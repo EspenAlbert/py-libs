@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Callable, TypeVar, Union
 
-from zero_lib.enum_utils import StrEnum
+from zero_3rdparty.enum_utils import StrEnum
 
 RegisteredPayloadT = TypeVar("RegisteredPayloadT")
 PayloadT = Union[RegisteredPayloadT, str, bytes, Path, dict, list]

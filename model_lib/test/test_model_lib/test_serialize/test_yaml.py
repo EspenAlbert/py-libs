@@ -14,7 +14,7 @@ from model_lib.serialize.yaml_serialize import (
     multiline_pipe_style,
     parse_yaml_file,
 )
-from zero_lib.dict_nested import read_nested
+from zero_3rdparty.dict_nested import read_nested
 
 
 def test_edit_index(tmp_path):

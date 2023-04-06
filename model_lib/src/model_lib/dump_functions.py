@@ -4,7 +4,7 @@ from functools import partial
 from typing import Callable, Optional, Type
 
 from pydantic import BaseModel
-from zero_lib.iter_utils import ignore_falsy_recurse
+from zero_3rdparty.iter_utils import ignore_falsy_recurse
 
 from model_lib import ModelT, register_dumper
 

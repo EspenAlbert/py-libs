@@ -89,7 +89,7 @@ def dump_safe(message: dict | object, format: FileFormat = FileFormat.json) -> s
 def dump_with_metadata(
     model: object,
     metadata: Mapping[str, object] | None = None,
-    format: FileFormat = FileFormat.json,
+    format: FileFormat | str = FileFormat.json,
     override_model_name: str = "",
     *,
     skip_dumpers: bool = False,

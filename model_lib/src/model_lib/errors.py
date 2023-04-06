@@ -4,7 +4,7 @@ from typing import Type, TypeVar
 
 from model_lib.constants import FileFormat, PayloadT
 from pydantic.env_settings import SettingsError
-from zero_lib.error import BaseError
+from zero_3rdparty.error import BaseError
 
 T = TypeVar("T")
 

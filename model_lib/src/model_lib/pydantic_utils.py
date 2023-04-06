@@ -4,7 +4,7 @@ from typing import List, Type, TypeVar, Union
 
 from pydantic import BaseModel, conint
 from pydantic.datetime_parse import StrBytesIntFloat, parse_datetime
-from zero_lib.datetime_utils import as_ms_precision_utc, ensure_tz
+from zero_3rdparty.datetime_utils import as_ms_precision_utc, ensure_tz
 
 from model_lib import register_dumper
 

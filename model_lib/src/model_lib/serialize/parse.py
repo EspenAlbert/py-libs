@@ -21,8 +21,8 @@ from model_lib.errors import (
     UnknownModelError,
 )
 from model_lib.model_base import model_name_to_t
-from zero_lib.file_utils import PathLike
-from zero_lib.object_name import as_name
+from zero_3rdparty.file_utils import PathLike
+from zero_3rdparty.object_name import as_name
 
 from .json_serialize import parse as parse_json
 from .yaml_serialize import parse_yaml_str

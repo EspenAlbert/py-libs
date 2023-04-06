@@ -45,9 +45,9 @@ from model_lib.errors import EnvVarParsingFailure
 from model_lib.pydantic_utils import field_names
 from pydantic import BaseSettings, Field, root_validator
 from pydantic.env_settings import SettingsError
-from zero_lib.iter_utils import first
-from zero_lib.run_env import running_in_container_environment
-from zero_lib.str_utils import words_to_list
+from zero_3rdparty.iter_utils import first
+from zero_3rdparty.run_env import running_in_container_environment
+from zero_3rdparty.str_utils import words_to_list
 
 logger = logging.getLogger(__name__)
 

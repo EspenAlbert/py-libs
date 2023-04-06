@@ -10,8 +10,8 @@ from typing import Callable, List, Mapping, Match
 from model_lib.dump_functions import base_model_dumper
 from model_lib.model_dump import PrimitiveT, register_dumper
 from pydantic import BaseModel
-from zero_lib.dict_nested import read_nested
-from zero_lib.file_utils import PathLike
+from zero_3rdparty.dict_nested import read_nested
+from zero_3rdparty.file_utils import PathLike
 
 from model_lib import DumperExist
 

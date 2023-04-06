@@ -13,7 +13,7 @@ from contextvars import Context, ContextVar
 from dataclasses import dataclass
 from typing import Callable, Coroutine, Protocol, TypeVar
 
-from zero_lib.object_name import as_name
+from zero_3rdparty.object_name import as_name
 
 T = TypeVar("T")
 KeyT = TypeVar("KeyT")

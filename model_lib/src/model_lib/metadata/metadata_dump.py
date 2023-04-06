@@ -6,7 +6,7 @@ from typing import Any, Callable, TypeAlias
 from uuid import uuid4
 
 from model_lib.metadata import EventMetadata, current_metadata
-from zero_lib.object_name import as_name
+from zero_3rdparty.object_name import as_name
 
 logger = logging.getLogger(__name__)
 MetadataDumper = Callable[[dict], Any]

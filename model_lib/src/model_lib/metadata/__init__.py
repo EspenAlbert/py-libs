@@ -1,3 +1,4 @@
+from model_lib.metadata.metadata_fields import EventMetadata, iter_tags
 from model_lib.metadata.metadata import (
     current_metadata,
     metadata_from_context_dict,
@@ -14,4 +15,3 @@ from model_lib.metadata.metadata_dump import (
     metadata_dumper,
     set_metadata_dumpers,
 )
-from model_lib.metadata.metadata_fields import EventMetadata, iter_tags

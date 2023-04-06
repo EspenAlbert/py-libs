@@ -6,8 +6,8 @@ from typing import Generic, Iterable, List, Sequence, Type, TypeVar, Union
 
 from model_lib.errors import ClsNameAlreadyExist, UnknownModelError
 from pydantic import BaseModel, Extra
-from zero_lib.object_name import as_name
-from zero_lib.str_utils import want_bool
+from zero_3rdparty.object_name import as_name
+from zero_3rdparty.str_utils import want_bool
 
 T = TypeVar("T")
 ModelT = TypeVar(name="ModelT", bound=BaseModel)

@@ -1,0 +1,6 @@
+GitPython==3.1.12
+PyYAML==5.4.1
+orjson==3.6.5
+pydantic==1.9.1
+semver==2.13.0
+yarl==1.8.2

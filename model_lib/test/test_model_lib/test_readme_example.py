@@ -1,14 +1,3 @@
-# Model-lib - pydantic base models with convenient dump methods
-
-## Model-lib tutorial: What classes to use as base classes, how to serialize them, and add metadata
-- The models: `Event` and `Entity` are subclassing [pydantic.BaseModel](https://pydantic-docs.helpmanual.io/usage/models/)
-- The only specific configuration are:
-    - Automatic registering for dumping
-    - Support different serializers for yaml/json/pretty_json
-    - use_enum_values
-    - +++
-
-```python
 from datetime import datetime
 
 from freezegun import freeze_time
@@ -74,5 +63,3 @@ def test_show_parsing(tmp_path):
     path_yaml = tmp_path / "example.yaml"
     path_yaml.write_text(_metadata_dump)
     assert parse_model(path_yaml) == person  # metadata is used to find the class
-
-```

@@ -1,0 +1,71 @@
+[GLOBAL]
+pants_version = "2.15.0"
+pantsd = false  # Enable the Pants daemon for better performance.[GLOBAL]
+# process_execution_local_parallelism=4 # Number of CPUs, found automatically
+pantsd_max_memory_usage=2073741824 # default: 1073741824 (1GB)
+print_stacktrace = true
+level = "warn"
+
+watch_filesystem = false
+
+plugins = []
+backend_packages.add = [
+  "pants.backend.awslambda.python",
+  "pants.backend.build_files.fmt.black",
+  "pants.backend.codegen.protobuf.python",
+  "pants.backend.experimental.python",
+  "pants.backend.python",
+  "pants.backend.python.lint.docformatter",
+  "pants.backend.python.lint.black",
+  "pants.backend.python.lint.flake8",
+  "pants.backend.python.lint.isort",
+  "pants.backend.plugin_development",
+]
+[anonymous-telemetry]
+enabled="false"
+
+[source]
+root_patterns = ["/*/src", "/*/", "/*/tests", "/*/test"]
+
+[python]
+interpreter_constraints = [">=3.10"]
+enable_resolves = true
+
+
+[black]
+config = "pyproject.toml"
+
+[flake8]
+config = ".flake8"
+
+[isort]
+config ="pyproject.toml"
+
+[coverage-py]
+interpreter_constraints = [">=3.10"]
+version="coverage[toml]==6.4.2"
+#lockfile = "pants-plugins/3rd_party/coverage.txt"
+
+[test]
+use_coverage = false
+extra_env_vars = ["RUNNING_IN_PANTS=yes"]
+timeout_default = 30
+timeout_maximum = 600
+
+[pytest]
+version = "pytest==6.2.5"
+extra_requirements.add = [
+  "coverage[toml]==6.4.2",
+  "pytest-icdiff==0.5",
+  "pygments==2.9.0",
+  "pytest-asyncio==0.15.1",
+  "pytest-regressions==2.0.1",
+  "pytest-freezegun==0.4.2",
+  "pytest-html==3.1.1",
+  "pytest-subtests==0.5.0",
+  "xdoctest==0.15.4"
+]
+lockfile = "3rdparty/pytest.txt"
+
+[python-protobuf]
+mypy_plugin = true

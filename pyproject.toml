@@ -1,0 +1,18 @@
+[tool.black]
+line-length = 88
+
+[tool.isort]
+line_length = 88
+profile="black"
+color_output = true
+known_protos="protos"
+known_tests="tests*"
+known_third_party="gitlab"
+sections = "FUTURE,STDLIB,THIRDPARTY,PROTOS,FIRSTPARTY,LOCALFOLDER,TESTS"
+
+[tool.pytest.ini_options]
+addopts="--tb=short -vv --xdoc --xdoctest-style=google"
+log_cli_level="INFO"
+log_cli=true
+log_cli_format="%(asctime)s.%(msecs)03d %(levelname)-6s %(threadName)-10s '%(message)-s' %(name)10s.%(funcName)-22s"
+junit_logging="all"

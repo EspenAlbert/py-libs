@@ -6,7 +6,7 @@ python_distribution(
     long_description_path="model_lib/readme.md",
     provides=setup_py(
         name="model-lib",
-        version="0.0.7",
+        version="0.0.8",
         description="base models, metadata, and how to dump them to json|yaml",
         author="Espen Albert",
         classifiers=[
@@ -14,7 +14,8 @@ python_distribution(
         ],
         extras_require={"json": ["orjson>=3.6.5"]},
         long_description_content_type="text/markdown",
-        license="MIT"
+        license="MIT",
+        url="https://github.com/EspenAlbert/py-libs"
     ),
     wheel=True,
     sdist=False,

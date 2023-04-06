@@ -4,13 +4,14 @@ python_distribution(
     dependencies=[":zero_3rdparty"],
     provides=setup_py(
         name="zero-3rdparty",
-        version="0.0.7",
+        version="0.0.8",
         description="zero_lib modules without 3rd-party dependencies",
         author="Espen Albert",
         classifiers=[
             "Programming Language :: Python :: 3.10",
         ],
-        license="MIT"
+        license="MIT",
+        url="https://github.com/EspenAlbert/py-libs"
     ),
     wheel=True,
     sdist=False,

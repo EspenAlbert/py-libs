@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: 'START_BRACKETS .Release.Name END_BRACKETS'
+  namespace: 'START_BRACKETS .Release.Namespace END_BRACKETS'
+  labels:
+    '6': 'START_BRACKETS- include QUOTEcommon.labels.standardQUOTE . | nindent 4 END_BRACKETS'
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      '11': 'START_BRACKETS- include QUOTEcommon.labels.matchLabelsQUOTE . | nindent 6 END_BRACKETS'
+  template:
+    metadata:
+      labels:
+        '15': 'START_BRACKETS- include QUOTEcommon.labels.standardQUOTE . | nindent 8 END_BRACKETS'
+        '16': 'START_BRACKETS- with .Values.podLabels END_BRACKETS'
+        '17': 'START_BRACKETS- toYaml . | nindent 8 END_BRACKETS'
+        '18': 'START_BRACKETS- end END_BRACKETS'
+      annotations:
+        '20': 'START_BRACKETS- with .Values.podAnnotations END_BRACKETS'
+        '21': 'START_BRACKETS- toYaml . | nindent 8 END_BRACKETS'
+        '22': 'START_BRACKETS- end END_BRACKETS'
+    spec:
+      imagePullSecrets:
+      - name: registry-credentials
+      containers: []

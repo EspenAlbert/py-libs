@@ -1,0 +1,16 @@
+#with_multiline:
+a: normal_single_line
+b: |
+  Line1
+  Line2
+  Line3
+---
+#without_multiline:
+a: normal_single_line
+b: 'Line1
+
+  Line2
+
+  Line3
+
+  '

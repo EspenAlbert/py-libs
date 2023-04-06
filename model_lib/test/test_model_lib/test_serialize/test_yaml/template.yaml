@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+  {{- include "common.labels.standard" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+    {{- include "common.labels.matchLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+      {{- include "common.labels.standard" . | nindent 8 }}
+      {{- with .Values.podLabels }}
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      annotations:
+      {{- with .Values.podAnnotations }}
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      imagePullSecrets:
+      - name: registry-credentials
+      containers: []

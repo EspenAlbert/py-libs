@@ -15,7 +15,7 @@ python_distribution(
         extras_require={"json": ["orjson>=3.6.5"]},
         long_description_content_type="text/markdown",
         license="MIT",
-        url="https://github.com/EspenAlbert/py-libs"
+        url="https://github.com/EspenAlbert/py-libs",
     ),
     wheel=True,
     sdist=False,

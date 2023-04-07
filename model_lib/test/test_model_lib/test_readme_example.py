@@ -3,7 +3,7 @@ from datetime import datetime
 from freezegun import freeze_time
 from pydantic import Field
 
-from model_lib import Entity, Event, dump, parse_model, dump_with_metadata
+from model_lib import Entity, Event, dump, dump_with_metadata, parse_model
 
 
 class Birthday(Event):
@@ -14,6 +14,7 @@ class Birthday(Event):
     ...
     TypeError: "Birthday" is immutable and does not support item assignment
     """
+
     date: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -24,6 +25,7 @@ class Person(Entity):
     >>> person.age
     100
     """
+
     name: str
     age: int
 

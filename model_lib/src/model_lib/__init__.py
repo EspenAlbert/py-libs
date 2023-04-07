@@ -30,10 +30,10 @@ from model_lib.pydantic_utils import (
     utc_datetime_ms,
     field_names,
 )
-from model_lib.serialize import *
+from model_lib.serialize import *  # noqa F403
 
 UNKNOWN = "_UNKNOWN_"
-__all__ = (
+__all__ = (  # noqa F405
     "BaseEnvVars",
     "Entity",
     "Event",

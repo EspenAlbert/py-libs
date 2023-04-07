@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from contextlib import suppress
 from functools import cached_property
 from typing import Generic, Iterable, List, Sequence, Type, TypeVar, Union
 
@@ -43,9 +42,6 @@ class _Model(BaseModel):
         ):
             raise ClsNameAlreadyExist(as_name(cls), as_name(old_cls))
         _model_name_to_type[cls_name] = cls
-
-        with suppress(ModuleNotFoundError):
-            import yaml
 
     def __eq__(self, other):
         """cached properties are stored on the instance and shouldn't be

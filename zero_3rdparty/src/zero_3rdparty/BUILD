@@ -11,7 +11,7 @@ python_distribution(
             "Programming Language :: Python :: 3.10",
         ],
         license="MIT",
-        url="https://github.com/EspenAlbert/py-libs"
+        url="https://github.com/EspenAlbert/py-libs",
     ),
     wheel=True,
     sdist=False,

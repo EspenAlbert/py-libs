@@ -12,13 +12,12 @@ from model_lib.constants import (
 from model_lib.errors import FileFormat
 from model_lib.metadata.metadata_dump import dump_metadata
 from model_lib.model_dump import registered_types
+from model_lib.serialize.json_serialize import dump as _dump_json
+from model_lib.serialize.json_serialize import parse as _parse_json
+from model_lib.serialize.json_serialize import pretty_dump as _dump_pretty_json
+from model_lib.serialize.yaml_serialize import dump_yaml_str
 
 from model_lib import ModelT
-
-from .json_serialize import dump as _dump_json
-from .json_serialize import parse as _parse_json
-from .json_serialize import pretty_dump as _dump_pretty_json
-from .yaml_serialize import dump_yaml_str
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +32,11 @@ _payload_dumpers = {
 
 def dump(instance: object, format: FileFormat | str) -> str:
     """
-    Raises:
-        JSONEncodeError
+    >>> dump('', "json")
+    ''
     """
-    if instance is "":
+    # instance == "" raises TypeError
+    if instance is "":  # noqa F632
         #: special case where we would get '""' otherwise
         return ""
     dumper = _payload_dumpers[format]

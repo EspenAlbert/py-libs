@@ -1,16 +1,15 @@
-from time import time
+from time import time, sleep
 
 from zero_3rdparty.file_utils import file_modified_time, iter_paths
 
 
 def test_file_modified_time(tmp_path):
     now = time()
+    sleep(0.01)
     path = tmp_path / "file.txt"
     path.write_text("1234")
     modified_time = file_modified_time(path)
     assert now < modified_time
-    print(now)
-    print(modified_time)
 
 
 def test_iter_paths(tmp_path):

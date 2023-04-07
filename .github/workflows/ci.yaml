@@ -16,14 +16,18 @@ jobs:
         run: pants tailor --check update-build-files --check
       - name: Lint
         run: "pants lint ::"
+        if: success() || failure()
       - name: Test
+        if: success() || failure()
         run: |
           export PANTS_TEST_USE_COVERAGE=true
           pants test ::
       - name: Package
+        if: success() || failure()
         run: "pants package ::"
       - name: Upload coverage
         uses: codecov/codecov-action@v3
+        if: success() || failure()
         with:
           files: ./dist/coverage/python/coverage.xml
       - name: Upload pants log
@@ -31,4 +35,4 @@ jobs:
         with:
           name: pants-log
           path: .pants.d/pants.log
-        if: always() # We want the log even on failures.
+        if: always() # We want the log even on failures & cancelling

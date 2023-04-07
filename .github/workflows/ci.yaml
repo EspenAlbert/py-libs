@@ -15,13 +15,13 @@ jobs:
       - name: Check BUILD files
         run: pants tailor --check update-build-files --check
       - name: Lint
-        run: pants lint ::
+        run: "pants lint ::"
       - name: Test
         run: |
           export PANTS_TEST_USE_COVERAGE=true
           pants test ::
       - name: Package
-        run: pants package ::
+        run: "pants package ::"
       - name: Upload coverage
         uses: codecov/codecov-action@v3
         with:

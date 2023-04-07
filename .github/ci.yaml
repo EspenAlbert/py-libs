@@ -1,0 +1,34 @@
+name: CI - Lint Test Package
+
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Initialize Pants
+        uses: pantsbuild/actions/init-pants@main
+        with:
+          # cache0 makes it easy to bust the cache if needed
+          gha-cache-key: cache0-py-3-10
+          named-caches-hash: ${{ hashFiles('3rdparty/*.txt') }}
+      - name: Check BUILD files
+        run: pants tailor --check update-build-files --check
+      - name: Lint
+        run: pants lint ::
+      - name: Test
+        run: |
+          export PANTS_TEST_USE_COVERAGE=true
+          pants test ::
+      - name: Package
+        run: pants package ::
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./dist/coverage/python/coverage.xml
+      - name: Upload pants log
+        uses: actions/upload-artifact@v3
+        with:
+          name: pants-log
+          path: .pants.d/pants.log
+        if: always() # We want the log even on failures.

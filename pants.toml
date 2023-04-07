@@ -1,12 +1,10 @@
 [GLOBAL]
 pants_version = "2.15.0"
-pantsd = false  # Enable the Pants daemon for better performance.[GLOBAL]
+#pantsd = false  # Enable the Pants daemon for better performance.[GLOBAL]
 # process_execution_local_parallelism=4 # Number of CPUs, found automatically
 pantsd_max_memory_usage=2073741824 # default: 1073741824 (1GB)
 print_stacktrace = true
 level = "warn"
-
-watch_filesystem = false
 
 plugins = []
 backend_packages.add = [
@@ -43,7 +41,8 @@ config ="pyproject.toml"
 
 [coverage-py]
 interpreter_constraints = [">=3.10"]
-version="coverage[toml]==6.4.2"
+version="coverage[toml]<6.6,>=6.5"
+report = ["xml", "html"]
 #lockfile = "pants-plugins/3rd_party/coverage.txt"
 
 [test]

@@ -1,4 +1,4 @@
-from time import time, sleep
+from time import sleep, time
 
 from zero_3rdparty.file_utils import file_modified_time, iter_paths
 

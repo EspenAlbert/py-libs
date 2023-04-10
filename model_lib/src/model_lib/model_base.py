@@ -47,7 +47,7 @@ class _Model(BaseModel):
         """cached properties are stored on the instance and shouldn't be
         included in comparison."""
         if not isinstance(other, BaseModel):
-            raise TypeError
+            return False
         return self.dict() == other.dict()
 
     def dict(

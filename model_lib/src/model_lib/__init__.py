@@ -1,4 +1,7 @@
 """isort:skip_file."""
+from model_lib.constants import (
+    FileFormat
+)
 from model_lib.errors import (
     UnknownModelError,
     ClsNameAlreadyExist,

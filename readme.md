@@ -1,5 +1,11 @@
 <p align="center">
-    <a href="https://codecov.io/gh/ghandic/jsf" target="_blank">
+    <a href="https://pypi.org/project/model-lib/" target="_blank">
+        <img src="https://img.shields.io/pypi/v/model-lib.svg">
+    </a>
+    <a href="https://pypi.org/project/model-lib/" target="_blank">
+        <img src="https://img.shields.io/pypi/pyversions/model-lib.svg">
+    </a>
+    <a href="https://codecov.io/gh/EspenAlbert/py-libs" target="_blank">
         <img src="https://img.shields.io/codecov/c/github/EspenAlbert/py-libs?color=%2334D058" alt="Coverage">
     </a>
     <a href="https://github.com/psf/black" target="_blank">

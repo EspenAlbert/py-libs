@@ -53,7 +53,7 @@ def as_file_format(path: PathLike) -> FileFormat:
 def parse_model(
     payload: PayloadT,
     t: Optional[Type[T]] = None,
-    format: FileFormat = FileFormat.json,
+    format: FileFormat| str = FileFormat.json,
     extra_kwargs: Mapping[str, Any] | None = None,
 ) -> T:
     model, _ = parse_model_metadata(

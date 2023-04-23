@@ -66,7 +66,7 @@ def dump_yaml_str(
         )
     except yaml.representer.RepresenterError as e:
         _, maybe_base_model = e.args
-        logger.warning(
+        logger.info(
             f"not yaml serializable, trying re-register: {type(maybe_base_model)}"
         )
         if isinstance(maybe_base_model, BaseModel):

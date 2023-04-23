@@ -35,8 +35,7 @@ def dump(instance: object, format: FileFormat | str) -> str:
     >>> dump('', "json")
     ''
     """
-    # instance == "" raises TypeError
-    if instance is "":  # noqa F632
+    if instance == "":
         #: special case where we would get '""' otherwise
         return ""
     dumper = _payload_dumpers[format]

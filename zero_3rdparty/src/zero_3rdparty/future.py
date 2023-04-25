@@ -1,5 +1,4 @@
 from __future__ import annotations
-from __future__ import annotations
 
 import logging
 from asyncio import CancelledError as _AsyncCancelledError
@@ -11,7 +10,7 @@ from concurrent.futures import Future as _ConcFuture
 from concurrent.futures import TimeoutError as _ConcTimeoutError
 from contextlib import suppress
 from functools import wraps
-from typing import Any, Callable, Iterable, Optional, Protocol, Type, TypeVar, TypeAlias
+from typing import Any, Callable, Iterable, Optional, Protocol, Type, TypeVar
 
 logger = logging.getLogger(__name__)
 ResultT = TypeVar("ResultT")
@@ -27,7 +26,6 @@ class Future(Protocol[ResultT]):
 
     def __await__(self) -> ResultT:
         pass
-
 
     def exception(self, timeout: float | None = None) -> Optional[Exception]:
         pass
@@ -177,11 +175,11 @@ def safe_cancel(future: Optional[Future], reason: str = ""):
     if future and not future.done():
         future.cancel()
 
-T = TypeVar('T')
 
-def safe_wait(
-    future: Future[T], timeout: Optional[float] = None
-) -> Optional[T]:
+T = TypeVar("T")
+
+
+def safe_wait(future: Future[T], timeout: Optional[float] = None) -> Optional[T]:
     if not future:
         logger.warning("no future to wait for")
     try:

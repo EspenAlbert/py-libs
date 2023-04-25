@@ -1,6 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 
-from zero_3rdparty.future import safe_wait, Future
+from zero_3rdparty.future import Future, safe_wait
 
 
 def test_type_completion():

@@ -1,5 +1,5 @@
 [GLOBAL]
-pants_version = "2.15.0"
+pants_version = "2.16.0rc0"
 #pantsd = false  # Enable the Pants daemon for better performance.[GLOBAL]
 # process_execution_local_parallelism=4 # Number of CPUs, found automatically
 pantsd_max_memory_usage=2073741824 # default: 1073741824 (1GB)
@@ -29,6 +29,8 @@ root_patterns = ["/*/src", "/*/", "/*/tests", "/*/test"]
 interpreter_constraints = [">=3.10"]
 enable_resolves = true
 
+[python.resolves]
+python-default = "3rdparty/python/default.lock"
 
 [black]
 config = "pyproject.toml"
@@ -52,19 +54,19 @@ timeout_default = 30
 timeout_maximum = 600
 
 [pytest]
-version = "pytest==6.2.5"
-extra_requirements.add = [
-  "coverage[toml]==6.4.2",
-  "pytest-icdiff==0.5",
-  "pygments==2.9.0",
+install_from_resolve="python-default"
+requirements= [
+  "pytest==6.2.5",
   "pytest-asyncio==0.15.1",
   "pytest-regressions==2.0.1",
   "pytest-freezegun==0.4.2",
   "pytest-html==3.1.1",
   "pytest-subtests==0.5.0",
-  "xdoctest==0.15.4"
+  "xdoctest==0.15.4",
 ]
-lockfile = "3rdparty/pytest.txt"
+
+[generate-lockfiles]
+diff = true
 
 [python-protobuf]
 mypy_plugin = true

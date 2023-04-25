@@ -1,3 +1,7 @@
 python_requirements(
-    module_mapping={"GitPython": ["git"], "PyYaml": ["yaml"]},
+    module_mapping={
+        "GitPython": ["git"],
+        "PyYaml": ["yaml"],
+        "pytest-freezegun": ["freezegun"],
+    },
 )

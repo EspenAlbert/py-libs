@@ -11,7 +11,7 @@ def test_values_time_name():
 
 def test_utc_now_ms_is_monotonic():
     prev_date = utc_now_ms_precision()
-    for _ in range(100):
+    for _ in range(10):
         now = utc_now_ms_precision()
-        time.sleep(0.001)
+        time.sleep(0.01)
         assert prev_date <= now

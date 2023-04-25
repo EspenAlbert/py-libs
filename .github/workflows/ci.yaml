@@ -13,7 +13,7 @@ jobs:
           gha-cache-key: cache0-py-3-10
           named-caches-hash: ${{ hashFiles('3rdparty/*.txt') }}
       - name: Check BUILD files
-        run: pants tailor --check update-build-files --check ::
+        run: "pants tailor --check update-build-files --check ::"
       - name: Lint
         run: "pants lint ::"
         if: success() || failure()

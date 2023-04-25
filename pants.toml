@@ -43,12 +43,14 @@ config ="pyproject.toml"
 
 [coverage-py]
 interpreter_constraints = [">=3.10"]
-version="coverage[toml]<6.6,>=6.5"
 report = ["xml", "html"]
-#lockfile = "pants-plugins/3rd_party/coverage.txt"
+install_from_resolve = "python-default"
+requirements = [
+  "coverage[toml]>=6.5,<8",
+]
 
 [test]
-use_coverage = false
+use_coverage = true
 extra_env_vars = ["RUNNING_IN_PANTS=yes"]
 timeout_default = 30
 timeout_maximum = 600
@@ -58,6 +60,7 @@ install_from_resolve="python-default"
 requirements= [
   "pytest==6.2.5",
   "pytest-asyncio==0.15.1",
+  "pytest-cov==3.0.0",
   "pytest-regressions==2.0.1",
   "pytest-freezegun==0.4.2",
   "pytest-html==3.1.1",

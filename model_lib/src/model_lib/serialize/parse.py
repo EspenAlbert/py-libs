@@ -97,37 +97,19 @@ def parse_model_metadata(
     # METADATA_DUMP_KEY = "metadata"
     # METADATA_MODEL_NAME_FIELD = "model_name"
     # METADATA_MODEL_NAME_BACKUP_FIELD = "model_name_backup"
-
-    match parsed_payload:
-        case {"metadata": metadata, "model": model_args}:
-            if t:
-                return create_model(t, model_args, extra_kwargs), metadata
-            match metadata:
-                case {"model_name": model_name, "model_name_backup": model_name_backup}:
-                    model_cls = _lookup_safe(model_name) or _lookup_safe(
-                        model_name_backup
-                    )
-                    if model_cls is None:
-                        message = f"unknown models: {model_name}, {model_name_backup}"
-                        raise PayloadError(parsed_payload, message, metadata)
-                    return create_model(model_cls, model_args, extra_kwargs), metadata
-                case {"model_name": model_name}:
-                    model_cls = _lookup_safe(model_name)
-                    if model_cls is None:
-                        raise PayloadError(
-                            parsed_payload, f"unknown model: {model_name}", metadata
-                        )
-                    return create_model(model_cls, model_args, extra_kwargs), metadata
-                case _:
-                    raise PayloadError(
-                        payload=parsed_payload,
-                        message="cannot infer model_cls",
-                        metadata=metadata,
-                    )
-        case _ if t:
-            return create_model(t, parsed_payload, extra_kwargs), {}
-        case _:
-            raise PayloadError(payload=payload, message="not a dictionary")
+    if not isinstance(parsed_payload, dict):
+        raise PayloadError(payload=payload, message="not a dictionary")
+    metadata = parsed_payload.get("metadata", {})
+    model_args = parsed_payload.get("model", parsed_payload)
+    if t:
+        return create_model(t, model_args, extra_kwargs), metadata
+    model_name = metadata.get("model_name")
+    model_name_backup = metadata.get("model_name_backup")
+    model_cls = _lookup_safe(model_name) or _lookup_safe(model_name_backup)
+    if model_cls is None:
+        message = f"unknown models: {model_name}, {model_name_backup}"
+        raise PayloadError(parsed_payload, message, metadata)
+    return create_model(model_cls, model_args, extra_kwargs), metadata
 
 
 def parse_model_name_kwargs_list(payload: RegisteredPayloadT) -> list[T]:

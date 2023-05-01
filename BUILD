@@ -8,7 +8,7 @@ docker_environment(
     name="python_bullseye_arm",
     platform="linux_arm64",
     image="python:3.10.11-slim-bullseye@sha256:2b7d288b3cd5a884c8764aa39488cd39373e25fc9c7218b3f74e2bd623de9ffe",
-    fallback_environment="linux_amd" # make CI pass
+    fallback_environment="linux_amd",  # make CI pass
 )
 
 local_environment(

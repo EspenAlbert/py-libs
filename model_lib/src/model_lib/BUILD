@@ -1,8 +1,8 @@
-python_sources(name="model_lib")
+python_sources(name="model_lib", resolve=parametrize("pants-plugins", "python-default"))
 python_distribution(
     name="model-lib",
     # orjson is not a hard requirement
-    dependencies=[":model_lib", "!!//3rdparty#orjson"],
+    dependencies=[":model_lib@resolve=python-default", "!!//3rdparty#orjson"],
     long_description_path="model_lib/readme.md",
     provides=setup_py(
         name="model-lib",

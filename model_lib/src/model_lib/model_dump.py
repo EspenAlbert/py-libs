@@ -8,13 +8,14 @@ from decimal import Decimal
 from enum import Enum
 from functools import singledispatch
 from pathlib import Path
-from typing import Callable, Literal, Type, TypeAlias, TypeVar, ValuesView
+from typing import Callable, Literal, Type, TypeVar, Union, ValuesView
 from uuid import UUID
 
 from model_lib.errors import DumperExist, NoDumper
+from typing_extensions import TypeAlias
 
 T = TypeVar("T")
-PrimitiveT: TypeAlias = dict | str | list | int | float | bool
+PrimitiveT: TypeAlias = Union[dict, str, list, int, float, bool]
 DumpCall: TypeAlias = Callable[[T], PrimitiveT]
 UnregisterCall: TypeAlias = Callable[[], None]
 

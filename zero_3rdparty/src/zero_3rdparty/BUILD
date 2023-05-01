@@ -8,6 +8,7 @@ python_distribution(
         description="zero_lib modules without 3rd-party dependencies",
         author="Espen Albert",
         classifiers=[
+            "Programming Language :: Python :: 3.9",
             "Programming Language :: Python :: 3.10",
         ],
         license="MIT",

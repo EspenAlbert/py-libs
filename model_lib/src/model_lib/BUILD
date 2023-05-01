@@ -10,6 +10,7 @@ python_distribution(
         description="base models, metadata, and how to dump them to json|yaml",
         author="Espen Albert",
         classifiers=[
+            "Programming Language :: Python :: 3.9",
             "Programming Language :: Python :: 3.10",
         ],
         extras_require={"json": ["orjson>=3.6.5"]},

@@ -96,3 +96,6 @@ python_bullseye_amd = "//:python_bullseye_amd"
 python_bullseye_arm = "//:python_bullseye_arm"
 linux_amd = "//:linux_amd"
 linux_arm = "//:linux_arm"
+
+[tailor]
+ignore_adding_targets=["_pants:_pants"]

@@ -119,7 +119,13 @@ def merge(
     for key, value in b.items():
         if key in a:
             if isinstance(a[key], dict) and isinstance(b[key], dict):
-                merge(a[key], b[key], path + [str(key)])
+                merge(
+                    a[key],
+                    b[key],
+                    path + [str(key)],
+                    allow_overwrite=allow_overwrite,
+                    allow_new=allow_new,
+                )
             elif a[key] != value:
                 if allow_overwrite:
                     a[key] = value

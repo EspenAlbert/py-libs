@@ -27,7 +27,7 @@ jobs:
           pants test ::
       - name: Package
         if: success() || failure()
-        run: "pants package ::"
+        run: "pants --tag='-arm' package ::"
       - name: Upload coverage
         uses: codecov/codecov-action@v3
         if: success() || failure()

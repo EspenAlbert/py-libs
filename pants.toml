@@ -1,36 +1,52 @@
 [GLOBAL]
-pants_version = "2.16.0rc0"
+pants_version = "2.16.0rc1"
 #pantsd = false  # Enable the Pants daemon for better performance.[GLOBAL]
 # process_execution_local_parallelism=4 # Number of CPUs, found automatically
 pantsd_max_memory_usage=2073741824 # default: 1073741824 (1GB)
 print_stacktrace = true
 level = "warn"
+build_file_prelude_globs = ["_pants/py_deploy.py"]
+pythonpath = ["%(buildroot)s/_pants/docker_compose/src", "%(buildroot)s/model_lib/src", "%(buildroot)s/zero_3rdparty/src"]
+plugins = [
+  "pydevd-pycharm==231.8109.197",
+  "PyYAML==6.0",
+  "pydantic==1.10.2",
+  "orjson==3.6.5"
+]
 
-plugins = []
 backend_packages.add = [
   "pants.backend.awslambda.python",
   "pants.backend.build_files.fmt.black",
   "pants.backend.codegen.protobuf.python",
+  "pants.backend.docker",
+  "pants.backend.experimental.helm",
   "pants.backend.experimental.python",
   "pants.backend.python",
   "pants.backend.python.lint.docformatter",
   "pants.backend.python.lint.black",
   "pants.backend.python.lint.flake8",
   "pants.backend.python.lint.isort",
+  "pants.backend.python.mixed_interpreter_constraints",
   "pants.backend.plugin_development",
+  "docker_compose"
 ]
 [anonymous-telemetry]
 enabled="false"
 
 [source]
-root_patterns = ["/*/src", "/*/", "/*/tests", "/*/test"]
+root_patterns = ["/*/src", "/*/", "/*/tests", "/*/test", "/_pants/*/src", "/_pants/*/tests", "/_pants/3rdparty"]
 
 [python]
 interpreter_constraints=[">=3.9"]
 enable_resolves = true
 
 [python.resolves]
+pants-plugins = "_pants/3rdparty/lock.txt"
 python-default = "3rdparty/python/default.lock"
+
+[python.resolves_to_interpreter_constraints]
+pants-plugins = [">=3.9,<3.10"]
+python-default = [">=3.9"]
 
 [black]
 config = "pyproject.toml"
@@ -73,3 +89,10 @@ diff = true
 
 [python-protobuf]
 mypy_plugin = true
+
+
+[environments-preview.names]
+python_bullseye_amd = "//:python_bullseye_amd"
+python_bullseye_arm = "//:python_bullseye_arm"
+linux_amd = "//:linux_amd"
+linux_arm = "//:linux_arm"

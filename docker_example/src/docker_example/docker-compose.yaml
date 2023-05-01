@@ -1,0 +1,31 @@
+version: '3.9'
+services:
+  EXISTING_SERVICE_NAME:
+    image: python:3.10.11-slim-bullseye@sha256:2b7d288b3cd5a884c8764aa39488cd39373e25fc9c7218b3f74e2bd623de9ffe
+    environment: {}
+    ports: []
+    networks:
+    - pants-default
+  docker-example-amd-docker:
+    image: docker-example-amd-docker:latest-amd
+    environment:
+      PORT: '8000'
+      env: default
+      name: __REQUIRED__
+    ports:
+    - 8000:8000
+    networks:
+    - pants-default
+  docker-example-arm-docker:
+    image: docker-example-arm-docker:latest-arm
+    environment:
+      PORT: '8000'
+      env: default
+      name: __REQUIRED__
+    ports:
+    - 8000:8000
+    networks:
+    - pants-default
+networks:
+  pants-default:
+    external: true

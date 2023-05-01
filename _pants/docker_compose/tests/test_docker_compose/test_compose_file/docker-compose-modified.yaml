@@ -1,0 +1,15 @@
+version: '3'
+services:
+  docker-example-arm:
+    image: docker-example-arm:latest-arm
+    environment:
+      env: default
+      name: __REQUIRED__
+      new: new_value
+    ports:
+    - 8000:8000
+    networks:
+    - pants-default
+networks:
+  pants-default:
+    external: true

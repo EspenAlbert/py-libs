@@ -1,5 +1,7 @@
 """https://docs.python.org/3/library/datetime.html#strftime-and-strptime-
 format-codes."""
+from __future__ import annotations
+
 from datetime import date, datetime, timedelta, timezone
 from functools import singledispatch
 from typing import Iterable, Optional, TypeVar, overload

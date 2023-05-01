@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from contextlib import suppress
 from copy import deepcopy
 from typing import Any, Iterable, Mapping, TypeVar

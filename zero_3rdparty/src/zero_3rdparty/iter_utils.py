@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import inspect
 from collections import ChainMap, defaultdict
 from collections.abc import Generator
@@ -300,19 +302,19 @@ def _unpack(raw: object, allowed_falsy: set[object] | None):
 
 
 @_unpack.register
-def _unpack_list(raw: list, allowed_falsy: set[object] | None):
+def _unpack_list(raw: list, allowed_falsy: Optional[set[object]]):
     return [_unpack(each_raw, allowed_falsy) for each_raw in raw]
 
 
 @_unpack.register
-def _unpack_dict(raw: dict, allowed_falsy: set[object] | None):
+def _unpack_dict(raw: dict, allowed_falsy: Optional[set[object]]):
     return ignore_falsy_recurse(**raw, allowed_falsy=allowed_falsy)
 
 
 _allowed_falsy = {False, 0}
 
 
-def ignore_falsy_recurse(allowed_falsy: set[object] | None = None, **kwargs) -> dict:
+def ignore_falsy_recurse(allowed_falsy: Optional[set[object]] = None, **kwargs) -> dict:
     """Ignores empty dictionaries or lists and None values.
     Warning:
         Keeps False & 0

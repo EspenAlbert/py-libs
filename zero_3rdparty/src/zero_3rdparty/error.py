@@ -47,8 +47,9 @@ from asyncio import TimeoutError as AsyncTimeoutError
 from concurrent.futures import TimeoutError as ConcTimeoutError
 from functools import partial, singledispatch
 from types import TracebackType
-from typing import TYPE_CHECKING, Type, TypeAlias
+from typing import TYPE_CHECKING, Type
 
+from typing_extensions import TypeAlias
 from zero_3rdparty.enum_utils import StrEnum
 
 logger = logging.getLogger(__name__)

@@ -1,4 +1,6 @@
 """FILE FROM mode.utils.objects but modified."""
+from __future__ import annotations
+
 import logging
 import sys
 from collections.abc import Awaitable as ColAwaitable
@@ -118,7 +120,7 @@ def call_signature(func, args=None, kwargs=None):
 
 def func_arg_name_of_type(
     func: Callable, arg_type: Type, strict: bool = True
-) -> str | None:
+) -> Union[str, None]:
     for name, value in get_type_hints(func).items():
         if value is arg_type or (not strict and is_subclass(value, arg_type)):
             return name
@@ -147,7 +149,7 @@ def func_args_of_instance_or_type(
             yield name, value
 
 
-def func_return_type(func: Callable) -> Type | None:
+def func_return_type(func: Callable) -> Union[Type, None]:
     return get_type_hints(func).get("return", None)
 
 
@@ -170,7 +172,7 @@ def func_default_instances_or_classes(
             yield name, default
 
 
-def unpack_optional_or_assume_class(maybe_optional) -> Type | None:
+def unpack_optional_or_assume_class(maybe_optional) -> Union[Type, None]:
     args = getattr(maybe_optional, "__args__", [])
     if not isclass(maybe_optional) and args and isclass(args[0]):
         return args[0]

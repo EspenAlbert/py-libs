@@ -3,7 +3,7 @@ import re
 import reprlib
 import sys
 from functools import singledispatch
-from typing import Any, AnyStr, Callable, Iterable, List, Pattern, Set, TextIO
+from typing import Any, AnyStr, Callable, Iterable, List, Pattern, Set, TextIO, Union
 
 from zero_3rdparty.iter_utils import key_values, select_attrs
 
@@ -31,7 +31,7 @@ def want_bytes(s: AnyStr, encoding: str = "utf-8") -> bytes:
 
 
 @singledispatch
-def want_bool(s: str | bool) -> bool:
+def want_bool(s: Union[str, bool]) -> bool:
     """
     >>> want_bool("False")
     False

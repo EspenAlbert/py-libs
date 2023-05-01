@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime, timedelta, timezone
 from functools import singledispatch
 from typing import List, Type, TypeVar, Union

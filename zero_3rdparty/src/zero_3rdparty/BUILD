@@ -1,7 +1,7 @@
-python_sources()
+python_sources(resolve=parametrize("pants-plugins", "python-default"))
 python_distribution(
     name="zero-3rdparty",
-    dependencies=[":zero_3rdparty"],
+    dependencies=[":zero_3rdparty@resolve=python-default"],
     provides=setup_py(
         name="zero-3rdparty",
         version="0.0.9",

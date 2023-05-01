@@ -26,7 +26,7 @@ enabled="false"
 root_patterns = ["/*/src", "/*/", "/*/tests", "/*/test"]
 
 [python]
-interpreter_constraints = [">=3.10"]
+interpreter_constraints=[">=3.9"]
 enable_resolves = true
 
 [python.resolves]
@@ -42,7 +42,7 @@ config = ".flake8"
 config ="pyproject.toml"
 
 [coverage-py]
-interpreter_constraints = [">=3.10"]
+interpreter_constraints = [">=3.9"]
 report = ["xml", "html"]
 install_from_resolve = "python-default"
 requirements = [

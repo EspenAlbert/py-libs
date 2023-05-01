@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import logging
 from contextlib import suppress
-from typing import Any, Callable, TypeAlias, TypeVar
+from typing import Any, Callable, Optional, TypeVar
 
 from model_lib.model_dump import dump as model_dump
+from typing_extensions import TypeAlias
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 dump_call: TypeAlias = Callable[[T], str]
-dump_parse: TypeAlias = tuple[dump_call, dump_call, Callable[[str], Any]] | None
+dump_parse: TypeAlias = Optional[tuple[dump_call, dump_call, Callable[[str], Any]]]
 
 
 def orjson_dumps_parse() -> dump_parse:

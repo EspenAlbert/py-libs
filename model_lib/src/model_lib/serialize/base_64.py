@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from base64 import b64decode, b64encode
 from functools import singledispatch
 from secrets import token_bytes

@@ -135,7 +135,7 @@ def _parse_str(payload: str, format=FileFormat.json):
 
 @parse_payload.register
 def _parse_bytes(payload: bytes, format=FileFormat.json):
-    return parse_payload(payload.decode("utf-8", format))
+    return parse_payload(payload.decode("utf-8"), format)
 
 
 @parse_payload.register

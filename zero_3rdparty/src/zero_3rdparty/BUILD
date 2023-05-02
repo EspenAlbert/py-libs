@@ -4,7 +4,7 @@ python_distribution(
     dependencies=[":zero_3rdparty@resolve=python-default"],
     provides=setup_py(
         name="zero-3rdparty",
-        version="0.0.9",
+        version="0.0.10",
         description="zero_lib modules without 3rd-party dependencies",
         author="Espen Albert",
         classifiers=[

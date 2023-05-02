@@ -6,7 +6,7 @@ import logging
 import typing
 from pydoc import locate
 
-from docker_compose.ports import PrefixPort
+from pants_py_deploy.ports import PrefixPort
 
 logger = logging.getLogger(__name__)
 NodeType = typing.TypeVar("NodeType", bound=ast.AST)

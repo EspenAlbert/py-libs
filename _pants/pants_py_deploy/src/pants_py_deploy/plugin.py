@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from pathlib import PurePath
 
-from docker_compose.compose_file import create_compose_files, modify_existing_compose
-from docker_compose.export_env import read_env_and_ports
-from docker_compose.fields import ComposeEnabledField
-from docker_compose.models import (
+from pants_py_deploy.compose_file import create_compose_files, modify_existing_compose
+from pants_py_deploy.export_env import read_env_and_ports
+from pants_py_deploy.fields import ComposeEnabledField
+from pants_py_deploy.models import (
     ComposeFiles,
     ComposeService,
     ComposeServiceRequest,
@@ -61,11 +61,13 @@ class DockerComposeFileFixer(FixFilesRequest):
 
 @rule
 async def docker_compose_partition(
-    request: DockerComposeFileFixer.PartitionRequest,
+    request: DockerComposeFileFixer.PartitionRequest, compose_files: ComposeFiles
 ) -> Partitions:
-    return Partitions.single_partition(
+    managed_files = [path for path in compose_files.paths_managed.keys()]
+    input_digest = [
         file for file in request.files if PurePath(file).stem == "docker-compose"
-    )
+    ]
+    return Partitions.single_partition(set(input_digest + managed_files))
 
 
 @rule

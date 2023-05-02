@@ -2,14 +2,14 @@ from collections import ChainMap
 from itertools import chain
 from typing import Iterable
 
-from docker_compose.compose_file_models import (
+from pants_py_deploy.compose_file_models import (
     ComposeServiceInfo,
     export_compose_dict_from_services,
     iter_compose_info,
 )
-from docker_compose.fields import COMPOSE_NETWORK_NAME
-from docker_compose.models import ComposeFiles, ComposeService, FileEnvVars
-from docker_compose.ports import PrefixPort
+from pants_py_deploy.fields import COMPOSE_NETWORK_NAME
+from pants_py_deploy.models import ComposeFiles, ComposeService, FileEnvVars
+from pants_py_deploy.ports import PrefixPort
 from pants.engine.fs import FileContent
 from zero_3rdparty.str_utils import ensure_suffix
 

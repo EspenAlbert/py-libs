@@ -1,5 +1,5 @@
-from docker_compose import plugin
-from docker_compose.fields import ComposeEnabledField
+from pants_py_deploy import plugin
+from pants_py_deploy.fields import ComposeEnabledField
 from pants.backend.docker.target_types import DockerImageTarget
 
 

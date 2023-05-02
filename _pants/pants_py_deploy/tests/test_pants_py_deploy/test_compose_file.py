@@ -1,6 +1,6 @@
-from docker_compose.compose_file import create_compose_files, modify_existing_compose
-from docker_compose.models import ComposeFiles, ComposeService, EnvVar, FileEnvVars
-from docker_compose.ports import PrefixPort
+from pants_py_deploy.compose_file import create_compose_files, modify_existing_compose
+from pants_py_deploy.models import ComposeFiles, ComposeService, EnvVar, FileEnvVars
+from pants_py_deploy.ports import PrefixPort
 from pants.engine.fs import FileContent
 from pants.util.ordered_set import FrozenOrderedSet
 

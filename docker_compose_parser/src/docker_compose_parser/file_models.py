@@ -15,6 +15,7 @@ from model_lib import Entity, FileFormat, parse_payload
 
 NETWORK_NAME_DEFAULT = "compose-default"
 
+
 class ComposeServiceInfo(Entity):
     class Config:
         allow_mutation = True

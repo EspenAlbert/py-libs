@@ -3,11 +3,11 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Dict, List, Tuple
 
-from model_lib import Event
-from pydantic import Field, constr, validator
-
 from model_lib.serialize.yaml_serialize import edit_helm_template
+from pydantic import Field, constr, validator
 from zero_3rdparty.enum_utils import StrEnum
+
+from model_lib import Event
 
 
 class ReplaceStr(StrEnum):
@@ -216,7 +216,9 @@ def helpers_tpl(spec: ChartTemplateSpec) -> str:
     helpers_tpl_content = spec.replacements.replace(_HELPERS_TPL)
     extra_labels_str = "\n"
     if extra_labels := spec.extra_labels:
-        extra_labels_str = "\n".join(f"{key}: {value}" for key, value in extra_labels.items())
+        extra_labels_str = "\n".join(
+            f"{key}: {value}" for key, value in extra_labels.items()
+        )
     helpers_tpl_content = helpers_tpl_content.replace("EXTRA_LABELS", extra_labels_str)
     return helpers_tpl_content
 
@@ -346,7 +348,6 @@ spec:
     spec:
       containers: []
 """
-
 
 
 def daemonset_yaml(spec: ChartTemplateSpec) -> str:

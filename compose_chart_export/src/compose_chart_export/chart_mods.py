@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Dict, Iterable, Mapping, Optional, Union
 
 from compose_chart_export.ports import PrefixPort
-from model_lib.serialize.yaml_serialize import edit_yaml, edit_helm_template
+from model_lib.serialize.yaml_serialize import edit_helm_template, edit_yaml
 
 service_yaml = "templates/service.yaml"
 values_yaml = "values.yaml"

@@ -1,6 +1,6 @@
+from pants.backend.docker.target_types import DockerImageTarget
 from pants_py_deploy import plugin
 from pants_py_deploy.fields import ComposeEnabledField
-from pants.backend.docker.target_types import DockerImageTarget
 
 
 def rules():

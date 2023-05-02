@@ -2,11 +2,11 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Iterable
 
-from pants_py_deploy.ports import PrefixPort
 from pants.backend.docker.target_types import DockerImageTarget
 from pants.engine.collection import Collection
 from pants.util.frozendict import FrozenDict
 from pants.util.ordered_set import FrozenOrderedSet
+from pants_py_deploy.ports import PrefixPort
 
 
 @dataclass(frozen=True)

@@ -1,8 +1,8 @@
+from pants.engine.fs import FileContent
+from pants.util.ordered_set import FrozenOrderedSet
 from pants_py_deploy.compose_file import create_compose_files, modify_existing_compose
 from pants_py_deploy.models import ComposeFiles, ComposeService, EnvVar, FileEnvVars
 from pants_py_deploy.ports import PrefixPort
-from pants.engine.fs import FileContent
-from pants.util.ordered_set import FrozenOrderedSet
 
 path1 = "docker_example/src/docker_example"
 path_settings = "docker_example/src/docker_example/settings"

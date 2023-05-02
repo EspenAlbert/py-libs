@@ -2,6 +2,7 @@ from collections import ChainMap
 from itertools import chain
 from typing import Iterable
 
+from pants.engine.fs import FileContent
 from pants_py_deploy.compose_file_models import (
     ComposeServiceInfo,
     export_compose_dict_from_services,
@@ -10,7 +11,6 @@ from pants_py_deploy.compose_file_models import (
 from pants_py_deploy.fields import COMPOSE_NETWORK_NAME
 from pants_py_deploy.models import ComposeFiles, ComposeService, FileEnvVars
 from pants_py_deploy.ports import PrefixPort
-from pants.engine.fs import FileContent
 from zero_3rdparty.str_utils import ensure_suffix
 
 from model_lib import FileFormat, dump, parse_payload

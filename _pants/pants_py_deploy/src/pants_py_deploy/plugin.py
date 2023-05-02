@@ -1,16 +1,6 @@
 from dataclasses import dataclass
 from pathlib import PurePath
 
-from pants_py_deploy.compose_file import create_compose_files, modify_existing_compose
-from pants_py_deploy.export_env import read_env_and_ports
-from pants_py_deploy.fields import ComposeEnabledField
-from pants_py_deploy.models import (
-    ComposeFiles,
-    ComposeService,
-    ComposeServiceRequest,
-    EnvVar,
-    FileEnvVars,
-)
 from pants.backend.docker.target_types import DockerImageTagsField, DockerImageTarget
 from pants.backend.python.target_types import PythonSourceField
 from pants.core.goals.fix import FixFilesRequest, FixResult, Partitions
@@ -33,6 +23,16 @@ from pants.engine.target import (
 )
 from pants.util.meta import classproperty
 from pants.util.ordered_set import FrozenOrderedSet
+from pants_py_deploy.compose_file import create_compose_files, modify_existing_compose
+from pants_py_deploy.export_env import read_env_and_ports
+from pants_py_deploy.fields import ComposeEnabledField
+from pants_py_deploy.models import (
+    ComposeFiles,
+    ComposeService,
+    ComposeServiceRequest,
+    EnvVar,
+    FileEnvVars,
+)
 from zero_3rdparty.str_utils import ensure_suffix
 
 

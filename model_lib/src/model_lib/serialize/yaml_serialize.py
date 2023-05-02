@@ -83,9 +83,11 @@ def dump_yaml_str(
     return s.getvalue()
 
 
-def dump_yaml_file(path: PathLike, data: Mapping, width=1000):
+def dump_yaml_file(path: PathLike, data: Mapping, width=1000, sort_keys: bool = False):
     with open(path, "w") as f:
-        yaml.safe_dump(data, stream=f, default_flow_style=False, width=width)
+        yaml.safe_dump(
+            data, stream=f, default_flow_style=False, width=width, sort_keys=sort_keys
+        )
     return path
 
 

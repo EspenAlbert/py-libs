@@ -3,7 +3,7 @@ from itertools import chain
 from typing import Iterable
 
 from pants.engine.fs import FileContent
-from pants_py_deploy.compose_file_models import (
+from docker_compose_parser.file_models import (
     ComposeServiceInfo,
     export_compose_dict_from_services,
     iter_compose_info,

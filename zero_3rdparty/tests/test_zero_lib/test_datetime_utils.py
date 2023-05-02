@@ -1,7 +1,5 @@
-import time
-
 import pytest
-from zero_3rdparty.datetime_utils import date_filename, utc_now_ms_precision
+from zero_3rdparty.datetime_utils import date_filename
 
 
 @pytest.mark.freeze_time("2020-01-01T08:34:22.124151")

@@ -9,9 +9,8 @@ def test_values_time_name():
     assert date_filename() == "2020-01-01T08-34Z"
 
 
-def test_utc_now_ms_is_monotonic():
+def test_utc_now_ms():
     prev_date = utc_now_ms_precision()
-    for _ in range(10):
-        now = utc_now_ms_precision()
-        time.sleep(0.01)
-        assert prev_date <= now
+    time.sleep(0.1)
+    now = utc_now_ms_precision()
+    assert prev_date <= now

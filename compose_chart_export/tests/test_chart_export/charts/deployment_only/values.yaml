@@ -1,0 +1,8 @@
+podLabels: {}
+podAnnotations: {}
+nodeSelector: {}
+replicas: 1
+docker_example_amd_docker:
+  env: default
+  name: __REQUIRED__
+  image: unset

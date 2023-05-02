@@ -1,0 +1,3 @@
+REVISION={{ .Release.Revision }}
+# Tags
+{{ include "common.labels.standard" .}}

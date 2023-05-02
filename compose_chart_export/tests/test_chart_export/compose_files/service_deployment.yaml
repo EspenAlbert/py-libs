@@ -1,0 +1,15 @@
+version: '3.9'
+services:
+  docker-example-amd-docker:
+    image: docker-example-amd-docker:latest-amd
+    environment:
+      PORT: '8000'
+      env: default
+      name: __REQUIRED__
+    ports:
+    - 8000:8000
+    networks:
+    - pants-default
+networks:
+  pants-default:
+    external: true

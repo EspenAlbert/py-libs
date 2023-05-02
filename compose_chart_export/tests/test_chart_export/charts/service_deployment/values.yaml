@@ -1,0 +1,9 @@
+podLabels: {}
+podAnnotations: {}
+nodeSelector: {}
+replicas: 1
+docker_example_amd_docker:
+  PORT: '8000'
+  env: default
+  name: __REQUIRED__
+  image: unset

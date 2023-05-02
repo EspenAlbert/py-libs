@@ -1,0 +1,7 @@
+apiVersion: v2
+name: deployment_only
+description: A Helm chart for deployment_only
+
+type: application
+version: 0.0.1
+appVersion: 0.0.1

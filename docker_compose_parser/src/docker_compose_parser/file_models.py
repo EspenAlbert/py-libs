@@ -6,48 +6,14 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional
 
 from pydantic import Extra, Field, validator
-from zero_3rdparty.datetime_utils import utc_now
 from zero_3rdparty.dict_nested import read_nested_or_none
 from zero_3rdparty.dict_utils import merge, sort_keys
-from zero_3rdparty.iter_utils import first
 from zero_3rdparty.iter_utils import ignore_falsy as ignore_falsy_method
 from zero_3rdparty.iter_utils import key_equal_value_to_dict
 
-from model_lib import Entity, Event, FileFormat, parse_payload, utc_datetime
+from model_lib import Entity, FileFormat, parse_payload
 
-NETWORK_NAME_DEFAULT = "wm-default"
-
-
-class ContainerRunStatus(Event):
-    container_id: str
-    container_name: str
-    is_running: bool
-    started_at: utc_datetime
-    # None when the container is still running
-    exit_code: Optional[int]
-    finished_at: Optional[utc_datetime]
-
-    @property
-    def is_finished(self) -> bool:
-        return bool(not self.is_running and self.finished_at)
-
-    @property
-    def is_ok(self):
-        return self.exit_code == 0
-
-    @property
-    def run_time_s(self) -> float:
-        finished_at = self.finished_at or utc_now()
-        return (finished_at - self.started_at).total_seconds()
-
-
-class ContainerRunInfo(ContainerRunStatus):
-    class Config:
-        copy_on_model_validation = False
-
-    stdout: List[str]
-    stderr: List[str]
-
+NETWORK_NAME_DEFAULT = "compose-default"
 
 class ComposeServiceInfo(Entity):
     class Config:
@@ -103,13 +69,6 @@ class ComposeServiceInfo(Entity):
         if ignore_falsy:
             return ignore_falsy_method(**service_dict)
         return service_dict
-
-
-def read_service_name(compose_path: Path) -> str:
-    parsed = parse_payload(compose_path, FileFormat.yaml)
-    services: dict = parsed["services"]
-    assert len(services) == 1
-    return first(services)
 
 
 class ServiceNameInfo(NamedTuple):
@@ -223,10 +182,3 @@ def export_compose_dict_from_services(
     for other_service, other_service_dict in service_dicts.items():
         full_compose["services"][other_service] = other_service_dict
     return full_compose
-
-
-CONTAINER_ID_LENGTH = 8
-
-
-def as_container_id(id_raw: str) -> str:
-    return id_raw[:CONTAINER_ID_LENGTH]

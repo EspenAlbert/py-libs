@@ -1,8 +1,5 @@
 [GLOBAL]
 pants_version = "2.16.0rc1"
-#pantsd = false  # Enable the Pants daemon for better performance.[GLOBAL]
-# process_execution_local_parallelism=4 # Number of CPUs, found automatically
-pantsd_max_memory_usage=2073741824 # default: 1073741824 (1GB)
 print_stacktrace = true
 level = "warn"
 build_file_prelude_globs = ["_pants/py_deploy.py"]

@@ -188,6 +188,13 @@ def iter_paths(base_dir: Path, *globs: str, rglob=True) -> Iterable[Path]:
         yield from search_func(glob)
 
 
+def iter_paths_and_relative(
+    base_dir: Path, *globs: str, rglob=True
+) -> Iterable[tuple[Path, str]]:
+    for path in iter_paths(base_dir, *globs, rglob=rglob):
+        yield path, str(path.relative_to(base_dir))
+
+
 def touch(path: str, times: int | tuple[int, int] | None = None):
     """Equivalent of unix `touch path`.
 

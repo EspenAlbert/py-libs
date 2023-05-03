@@ -33,8 +33,8 @@ class PrefixPort:
     """Used for creating virtual services with ports that maps to paths.
 
     Example:
-        warehouse1.dev.wheelme-web.com/robot
-        warehouse1.dev.wheelme-web.com/frontend_grpc
+        warehouse1.dev.example.com/robot
+        warehouse1.dev.example.com/frontend_grpc
         >>> prefix_port = PrefixPort(prefix='frontend_grpc_web', port=50051, protocol=PortProtocol.grpc_web)
         >>> prefix_port.as_kub_port_name(prefix_port)
         'grpc-web-fronte'
@@ -51,7 +51,7 @@ class PrefixPort:
 
     prefix: str
     port: int
-    protocol: PortProtocol
+    protocol: PortProtocol | str
 
     def __post_init__(self):
         options = list(PortProtocol)

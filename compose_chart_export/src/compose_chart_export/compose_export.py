@@ -109,11 +109,16 @@ def parse_service_name_extra_containers(
 
 def ensure_chart_version_valid(chart_version: str):
     """
+    >>> ensure_chart_version_valid("v0.1.0-amd")
+    'v0.1.0-amd'
+    >>> ensure_chart_version_valid("v0.0.1")
+    'v0.0.1'
     >>> ensure_chart_version_valid("latest-amd")
     '0.0.1-latest-amd'
     """
+    check_version = chart_version if chart_version[0].isdigit() else chart_version[1:]
     try:
-        semver.parse_version_info(chart_version)
+        semver.parse_version_info(check_version)
         return chart_version
     except ValueError:
         updated_version = f"0.0.1-{chart_version}"

@@ -48,7 +48,7 @@ def _as_service_dict(compose_service: ComposeService) -> dict:
         default_ports=file_compose_ports(compose_service.ports),
         default_volumes=[],
         command=[],
-        labels={"chart_name": compose_service.name}
+        labels={"chart_name": compose_service.chart_inferred_name}
         if compose_service.chart_path
         else {},
     )

@@ -5,7 +5,7 @@ python_distribution(
     long_description_path="_pants/pants_py_deploy/readme.md",
     provides=setup_py(
         name="pants-py-deploy",
-        version="0.0.14.rc2",
+        version="0.0.15.rc1",
         description="Make it easy to maintain docker-compose files and helm-charts across projects with pants-py-deploy",
         author="Espen Albert",
         classifiers=[

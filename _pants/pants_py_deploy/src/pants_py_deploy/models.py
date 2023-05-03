@@ -64,6 +64,10 @@ class ComposeService:
     def image_url(self) -> str:
         return f"{self.name}:{self.image_tag}"
 
+    @property
+    def chart_inferred_name(self):
+        return self.chart_name or self.name
+
 
 @dataclass(frozen=True)
 class ComposeFiles:

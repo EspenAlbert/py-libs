@@ -118,7 +118,7 @@ async def export_helm_chart(request: ComposeExportChartRequest) -> ComposeExport
         export_from_compose(
             compose_path=docker_compose_path,
             chart_version=service.image_tag,
-            chart_name=service.chart_name or service.name,
+            chart_name=service.chart_inferred_name,
             image_url=service.image_url,
             on_exported=store_digest,
         )
@@ -145,7 +145,6 @@ async def helm_chart_partition(
     managed_chart_files = list(
         file.path for file in chain.from_iterable(new_exported_charts.charts.values())
     )
-
     return Partitions.single_partition(managed_chart_files)
 
 
@@ -257,7 +256,13 @@ async def fix_docker_compose(
 async def fix_helm_charts(
     request: HelmChartFileFixer.Batch, charts: HelmChartsExported
 ) -> FixResult:
-    new_contents = await Get(Snapshot, CreateDigest(charts.full_digest))
+    batch_files = set(request.files)
+    out_files = [
+        file_content
+        for file_content in charts.full_digest
+        if file_content.path in batch_files
+    ]
+    new_contents = await Get(Snapshot, CreateDigest(out_files))
     return FixResult(
         input=request.snapshot,
         output=new_contents,

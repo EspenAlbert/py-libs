@@ -55,12 +55,16 @@ class ComposeServiceInfo(Entity):
         ignore_falsy: bool = False,
         new_environment: dict | None = None,
         network_name: str = "",
+        ensure_labels: dict[str, str] | None = None,
     ) -> dict:
         image = image or self.image
         assert image, "image unspecified"
+        existing_labels = sort_keys(self.labels)
+        if ensure_labels:
+            existing_labels.update(ensure_labels)
         service_dict = {
             "image": image,
-            "labels": sort_keys(self.labels),
+            "labels": existing_labels,
             "environment": sort_keys(new_environment or self.default_env),
             "ports": port_overrides or self.default_ports if include_ports else [],
             "command": self.command,

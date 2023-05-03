@@ -5,6 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Callable, Iterable
 
+import semver
 from compose_chart_export.chart_export import export_chart
 from compose_chart_export.chart_file_templates import (
     ChartTemplateSpec,
@@ -106,6 +107,23 @@ def parse_service_name_extra_containers(
     return service_names[0], extra_containers
 
 
+def ensure_chart_version_valid(chart_version: str):
+    """
+    >>> ensure_chart_version_valid("latest-amd")
+    '0.0.1-latest-amd'
+    """
+    try:
+        semver.parse_version_info(chart_version)
+        return chart_version
+    except ValueError:
+        updated_version = f"0.0.1-{chart_version}"
+        logger.warning(
+            f"not a valid semver: {chart_version}, will try: {updated_version}"
+        )
+    semver.parse_version_info(updated_version)
+    return updated_version
+
+
 def export_from_compose(
     compose_path: PathLike,
     chart_version: str,
@@ -113,6 +131,7 @@ def export_from_compose(
     image_url: str = "unset",
     on_exported: Callable[[Path], None] | None = None,
 ):
+    chart_version = ensure_chart_version_valid(chart_version)
     compose_path = Path(compose_path)
     service_name, extra_containers = parse_service_name_extra_containers(compose_path)
     info = read_compose_info(compose_path, service_name)

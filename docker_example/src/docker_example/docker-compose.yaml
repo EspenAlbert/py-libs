@@ -8,6 +8,8 @@ services:
     - pants-default
   docker-example-amd-docker:
     image: docker-example-amd-docker:latest-amd
+    labels:
+      chart_name: docker-example-amd-docker
     environment:
       PORT: '8000'
       env: default

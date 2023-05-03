@@ -4,7 +4,7 @@ python_distribution(
     dependencies=[":docker_compose_parser"],
     provides=setup_py(
         name="docker-compose-parser",
-        version="0.0.13",
+        version="0.0.14",
         description="Small package for modifying/reading docker-compose files",
         author="Espen Albert",
         classifiers=[

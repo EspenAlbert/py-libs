@@ -34,7 +34,8 @@ from pants_py_deploy.compose_file import (
     modify_existing_compose,
 )
 from pants_py_deploy.export_env import read_env_and_ports
-from pants_py_deploy.fields import ComposeChartField, ComposeEnabledField
+from pants_py_deploy.fields import ComposeChartField, ComposeEnabledField, \
+    ComposeChartNameField
 from pants_py_deploy.models import (
     ComposeExportChart,
     ComposeExportChartRequest,
@@ -114,7 +115,7 @@ async def export_helm_chart(request: ComposeExportChartRequest) -> ComposeExport
         export_from_compose(
             compose_path=docker_compose_path,
             chart_version=service.image_tag,
-            chart_name=service.name,
+            chart_name=service.chart_name or service.name,
             image_url=service.image_url,
             on_exported=store_digest,
         )
@@ -205,6 +206,7 @@ async def resolve_compose_service(
         ports=Collection[PrefixPort](combined_ports(all_env_vars, dependencies)),
         image_tag=image_tag,
         chart_path=chart_path,
+        chart_name=image.get(ComposeChartNameField, default_raw_value="").value
     )
 
 

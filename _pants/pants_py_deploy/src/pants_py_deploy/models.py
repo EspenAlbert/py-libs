@@ -6,7 +6,7 @@ from typing import Iterable
 from compose_chart_export.ports import PrefixPort
 from pants.backend.docker.target_types import DockerImageTarget
 from pants.engine.collection import Collection
-from pants.engine.fs import DigestContents, FileContent
+from pants.engine.fs import DigestContents
 from pants.util.frozendict import FrozenDict
 from pants.util.ordered_set import FrozenOrderedSet
 
@@ -58,6 +58,7 @@ class ComposeService:
     ports: Collection[PrefixPort]
     image_tag: str
     chart_path: str = ""
+    chart_name: str = ""
 
     @property
     def image_url(self) -> str:

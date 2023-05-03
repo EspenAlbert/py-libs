@@ -13,4 +13,10 @@ class ComposeChartField(StringField):
     help = "If set to a path, it will use the docker-compose file to export a chart"
 
 
+class ComposeChartNameField(StringField):
+    alias = "compose_chart_name"
+    default = ""
+    help = "Will not use the name of the docker-image if it is set"
+
+
 COMPOSE_NETWORK_NAME = "pants-default"

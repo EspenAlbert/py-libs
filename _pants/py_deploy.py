@@ -96,7 +96,8 @@ def py_deploy(
                 ),
                 source=None,
                 compose_enabled=True,
-                compose_chart="chart" if use_helm and not is_arm else ""
+                compose_chart="chart" if docker.get("compose_chart", False) and not is_arm else "",
+                compose_chart_name=name,
             )
     if use_helm:
         chart_path = "chart"

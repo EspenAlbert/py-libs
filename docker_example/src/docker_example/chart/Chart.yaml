@@ -1,0 +1,7 @@
+apiVersion: v2
+name: docker-example
+description: A Helm chart for docker-example
+
+type: application
+version: 0.0.1-latest-amd
+appVersion: 0.0.1-latest-amd

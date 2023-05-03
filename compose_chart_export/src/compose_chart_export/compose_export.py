@@ -130,6 +130,7 @@ def export_from_compose(
     chart_name: str,
     image_url: str = "unset",
     on_exported: Callable[[Path], None] | None = None,
+    use_chart_name_as_container_name: bool = True,
 ):
     chart_version = ensure_chart_version_valid(chart_version)
     compose_path = Path(compose_path)
@@ -138,7 +139,11 @@ def export_from_compose(
     env = info.default_env
     compose_labels = info.labels
     prefix_ports = parse_container_ports(compose_labels, info.host_container_ports)
-    container_name = service_name.replace("_", "-")
+    container_name = (
+        chart_name.replace("_", "-")
+        if use_chart_name_as_container_name
+        else service_name.replace("_", "-")
+    )
     with TemporaryDirectory() as path:
         chart_path = Path(path) / chart_name
         if existing_chart := parse_existing_chart(compose_labels):

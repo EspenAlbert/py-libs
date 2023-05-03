@@ -6,7 +6,7 @@ python_distribution(
     long_description_path="model_lib/readme.md",
     provides=setup_py(
         name="model-lib",
-        version="0.0.14",
+        version="0.0.15",
         description="base models, metadata, and how to dump them to json|yaml",
         author="Espen Albert",
         classifiers=[

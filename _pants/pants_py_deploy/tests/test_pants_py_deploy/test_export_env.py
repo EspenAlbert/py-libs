@@ -1,7 +1,7 @@
 from typing import Dict
 
+from compose_chart_export.ports import PrefixPort
 from pants_py_deploy.export_env import REQUIRED, read_env_and_ports
-from pants_py_deploy.ports import PrefixPort
 
 prefix_script = """
 from pydantic import BaseSettings

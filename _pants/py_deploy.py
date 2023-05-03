@@ -63,7 +63,7 @@ def py_deploy(
             include_tools=True,
             layout="packed",
             execution_mode="venv",
-            resolve="python-default"
+            resolve=resolve
         )
         pex_binary(
             **dict(
@@ -95,7 +95,8 @@ def py_deploy(
                     pex_sources_path=f"{parent_path}/{pex_filename}",
                 ),
                 source=None,
-                compose_enabled=True
+                compose_enabled=True,
+                compose_chart="chart" if use_helm and not is_arm else ""
             )
     if use_helm:
         chart_path = "chart"

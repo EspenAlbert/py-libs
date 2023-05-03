@@ -1,12 +1,14 @@
 from collections import defaultdict
 from dataclasses import dataclass
+from itertools import chain
 from typing import Iterable
 
+from compose_chart_export.ports import PrefixPort
 from pants.backend.docker.target_types import DockerImageTarget
 from pants.engine.collection import Collection
+from pants.engine.fs import DigestContents, FileContent
 from pants.util.frozendict import FrozenDict
 from pants.util.ordered_set import FrozenOrderedSet
-from pants_py_deploy.ports import PrefixPort
 
 
 @dataclass(frozen=True)
@@ -52,7 +54,10 @@ class ComposeService:
     path: str
     name: str
     dependency_paths: FrozenOrderedSet[str]
+    env_vars: FrozenDict[str, str]
+    ports: Collection[PrefixPort]
     image_tag: str
+    chart_path: str = ""
 
     @property
     def image_url(self) -> str:
@@ -76,7 +81,45 @@ class ComposeFiles:
     def is_managed(self, path: str) -> bool:
         return path in self.paths_managed
 
+    @property
+    def helm_charts(self) -> dict[str, ComposeService]:
+        return {
+            path: service
+            for service in chain.from_iterable(self.paths_managed.values())
+            if (path := service.chart_path)
+        }
+
 
 @dataclass(frozen=True)
 class ComposeServiceRequest:
     image: DockerImageTarget
+
+
+@dataclass(frozen=True)
+class HelmChartsExported:
+    # chart paths always is to the Chart.yaml file
+    charts: FrozenDict[str, DigestContents]
+
+    def __init__(self, charts: dict[str, DigestContents]):
+        """Expecting FileContent to have the full relative path.
+
+        Keys are path to the chart itself
+        """
+        object.__setattr__(self, "charts", FrozenDict(charts))
+
+    @property
+    def full_digest(self) -> DigestContents:
+        return DigestContents(chain.from_iterable(self.charts.values()))
+
+
+@dataclass(frozen=True)
+class ComposeExportChartRequest:
+    # chart paths always is to the Chart.yaml file
+    service: ComposeService
+    chart_path: str
+
+
+@dataclass(frozen=True)
+class ComposeExportChart:
+    chart_path: str
+    files: DigestContents

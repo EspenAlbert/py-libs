@@ -6,7 +6,7 @@ import logging
 import typing
 from pydoc import locate
 
-from pants_py_deploy.ports import PrefixPort
+from compose_chart_export.ports import PrefixPort
 
 logger = logging.getLogger(__name__)
 NodeType = typing.TypeVar("NodeType", bound=ast.AST)

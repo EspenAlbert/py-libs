@@ -23,8 +23,8 @@ spec:
       {{- end }}
     spec:
       containers:
-      - name: docker-example-amd-docker
-        image: {{ .Values.docker_example_amd_docker.image | quote }}
+      - name: docker-example
+        image: {{ .Values.docker_example.image | quote }}
         imagePullPolicy: IfNotPresent
         resources: {}
         ports:
@@ -32,11 +32,11 @@ spec:
           name: http-docker-exa
         env:
         - name: PORT
-          value: {{ .Values.docker_example_amd_docker.PORT | quote }}
+          value: {{ .Values.docker_example.PORT | quote }}
         - name: env
-          value: {{ .Values.docker_example_amd_docker.env | quote }}
+          value: {{ .Values.docker_example.env | quote }}
         - name: name
-          value: {{ .Values.docker_example_amd_docker.name | quote }}
+          value: {{ .Values.docker_example.name | quote }}
       nodeSelector:
       {{- with .Values.nodeSelector }}
       {{- toYaml . | nindent 8 }}

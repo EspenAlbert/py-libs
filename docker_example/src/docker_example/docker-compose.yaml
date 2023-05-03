@@ -9,7 +9,7 @@ services:
   docker-example-amd-docker:
     image: docker-example-amd-docker:latest-amd
     labels:
-      chart_name: docker-example-amd-docker
+      chart_name: docker-example
     environment:
       PORT: '8000'
       env: default

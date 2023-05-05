@@ -6,8 +6,7 @@ serviceAccount:
   name: docker-example
   annotations: {}
   create: true
-docker_example:
-  PORT: '8000'
+deployment_only_with_service_account:
   env: default
   name: __REQUIRED__
-  image: docker-example-amd-docker:latest-amd
+  image: unset

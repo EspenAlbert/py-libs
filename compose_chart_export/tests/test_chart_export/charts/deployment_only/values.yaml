@@ -2,7 +2,7 @@ podLabels: {}
 podAnnotations: {}
 nodeSelector: {}
 replicas: 1
-docker_example_amd_docker:
+deployment_only:
   env: default
   name: __REQUIRED__
   image: unset

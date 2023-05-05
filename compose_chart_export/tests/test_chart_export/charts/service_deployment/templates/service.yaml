@@ -9,6 +9,6 @@ spec:
   type: ClusterIP
   ports:
   - port: 8000
-    name: http-docker-exa
+    name: http-service-de
   selector:
   {{- include "common.labels.matchLabels" . | nindent 4 }}

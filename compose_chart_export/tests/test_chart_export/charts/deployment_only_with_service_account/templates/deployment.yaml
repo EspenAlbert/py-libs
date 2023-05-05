@@ -23,16 +23,16 @@ spec:
       {{- end }}
     spec:
       containers:
-      - name: deployment-only
-        image: {{ .Values.deployment_only.image | quote }}
+      - name: deployment-only-with-service-account
+        image: {{ .Values.deployment_only_with_service_account.image | quote }}
         imagePullPolicy: IfNotPresent
         resources: {}
         ports: []
         env:
         - name: env
-          value: {{ .Values.deployment_only.env | quote }}
+          value: {{ .Values.deployment_only_with_service_account.env | quote }}
         - name: name
-          value: {{ .Values.deployment_only.name | quote }}
+          value: {{ .Values.deployment_only_with_service_account.name | quote }}
       nodeSelector:
       {{- with .Values.nodeSelector }}
       {{- toYaml . | nindent 8 }}

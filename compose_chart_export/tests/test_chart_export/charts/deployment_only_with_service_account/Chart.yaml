@@ -1,0 +1,7 @@
+apiVersion: v2
+name: deployment_only_with_service_account
+description: A Helm chart for deployment_only_with_service_account
+
+type: application
+version: 0.0.1
+appVersion: 0.0.1

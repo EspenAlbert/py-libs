@@ -11,6 +11,7 @@ from compose_chart_export.chart_file_templates import (
     helpers_tpl,
     notes_txt,
     persistence_volume_claims,
+    service_account,
     service_yaml,
     values_yaml,
 )
@@ -32,6 +33,7 @@ PATH_TO_GENERATORS: Dict[str, Callable[[ChartTemplateSpec], str]] = {
     "templates/NOTES.txt": notes_txt,
     daemonset_path: daemonset_yaml,
     "templates/persistent-volume-claims.yaml": persistence_volume_claims,
+    "templates/service_account.yaml": service_account,
 }
 SERVICE_DEPLOYMENT = "service_deployment"
 DEPLOYMENT_ONLY = "deployment_only"

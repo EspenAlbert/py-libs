@@ -72,6 +72,10 @@ def parse_existing_chart(labels: dict[str, str]):
     return labels.get("chart_path", "")
 
 
+def parse_service_account_name(labels: dict[str, str]):
+    return labels.get("chart_service_account_name", "")
+
+
 class ExtraContainer(BaseModel):
     name: kubernetes_label_regex
     env: dict[str, str]
@@ -244,6 +248,7 @@ def create_spec(
     use_resource_limits = parse_use_resource_limits(compose_labels)
     repo_name = parse_repo_name(compose_labels) or container_name
     repo_owner = parse_repo_owner(compose_labels) or "unknown"
+    service_account_name = parse_service_account_name(compose_labels)
     return template_name, ChartTemplateSpec(
         replacements=TemplateReplacements(
             APP_VERSION=chart_version,
@@ -256,4 +261,5 @@ def create_spec(
         container_host_path_volumes={container_name: target_volumes},
         persistence_volumes=persistent_volumes,
         use_resource_limits=use_resource_limits,
+        service_account_name=service_account_name,
     )

@@ -121,7 +121,12 @@ class ChartTemplateSpec(Event):
     )
     persistence_volumes: list[PersistentVolume] = Field(default_factory=list)
     use_resource_limits: bool = True
+    service_account_name: str = ""
     extra_labels: dict[str, kubernetes_label_regex] = Field(default_factory=dict)
+
+    @property
+    def use_service_account(self) -> bool:
+        return bool(self.service_account_name)
 
     @property
     def containers_values_names(self) -> List[str]:
@@ -147,12 +152,24 @@ resources:
     cpu: 500m
     memory: 512Mi"""
 
+_SERVICE_ACCOUNT_VALUES = """\
+serviceAccount:
+  name: SERVICE_ACCOUNT_NAME
+  annotations: {}
+  create: true
+"""
+
 
 def values_yaml(spec: ChartTemplateSpec) -> str:
     values_base = _VALUES_YAML
     if spec.use_resource_limits:
         values_base += f"\n{_RESOURCES_YAML}"
-    return _VALUES_YAML + "".join(
+    if service_account_name := spec.service_account_name:
+        service_account_values = _SERVICE_ACCOUNT_VALUES.replace(
+            "SERVICE_ACCOUNT_NAME", service_account_name
+        )
+        values_base += f"\n{service_account_values}"
+    return values_base + "".join(
         f"\n{name}: \n  image: override_me" for name in spec.containers_values_names
     )
 
@@ -407,3 +424,26 @@ def persistence_volume_claims(spec: ChartTemplateSpec) -> str:
         )
         for pv in spec.persistence_volumes
     )
+
+
+_SERVICE_ACCOUNT = """\
+{{- if .Values.serviceAccount.create }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.serviceAccount.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+"""
+
+
+def service_account(spec: ChartTemplateSpec) -> str:
+    if spec.use_service_account:
+        return _SERVICE_ACCOUNT
+    return ""

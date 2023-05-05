@@ -85,6 +85,14 @@ async def export_helm_charts(compose_files: ComposeFiles) -> HelmChartsExported:
     return HelmChartsExported(charts)
 
 
+def as_chart_version(image_tag: str) -> str:
+    """
+    >>> as_chart_version('0.0.1-latest-amd')
+    '0.0.1-latest-chart'
+    """
+    return ensure_suffix(image_tag.removesuffix("-amd").removesuffix("-arm"), "-chart")
+
+
 @rule
 async def export_helm_chart(request: ComposeExportChartRequest) -> ComposeExportChart:
     chart_yaml_path = request.chart_path
@@ -117,7 +125,7 @@ async def export_helm_chart(request: ComposeExportChartRequest) -> ComposeExport
         docker_compose_path.write_text(compose_yaml)
         export_from_compose(
             compose_path=docker_compose_path,
-            chart_version=service.image_tag,
+            chart_version=as_chart_version(service.image_tag),
             chart_name=service.chart_inferred_name,
             image_url=service.image_url,
             on_exported=store_digest,

@@ -38,8 +38,10 @@ from pants_py_deploy.fields import (
     ComposeChartField,
     ComposeChartNameField,
     ComposeEnabledField,
+    ComposeEnvExportField,
 )
 from pants_py_deploy.models import (
+    ComposeEnvExport,
     ComposeExportChart,
     ComposeExportChartRequest,
     ComposeFiles,
@@ -219,6 +221,7 @@ async def resolve_compose_service(
     compose_chart_relative_path = service_request.image.get(
         ComposeChartField, default_raw_value=""
     ).value
+    compose_env_export = ComposeEnvExport(**image[ComposeEnvExportField].value)
     if compose_chart_relative_path:
         chart_path = ensure_suffix(
             f"{spec_path}/{compose_chart_relative_path}", "/Chart.yaml"
@@ -229,11 +232,14 @@ async def resolve_compose_service(
         path=ensure_suffix(spec_path, "/docker-compose.yaml"),
         name=image.address.target_name,
         dependency_paths=FrozenOrderedSet(dependencies),
-        env_vars=FrozenDict(file_env_vars(all_env_vars, dependencies)),
+        env_vars=FrozenDict(
+            file_env_vars(all_env_vars, dependencies, compose_env_export)
+        ),
         ports=Collection[PrefixPort](combined_ports(all_env_vars, dependencies)),
         image_tag=image_tag,
         chart_path=chart_path,
         chart_name=image.get(ComposeChartNameField, default_raw_value="").value,
+        compose_env_export=compose_env_export,
     )
 
 

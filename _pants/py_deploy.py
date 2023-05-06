@@ -37,7 +37,8 @@ def py_deploy(
     version: str = "3.10.11",
     env_arm: str = "linux_arm",
     env_amd: str = "linux_amd",
-    resolve: str = "python-default"
+    resolve: str = "python-default",
+    env_export: dict=None
 ):
     use_docker = docker is not None
     use_helm = helm is not None
@@ -98,6 +99,7 @@ def py_deploy(
                 compose_enabled=True,
                 compose_chart="chart" if docker.get("compose_chart", False) and not is_arm else "",
                 compose_chart_name=name,
+                compose_env_export=env_export or {}
             )
     if use_helm:
         chart_path = "chart"

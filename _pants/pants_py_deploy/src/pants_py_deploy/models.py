@@ -1,5 +1,6 @@
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from fnmatch import fnmatchcase
 from itertools import chain
 from typing import Iterable
 
@@ -50,6 +51,38 @@ class FileEnvVars:
 
 
 @dataclass(frozen=True)
+class ComposeEnvExport:
+    """
+    >>> ComposeEnvExport().include_env_var("MY_ENV_VAR")
+    True
+    >>> ComposeEnvExport(exclude_globs=["MY_*"]).include_env_var("MY_ENV_VAR")
+    False
+    >>> ComposeEnvExport(exclude_globs=["MY_ENV_VAR"]).include_env_var("MY_ENV_VAR")
+    False
+    >>> ComposeEnvExport(exclude_globs=["my_env_var"]).include_env_var("MY_ENV_VAR")
+    True
+    >>> ComposeEnvExport(exclude_globs=["MY_ENV_*"], include_globs=["MY_ENV_VAR"]).include_env_var("MY_ENV_VAR")
+    True
+    """
+
+    exclude_globs: Collection[str]
+    include_globs: Collection[str]
+
+    def __init__(
+        self, exclude_globs: Iterable[str] = None, include_globs: Iterable[str] = None
+    ):
+        object.__setattr__(self, "exclude_globs", exclude_globs or Collection[str]())
+        object.__setattr__(self, "include_globs", include_globs or Collection[str]())
+
+    def include_env_var(self, name: str):
+        if any(fnmatchcase(name, include) for include in self.include_globs):
+            return True
+        if any(fnmatchcase(name, exclude) for exclude in self.exclude_globs):
+            return False
+        return True
+
+
+@dataclass(frozen=True)
 class ComposeService:
     path: str
     name: str
@@ -59,6 +92,7 @@ class ComposeService:
     image_tag: str
     chart_path: str = ""
     chart_name: str = ""
+    compose_env_export: ComposeEnvExport = field(default_factory=ComposeEnvExport)
 
     @property
     def image_url(self) -> str:

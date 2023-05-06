@@ -10,7 +10,12 @@ from docker_compose_parser.file_models import (
 )
 from pants.engine.fs import FileContent
 from pants_py_deploy.fields import COMPOSE_NETWORK_NAME
-from pants_py_deploy.models import ComposeFiles, ComposeService, FileEnvVars
+from pants_py_deploy.models import (
+    ComposeEnvExport,
+    ComposeFiles,
+    ComposeService,
+    FileEnvVars,
+)
 from zero_3rdparty.str_utils import ensure_suffix
 
 from model_lib import FileFormat, dump, parse_payload
@@ -104,11 +109,19 @@ def create_compose_file(path: str, content: str) -> FileContent:
     )
 
 
-def file_env_vars(env_vars: FileEnvVars, dependencies: Iterable[str]) -> dict[str, str]:
+def file_env_vars(
+    env_vars: FileEnvVars,
+    dependencies: Iterable[str],
+    compose_env_export: ComposeEnvExport,
+) -> dict[str, str]:
     env_vars_paths = set(dependencies) & env_vars.file_env_vars.keys()
     file_env_vars = ChainMap(
         *[
-            {env.name: env.default for env in env_vars.file_env_vars[env_file]}
+            {
+                env.name: env.default
+                for env in env_vars.file_env_vars[env_file]
+                if compose_env_export.include_env_var(env.name)
+            }
             for env_file in env_vars_paths
         ]
     )

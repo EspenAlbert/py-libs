@@ -188,6 +188,20 @@ async def find_env_vars(targets: AllTargets) -> FileEnvVars:
     return FileEnvVars(file_env_vars, file_ports)
 
 
+def strip_address_target_name(address: str) -> str:
+    """
+    >>> strip_address_target_name('auth/src/welcome:welcome-app-amd-deps')
+    'auth/src/welcome'
+    >>> strip_address_target_name('auth/src/welcome/settings.py')
+    'auth/src/welcome/settings.py'
+    >>> strip_address_target_name('auth/src/welcome/settings.py:lib')
+    'auth/src/welcome/settings.py'
+    """
+    if ":" in address:
+        return address.rsplit(":", maxsplit=1)[0]
+    return address
+
+
 @rule
 async def resolve_compose_service(
     service_request: ComposeServiceRequest, all_env_vars: FileEnvVars
@@ -197,7 +211,10 @@ async def resolve_compose_service(
         TransitiveTargets, TransitiveTargetsRequest([image.address])
     )
     spec_path = image.address.spec_path
-    dependencies = [str(dep.address) for dep in transitive_targets.dependencies]
+    dependencies = [
+        strip_address_target_name(str(dep.address))
+        for dep in transitive_targets.dependencies
+    ]
     image_tag = image[DockerImageTagsField].value[0]
     compose_chart_relative_path = service_request.image.get(
         ComposeChartField, default_raw_value=""

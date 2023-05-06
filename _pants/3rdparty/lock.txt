@@ -10,16 +10,16 @@
 //   ],
 //   "generated_with_requirements": [
 //     "PyYAML==6.0",
-//     "compose-chart-export==0.0.15rc4",
-//     "docker-compose-parser==0.0.15",
-//     "model-lib==0.0.15",
+//     "compose-chart-export==0.0.16",
+//     "docker-compose-parser==0.0.16",
+//     "model-lib==0.0.16",
 //     "orjson==3.6.5",
 //     "pantsbuild.pants.testutil<2.17,>=2.16.0a0",
 //     "pantsbuild.pants<2.17,>=2.16.0a0",
 //     "pydantic==1.10.2",
 //     "pydevd-pycharm==231.8109.197",
 //     "typing_extensions>=4.3.0",
-//     "zero-3rdparty==0.0.15"
+//     "zero-3rdparty==0.0.16"
 //   ],
 //   "manylinux": "manylinux2014",
 //   "requirement_constraints": [],
@@ -218,37 +218,37 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "c9ed4751525af49dfd395529a9b78f5ce6fe32f63fc1231d6578bb2d1e36beee",
-              "url": "https://files.pythonhosted.org/packages/a6/fe/02fe5672b46af2b7eda1cbc0d05fdf8ef5e77157f123c911393cfe2c565c/compose_chart_export-0.0.15rc4-py3-none-any.whl"
+              "hash": "51d594b1e26535a8c20b163e31e39580d04f46d571d8916bfa9a5bd8bff2b234",
+              "url": "https://files.pythonhosted.org/packages/dd/3d/bcd6cb180f8a340fae6ef72897043288e3bdda290ee49fce9720b4c9d54c/compose_chart_export-0.0.16-py3-none-any.whl"
             }
           ],
           "project_name": "compose-chart-export",
           "requires_dists": [
-            "docker-compose-parser==0.0.15",
-            "model-lib==0.0.15",
+            "docker-compose-parser==0.0.16",
+            "model-lib==0.0.16",
             "pydantic>=1.10.2",
             "semver==2.13.0",
-            "zero-3rdparty==0.0.15"
+            "zero-3rdparty==0.0.16"
           ],
           "requires_python": ">=3.9",
-          "version": "0.0.15rc4"
+          "version": "0.0.16"
         },
         {
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "797aa2dbc6f71d6974fb46d133b26b1897456f5de12024592635dd179512a326",
-              "url": "https://files.pythonhosted.org/packages/a9/a0/b7ec5103c7c62d31c21dc67706040c5eb473ac035cf08715565fb235b805/docker_compose_parser-0.0.15-py3-none-any.whl"
+              "hash": "2ba7f9170d45f6bf8f6ace70e76d24cd3e6fd33937e0dcc61c92edd561169bc4",
+              "url": "https://files.pythonhosted.org/packages/c7/d0/8998761dea67b3c8f6b6f789bc2c21309e481e70a1b2ddba539c3f9ee0c8/docker_compose_parser-0.0.16-py3-none-any.whl"
             }
           ],
           "project_name": "docker-compose-parser",
           "requires_dists": [
-            "model-lib==0.0.15",
+            "model-lib==0.0.16",
             "pydantic>=1.10.2",
-            "zero-3rdparty==0.0.15"
+            "zero-3rdparty==0.0.16"
           ],
           "requires_python": ">=3.9",
-          "version": "0.0.15"
+          "version": "0.0.16"
         },
         {
           "artifacts": [
@@ -414,8 +414,8 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "87b54284301daf79e09e04fa3c48834f0f98e019dfa15f037977fe67897f7b2d",
-              "url": "https://files.pythonhosted.org/packages/b7/7d/85caaee6bcb3c3f307a2f46dc85ce37e967b4c46df056f2ac922ebf769a6/model_lib-0.0.15-py3-none-any.whl"
+              "hash": "b059e33a80b722c71b014cb229fe5e5f6423d57c0c8902c628eea5cf49f6f01f",
+              "url": "https://files.pythonhosted.org/packages/30/27/07dea4932f528c5864e904bfda3725faacac7b5602380ce03324f952fef9/model_lib-0.0.16-py3-none-any.whl"
             }
           ],
           "project_name": "model-lib",
@@ -424,10 +424,10 @@
             "orjson>=3.6.5; extra == \"json\"",
             "pydantic>=1.10.2",
             "typing-extensions>=4.3.0",
-            "zero-3rdparty==0.0.15"
+            "zero-3rdparty==0.0.16"
           ],
           "requires_python": ">=3.9",
-          "version": "0.0.15"
+          "version": "0.0.16"
         },
         {
           "artifacts": [
@@ -1249,8 +1249,8 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "51097d749a1cc82fa5a6945e18703756a904a37e951baa8a8ced0c3603c45957",
-              "url": "https://files.pythonhosted.org/packages/47/bc/6bc6c72f0001fa4776d7bf2998ddad9f62fe2121a8eb7fed0d9ac8b91599/zero_3rdparty-0.0.15-py3-none-any.whl"
+              "hash": "4e37a1e177c6927694b01d11797e12e597e8381c72a8d0ef57fc408552bcda2c",
+              "url": "https://files.pythonhosted.org/packages/21/65/385abff07b62713ac952103a4038a5252c1f0afb8fcc6dbb8eb53e78c157/zero_3rdparty-0.0.16-py3-none-any.whl"
             }
           ],
           "project_name": "zero-3rdparty",
@@ -1258,7 +1258,7 @@
             "typing-extensions>=4.3.0"
           ],
           "requires_python": ">=3.9",
-          "version": "0.0.15"
+          "version": "0.0.16"
         }
       ],
       "platform_tag": null
@@ -1270,16 +1270,16 @@
   "prefer_older_binary": false,
   "requirements": [
     "PyYAML==6.0",
-    "compose-chart-export==0.0.15rc4",
-    "docker-compose-parser==0.0.15",
-    "model-lib==0.0.15",
+    "compose-chart-export==0.0.16",
+    "docker-compose-parser==0.0.16",
+    "model-lib==0.0.16",
     "orjson==3.6.5",
     "pantsbuild.pants.testutil<2.17,>=2.16.0a0",
     "pantsbuild.pants<2.17,>=2.16.0a0",
     "pydantic==1.10.2",
     "pydevd-pycharm==231.8109.197",
     "typing_extensions>=4.3.0",
-    "zero-3rdparty==0.0.15"
+    "zero-3rdparty==0.0.16"
   ],
   "requires_python": [
     "<3.10,>=3.9"

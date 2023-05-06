@@ -37,6 +37,7 @@ spec:
           value: {{ .Values.docker_example.env | quote }}
         - name: name
           value: {{ .Values.docker_example.name | quote }}
+      serviceAccountName: {{ template "docker-example.serviceAccountName" . }}
       nodeSelector:
       {{- with .Values.nodeSelector }}
       {{- toYaml . | nindent 8 }}

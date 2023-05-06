@@ -33,6 +33,7 @@ spec:
           value: {{ .Values.deployment_only_with_service_account.env | quote }}
         - name: name
           value: {{ .Values.deployment_only_with_service_account.name | quote }}
+      serviceAccountName: {{ template "deployment_only_with_service_account.serviceAccountName" . }}
       nodeSelector:
       {{- with .Values.nodeSelector }}
       {{- toYaml . | nindent 8 }}

@@ -227,6 +227,17 @@ app.kubernetes.io/name: {{ .Chart.Name }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 """
+_service_account_tpl = """
+# Template from
+# https://github.com/influxdata/helm-charts/blob/master/charts/telegraf-ds/templates/_helpers.tpl#L400
+{{- define "APP_NAME.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create -}}
+    {{ .Values.serviceAccount.name }}
+{{- else -}}
+    {{ default "default" .Values.serviceAccount.name }}
+{{- end -}}
+{{- end -}}
+"""
 
 
 def helpers_tpl(spec: ChartTemplateSpec) -> str:
@@ -235,6 +246,10 @@ def helpers_tpl(spec: ChartTemplateSpec) -> str:
     if extra_labels := spec.extra_labels:
         extra_labels_str = "\n".join(
             f"{key}: {value}" for key, value in extra_labels.items()
+        )
+    if spec.use_service_account:
+        helpers_tpl_content += _service_account_tpl.replace(
+            "APP_NAME", spec.replacements.APP_NAME
         )
     helpers_tpl_content = helpers_tpl_content.replace("EXTRA_LABELS", extra_labels_str)
     return helpers_tpl_content
@@ -291,6 +306,12 @@ def _add_template_spec(template: str, spec: ChartTemplateSpec):
         with edit_helm_template(
             deploy_file, yaml_path="spec.template.spec"
         ) as file_spec:  # type: dict
+            if spec.use_service_account:
+                file_spec[
+                    "serviceAccountName"
+                ] = '{{ template "APP_NAME.serviceAccountName" . }}'.replace(
+                    "APP_NAME", spec.replacements.APP_NAME
+                )
             containers: list = file_spec["containers"]
             for name, value_name in spec.container_name_value_name:
                 container_spec = dict(

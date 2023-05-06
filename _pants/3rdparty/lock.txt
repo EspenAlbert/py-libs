@@ -10,7 +10,7 @@
 //   ],
 //   "generated_with_requirements": [
 //     "PyYAML==6.0",
-//     "compose-chart-export==0.0.15rc2",
+//     "compose-chart-export==0.0.15rc4",
 //     "docker-compose-parser==0.0.15",
 //     "model-lib==0.0.15",
 //     "orjson==3.6.5",
@@ -218,8 +218,8 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "f140d924426b137bdb866170452e9152ef14138ad409140b793354fa609a819d",
-              "url": "https://files.pythonhosted.org/packages/84/55/c32c2f17fac7c82fb1268766d487a382dd72a4bfc9cb9a7d8f6963852505/compose_chart_export-0.0.15rc2-py3-none-any.whl"
+              "hash": "c9ed4751525af49dfd395529a9b78f5ce6fe32f63fc1231d6578bb2d1e36beee",
+              "url": "https://files.pythonhosted.org/packages/a6/fe/02fe5672b46af2b7eda1cbc0d05fdf8ef5e77157f123c911393cfe2c565c/compose_chart_export-0.0.15rc4-py3-none-any.whl"
             }
           ],
           "project_name": "compose-chart-export",
@@ -231,7 +231,7 @@
             "zero-3rdparty==0.0.15"
           ],
           "requires_python": ">=3.9",
-          "version": "0.0.15rc2"
+          "version": "0.0.15rc4"
         },
         {
           "artifacts": [
@@ -1270,7 +1270,7 @@
   "prefer_older_binary": false,
   "requirements": [
     "PyYAML==6.0",
-    "compose-chart-export==0.0.15rc2",
+    "compose-chart-export==0.0.15rc4",
     "docker-compose-parser==0.0.15",
     "model-lib==0.0.15",
     "orjson==3.6.5",

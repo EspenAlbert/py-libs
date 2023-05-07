@@ -10,7 +10,9 @@ from concurrent.futures import Future as _ConcFuture
 from concurrent.futures import TimeoutError as _ConcTimeoutError
 from contextlib import suppress
 from functools import wraps
-from typing import Any, Callable, Iterable, Optional, Protocol, Type, TypeVar
+from typing import Any, Callable, Iterable, Optional, Type, TypeVar, Union
+
+from typing_extensions import TypeAlias
 
 logger = logging.getLogger(__name__)
 ResultT = TypeVar("ResultT")
@@ -20,33 +22,7 @@ ConcTimeoutError = _ConcTimeoutError
 AsyncTimeoutError = _AsyncTimeoutError
 AsyncCancelledError = _AsyncCancelledError
 
-
-class Future(Protocol[ResultT]):
-    """Generic Future."""
-
-    def __await__(self) -> ResultT:
-        pass
-
-    def exception(self, timeout: float | None = None) -> Optional[Exception]:
-        pass
-
-    def set_exception(self, exception: Exception) -> None:
-        pass
-
-    def set_result(self, result: ResultT) -> None:
-        pass
-
-    def result(self, timeout: Optional[float] = None) -> ResultT:
-        pass
-
-    def done(self) -> bool:
-        pass
-
-    def add_done_callback(self, fn: Callable[[Future[ResultT]], None]) -> None:
-        pass
-
-    def cancel(self):
-        pass
+Future: TypeAlias = Union[ConcFuture[ResultT], AsyncFuture[ResultT]]
 
 
 def gather_conc_futures(futures: Iterable[ConcFuture]) -> AsyncFuture:
@@ -171,15 +147,13 @@ def as_incomplete_future(
 
 
 def safe_cancel(future: Optional[Future], reason: str = ""):
-    # TODO: support message in 3.9
     if future and not future.done():
-        future.cancel()
+        future.cancel(reason)
 
 
-T = TypeVar("T")
-
-
-def safe_wait(future: Future[T], timeout: Optional[float] = None) -> Optional[T]:
+def safe_wait(
+    future: Future[ResultT], timeout: Optional[float] = None
+) -> Optional[ResultT]:
     if not future:
         logger.warning("no future to wait for")
     try:

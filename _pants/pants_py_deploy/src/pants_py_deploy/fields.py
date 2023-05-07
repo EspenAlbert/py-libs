@@ -1,6 +1,8 @@
 from typing import ClassVar
 
 from pants.engine.target import BoolField, DictStringToStringSequenceField, StringField
+from pants.option.option_types import StrListOption
+from pants.option.subsystem import Subsystem
 from pants.util.frozendict import FrozenDict
 
 
@@ -29,3 +31,15 @@ class ComposeEnvExportField(DictStringToStringSequenceField):
 
 
 COMPOSE_NETWORK_NAME = "pants-default"
+
+
+class PyDeploySubsystem(Subsystem):
+    options_scope = "py-deploy"
+    name = "PyDeploy"
+    help = "Control env-vars resolving for docker-compose files"
+
+    env_vars_file_globs = StrListOption(
+        flag_name="--env-vars-globs",
+        default=lambda cls: ["**/settings.py"],
+        help="patterns of files for finding env-vars",
+    )

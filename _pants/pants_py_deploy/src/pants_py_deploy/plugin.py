@@ -39,6 +39,7 @@ from pants_py_deploy.fields import (
     ComposeChartNameField,
     ComposeEnabledField,
     ComposeEnvExportField,
+    PyDeploySubsystem,
 )
 from pants_py_deploy.models import (
     ComposeEnvExport,
@@ -56,6 +57,8 @@ from zero_3rdparty.str_utils import ensure_suffix
 
 
 class DockerComposeFileFixer(FixFilesRequest):
+    tool_subsystem = PyDeploySubsystem
+
     @classproperty
     def tool_name(cls) -> str:
         return "docker-compose"
@@ -66,6 +69,8 @@ class DockerComposeFileFixer(FixFilesRequest):
 
 
 class HelmChartFileFixer(FixFilesRequest):
+    tool_subsystem = PyDeploySubsystem
+
     @classproperty
     def tool_name(cls) -> str:
         return "helm-chart"
@@ -159,7 +164,9 @@ async def helm_chart_partition(
 
 
 @rule
-async def find_env_vars(targets: AllTargets) -> FileEnvVars:
+async def find_env_vars(
+    targets: AllTargets, py_deploy: PyDeploySubsystem
+) -> FileEnvVars:
     # don't understand why targets: Targets doesn't work
     sources = await Get(
         SourceFiles,
@@ -173,7 +180,8 @@ async def find_env_vars(targets: AllTargets) -> FileEnvVars:
     )
 
     settings_digest = await Get(
-        Digest, DigestSubset(sources.snapshot.digest, PathGlobs(["**/settings.py"]))
+        Digest,
+        DigestSubset(sources.snapshot.digest, PathGlobs(py_deploy.env_vars_file_globs)),
     )
     digest_contents = await Get(DigestContents, Digest, settings_digest)
     file_env_vars_ports = {

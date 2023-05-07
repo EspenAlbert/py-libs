@@ -36,5 +36,4 @@ py_deploy(
   - if they exist: ensure environment & ports are up-to-date
 
 ## Later ideas
-- support passing `env_config=dict(ignore_globs=[], include_globs=[])`
 - support analyzing env-vars and using them for adding services like postgres/rabbitmq/mongo etc. to the docker-compose file

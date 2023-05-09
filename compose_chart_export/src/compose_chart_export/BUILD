@@ -5,7 +5,7 @@ python_distribution(
     long_description_path="compose_chart_export/readme.md",
     provides=setup_py(
         name="compose_chart_export",
-        version="0.0.16",
+        version="0.0.16rc1",
         description="compose_agent_export for docker-compose -> helm chart",
         author="Espen",
         classifiers=[

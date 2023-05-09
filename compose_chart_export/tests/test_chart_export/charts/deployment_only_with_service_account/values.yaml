@@ -1,3 +1,5 @@
+app_kubernetes_io_name: ''
+app_kubernetes_io_instance: ''
 podLabels: {}
 podAnnotations: {}
 nodeSelector: {}

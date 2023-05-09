@@ -141,7 +141,10 @@ def chart_yaml(spec: ChartTemplateSpec) -> str:
     return spec.replacements.replace(_CHART_YAML)
 
 
-_VALUES_YAML = """podLabels: {}
+_VALUES_YAML = """\
+app_kubernetes_io_name: ''
+app_kubernetes_io_instance: ''
+podLabels: {}
 podAnnotations: {}
 nodeSelector: {}
 replicas: 1"""
@@ -223,8 +226,8 @@ EXTRA_LABELS
 {{- end -}}
 
 {{- define "common.labels.matchLabels" -}}
-app.kubernetes.io/name: {{ .Chart.Name }}
-app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/name: {{ default .Chart.Name .Values.app_kubernetes_io_name }}
+app.kubernetes.io/instance: {{ default .Release.Name .Values.app_kubernetes_io_instance }}
 {{- end -}}
 """
 _service_account_tpl = """

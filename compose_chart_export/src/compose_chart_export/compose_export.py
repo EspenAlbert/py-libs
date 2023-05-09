@@ -76,6 +76,10 @@ def parse_service_account_name(labels: dict[str, str]):
     return labels.get("chart_service_account_name", "")
 
 
+def parse_chart_name(labels: dict[str, str]) -> str:
+    return labels.get("chart_name", "")
+
+
 class ExtraContainer(BaseModel):
     name: kubernetes_label_regex
     env: dict[str, str]
@@ -96,7 +100,7 @@ def parse_service_name_extra_containers(
                     name=container_name, env=info.default_env, command=info.command
                 )
             )
-        elif info.labels.get("chart_name"):
+        elif parse_chart_name(info.labels):
             service_names_with_chart_name.append(each_service_name)
         else:
             service_names.append(each_service_name)
@@ -136,7 +140,7 @@ def ensure_chart_version_valid(chart_version: str):
 def export_from_compose(
     compose_path: PathLike,
     chart_version: str,
-    chart_name: str,
+    chart_name: str = "",
     image_url: str = "unset",
     on_exported: Callable[[Path], None] | None = None,
     use_chart_name_as_container_name: bool = True,
@@ -147,6 +151,7 @@ def export_from_compose(
     info = read_compose_info(compose_path, service_name)
     env = info.default_env
     compose_labels = info.labels
+    chart_name = chart_name or parse_chart_name(compose_labels)
     prefix_ports = parse_container_ports(compose_labels, info.host_container_ports)
     container_name = (
         chart_name.replace("_", "-")

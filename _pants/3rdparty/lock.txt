@@ -10,7 +10,7 @@
 //   ],
 //   "generated_with_requirements": [
 //     "PyYAML==6.0",
-//     "compose-chart-export==0.0.17",
+//     "compose-chart-export==0.0.18",
 //     "docker-compose-parser==0.0.17",
 //     "model-lib==0.0.17",
 //     "orjson==3.6.5",
@@ -218,8 +218,8 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "579a83c0b3fa535d841534da6c58dabd227ee34182e16fbbd25e9af23851192a",
-              "url": "https://files.pythonhosted.org/packages/dd/70/507d6c30812e7c6a98894e1882d0926dbb8a74c1c4cd67f007acc9758406/compose_chart_export-0.0.17-py3-none-any.whl"
+              "hash": "aeaa72228ccc2b5dcd985739687ee03450c00f2a776bdc8e5ebafabe64d22d77",
+              "url": "https://files.pythonhosted.org/packages/ec/d8/eb913660e16e8cd0fde35b1d0ad9ab052f5a86d3aea7f98090ca6da462bc/compose_chart_export-0.0.18-py3-none-any.whl"
             }
           ],
           "project_name": "compose-chart-export",
@@ -231,7 +231,7 @@
             "zero-3rdparty==0.0.17"
           ],
           "requires_python": ">=3.9",
-          "version": "0.0.17"
+          "version": "0.0.18"
         },
         {
           "artifacts": [
@@ -491,23 +491,23 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "0c16828b4a48391b6ed38a439dcd78d3fa8723e5500f9a459ec8758b67449d4d",
-              "url": "https://files.pythonhosted.org/packages/05/37/0920643257cd7cb555f160229b54fabfb652af99f8aa8b69b60b3142ee5f/pantsbuild.pants-2.16.0rc1-cp39-cp39-manylinux2014_x86_64.whl"
+              "hash": "66758ad2af2ffa8177bca7ff31231ae5e7ec528e7a709e405aea9a2ea8aa442a",
+              "url": "https://files.pythonhosted.org/packages/4a/f6/1f428c18fda08901356949049f654feefa2e45e8a15906850723d2ee31c8/pantsbuild.pants-2.16.0rc2-cp39-cp39-manylinux2014_x86_64.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "1ca4f9d9cfbeee2dbc4e7511a30aa7185386c96b70fc8f05e904e8d15a8e430f",
-              "url": "https://files.pythonhosted.org/packages/10/b0/55ee3221d2f8cb0f30ffb89bcac055a5c818509c37814c661bf16491e8e5/pantsbuild.pants-2.16.0rc1-cp39-cp39-macosx_10_15_x86_64.whl"
+              "hash": "a27a59ece4edb68033d7670f01b552f1ab9234e70deb543f7309809c602a333c",
+              "url": "https://files.pythonhosted.org/packages/48/5d/a3a414e7a41db1d1ef128aace6ea0facfbfb2f26ac07a1f2c08e852beda5/pantsbuild.pants-2.16.0rc2-cp39-cp39-macosx_10_15_x86_64.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "f6beaee0c39e790ac07b04d18e5916a6549d3927fdac2724a7aa42aeec77ef8e",
-              "url": "https://files.pythonhosted.org/packages/1c/8c/60d0739e6b6341f1d0fe7c377361cc4589acf008ac23f7e0cf94779fd108/pantsbuild.pants-2.16.0rc1-cp39-cp39-manylinux2014_aarch64.whl"
+              "hash": "f0360b7fcc7078f86a56cea4308da39284e8fa00b11d47f8c0150a5a7e9afc66",
+              "url": "https://files.pythonhosted.org/packages/56/5b/12b53256be68d127a066bdf316da25b21843da1dcc843c1e002251f850d6/pantsbuild.pants-2.16.0rc2-cp39-cp39-macosx_11_0_arm64.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "80a2490dde99469fb85467052f538d9384a35ce3703b527811fbf7f093299d2f",
-              "url": "https://files.pythonhosted.org/packages/95/0f/46c874bc3f78676e409120bb24d80924125f1b16238d1c8938a7c559d2dc/pantsbuild.pants-2.16.0rc1-cp39-cp39-macosx_11_0_arm64.whl"
+              "hash": "1693bb227234da20dd1de40667db7338f5d8e176fda934054ed83537e5a9e32f",
+              "url": "https://files.pythonhosted.org/packages/a6/54/1835e864b2a02a25034f701164761b196448c05b75cd6f2c87a509bc692b/pantsbuild.pants-2.16.0rc2-cp39-cp39-manylinux2014_aarch64.whl"
             }
           ],
           "project_name": "pantsbuild-pants",
@@ -529,26 +529,27 @@
             "types-PyYAML==6.0.3",
             "types-setuptools==62.6.1",
             "types-toml==0.10.8",
-            "typing-extensions==4.3.0"
+            "typing-extensions==4.3.0",
+            "urllib3<2"
           ],
           "requires_python": "<3.10,>=3.7",
-          "version": "2.16.0rc1"
+          "version": "2.16.0rc2"
         },
         {
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "2cc9f42a105493ada63c5b7473c32535f6126edfcaaa8f27df865efc4be7d46b",
-              "url": "https://files.pythonhosted.org/packages/8c/44/12af5805179f8aea1c90463e12ce220c1a2aeb13477087227d0855728da0/pantsbuild.pants.testutil-2.16.0rc1-py3-none-any.whl"
+              "hash": "14aa1e14401744dff549e3f489bc84274362a52d68e715d1e210e3c75f7d13ba",
+              "url": "https://files.pythonhosted.org/packages/9a/9b/001b2a8e104aeabc878d33af26da51ef6fe57221714bb2a38a9d2167e1dc/pantsbuild.pants.testutil-2.16.0rc2-py3-none-any.whl"
             }
           ],
           "project_name": "pantsbuild-pants-testutil",
           "requires_dists": [
-            "pantsbuild.pants==2.16.0rc1",
+            "pantsbuild.pants==2.16.0rc2",
             "pytest<7.1.0,>=6.2.4"
           ],
           "requires_python": "<3.10,>=3.7",
-          "version": "2.16.0rc1"
+          "version": "2.16.0rc2"
         },
         {
           "artifacts": [
@@ -1221,29 +1222,30 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "d055c2f9d38dc53c808f6fdc8eab7360b6fdbbde02340ed25cfbcd817c62469e",
-              "url": "https://files.pythonhosted.org/packages/4b/1d/f8383ef593114755429c307449e7717b87044b3bcd5f7860b89b1f759e34/urllib3-2.0.2-py3-none-any.whl"
+              "hash": "aa751d169e23c7479ce47a0cb0da579e3ede798f994f5816a74e4f4500dcea42",
+              "url": "https://files.pythonhosted.org/packages/7b/f5/890a0baca17a61c1f92f72b81d3c31523c99bec609e60c292ea55b387ae8/urllib3-1.26.15-py2.py3-none-any.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "61717a1095d7e155cdb737ac7bb2f4324a858a1e2e6466f6d03ff630ca68d3cc",
-              "url": "https://files.pythonhosted.org/packages/fb/c0/1abba1a1233b81cf2e36f56e05194f5e8a0cec8c03c244cab56cc9dfb5bd/urllib3-2.0.2.tar.gz"
+              "hash": "8a388717b9476f934a21484e8c8e61875ab60644d29b9b39e11e4b9dc1c6b305",
+              "url": "https://files.pythonhosted.org/packages/21/79/6372d8c0d0641b4072889f3ff84f279b738cd8595b64c8e0496d4e848122/urllib3-1.26.15.tar.gz"
             }
           ],
           "project_name": "urllib3",
           "requires_dists": [
-            "brotli>=1.0.9; platform_python_implementation == \"CPython\" and extra == \"brotli\"",
-            "brotlicffi>=0.8.0; platform_python_implementation != \"CPython\" and extra == \"brotli\"",
+            "PySocks!=1.5.7,<2.0,>=1.5.6; extra == \"socks\"",
+            "brotli>=1.0.9; ((os_name != \"nt\" or python_version >= \"3\") and platform_python_implementation == \"CPython\") and extra == \"brotli\"",
+            "brotlicffi>=0.8.0; ((os_name != \"nt\" or python_version >= \"3\") and platform_python_implementation != \"CPython\") and extra == \"brotli\"",
+            "brotlipy>=0.6.0; (os_name == \"nt\" and python_version < \"3\") and extra == \"brotli\"",
             "certifi; extra == \"secure\"",
-            "cryptography>=1.9; extra == \"secure\"",
+            "cryptography>=1.3.4; extra == \"secure\"",
             "idna>=2.0.0; extra == \"secure\"",
-            "pyopenssl>=17.1.0; extra == \"secure\"",
-            "pysocks!=1.5.7,<2.0,>=1.5.6; extra == \"socks\"",
-            "urllib3-secure-extra; extra == \"secure\"",
-            "zstandard>=0.18.0; extra == \"zstd\""
+            "ipaddress; python_version == \"2.7\" and extra == \"secure\"",
+            "pyOpenSSL>=0.14; extra == \"secure\"",
+            "urllib3-secure-extra; extra == \"secure\""
           ],
-          "requires_python": ">=3.7",
-          "version": "2.0.2"
+          "requires_python": "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,>=2.7",
+          "version": "1.26.15"
         },
         {
           "artifacts": [
@@ -1270,7 +1272,7 @@
   "prefer_older_binary": false,
   "requirements": [
     "PyYAML==6.0",
-    "compose-chart-export==0.0.17",
+    "compose-chart-export==0.0.18",
     "docker-compose-parser==0.0.17",
     "model-lib==0.0.17",
     "orjson==3.6.5",

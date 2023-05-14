@@ -105,9 +105,11 @@ def field_names(model_type: Type[BaseModel] | BaseModel) -> List[str]:
 def parse_timedelta(td: Union[timedelta, float]):
     raise NotImplementedError
 
+
 @parse_timedelta.register
 def _parse_timedelta_td(td: timedelta):
     return td
+
 
 @parse_timedelta.register
 def _parse_timedelta_float(td: float):

@@ -6,15 +6,16 @@ import logging
 from collections import defaultdict
 from contextlib import suppress
 from dataclasses import dataclass
-from typing import Any, Callable, Generic, Type, TypeVar, cast, Union
-from typing_extensions import TypeAlias
+from typing import Any, Callable, Generic, Type, TypeVar, Union, cast
 
+from typing_extensions import TypeAlias
 from zero_3rdparty.error import BaseError
 from zero_3rdparty.iter_utils import first_or_none, public_dict
 from zero_3rdparty.object_name import as_name
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
+
 
 @dataclass
 class Provider(Generic[T]):
@@ -52,6 +53,7 @@ def instance_or_none(cls: Type[T]) -> T | None:
     with suppress(DependencyNotSet):
         return instance(cls)
     return None
+
 
 class ReBindingError(BaseError):
     def __init__(self, classes: list[Type]):

@@ -127,6 +127,7 @@ def func_arg_name_of_type(
             return name
     return None
 
+
 def is_subclass(maybe_class, classes) -> bool:
     return isclass(maybe_class) and issubclass(maybe_class, classes)
 
@@ -180,6 +181,7 @@ def unpack_optional_or_assume_class(maybe_optional) -> Union[Type, None]:
     if isclass(maybe_optional):
         return maybe_optional
     return None
+
 
 def unpack_first_arg(function: Callable) -> Type:
     maybe_optional: Type = first(func_arg_types(function))

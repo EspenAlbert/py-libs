@@ -1,15 +1,24 @@
 from __future__ import annotations
 
 from functools import cached_property
-from typing import Generic, Iterable, List, Sequence, Type, TypeVar, Union, TYPE_CHECKING
-
+from typing import (
+    TYPE_CHECKING,
+    Generic,
+    Iterable,
+    List,
+    Sequence,
+    Type,
+    TypeVar,
+    Union,
+)
 
 from model_lib.errors import ClsNameAlreadyExist, UnknownModelError
 from pydantic import BaseModel, Extra
 from zero_3rdparty.object_name import as_name
 from zero_3rdparty.str_utils import want_bool
+
 if TYPE_CHECKING:
-    from pydantic.typing import AbstractSetIntStr, MappingIntStrAny, DictStrAny
+    from pydantic.typing import AbstractSetIntStr, DictStrAny, MappingIntStrAny
 
 T = TypeVar("T")
 ModelT = TypeVar("ModelT", bound=BaseModel)
@@ -17,7 +26,7 @@ _model_name_to_type: dict[str, Type] = {
     "str": str,
     "int": int,
     "float": float,
-    "bool": want_bool, # type: ignore
+    "bool": want_bool,  # type: ignore
 }
 
 

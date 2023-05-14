@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from contextlib import suppress
-from typing import Iterable, Mapping, Type, Callable, Any
+from typing import Any, Callable, Iterable, Mapping, Type
 
 from model_lib.constants import (
     METADATA_DUMP_KEY,
@@ -60,7 +60,9 @@ def dump_as_type_dict(instances: Iterable[ModelT], format: FileFormat) -> str:
     return dump({type(instance).__name__: instance for instance in instances}, format)
 
 
-def dump_safe(message: dict | object, format: FileFormat| str = FileFormat.json) -> str:
+def dump_safe(
+    message: dict | object, format: FileFormat | str = FileFormat.json
+) -> str:
     try:
         return dump(message, format)
     except TypeError as e:

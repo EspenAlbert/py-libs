@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import fields
-from typing import Callable, Type, TypeVar, Container
+from typing import Callable, Container, Type, TypeVar
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def field_names(cls: Type[T] | T):
@@ -14,11 +14,13 @@ def values(instance: T):
     return [getattr(instance, name) for name in field_names(instance)]
 
 
-def copy(instance: T, exclude: Container[str] | None = None, update: dict| None = None):
+def copy(
+    instance: T, exclude: Container[str] | None = None, update: dict | None = None
+):
     if exclude:
 
         def include(field_name: str):
-            return field_name not in exclude # type: ignore
+            return field_name not in exclude  # type: ignore
 
         kwargs = key_values(instance, filter=include)
     else:

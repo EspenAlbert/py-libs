@@ -120,8 +120,11 @@ def first_or_none(
     if condition:
         return next((instance for instance in iterable if condition(instance)), default)
     if first_type:
-        return next((instance for instance in filter_on_type(iterable, first_type)), default)
+        return next(
+            (instance for instance in filter_on_type(iterable, first_type)), default
+        )
     return next((instance for instance in iterable), default)
+
 
 def filter_on_type(iterable: Iterable[T], t: Type[T]) -> Iterable[T]:
     """

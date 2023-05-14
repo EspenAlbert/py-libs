@@ -3,10 +3,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Dict, List, Tuple, cast
 
-from typing_extensions import TypeAlias
-
 from model_lib.serialize.yaml_serialize import edit_helm_template
 from pydantic import Field, constr, validator
+from typing_extensions import TypeAlias
 from zero_3rdparty.enum_utils import StrEnum
 
 from model_lib import Event

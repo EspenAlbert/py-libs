@@ -20,7 +20,7 @@ def get_date_as_rfc3339_without_time(date: datetime | None = None) -> str:
     return date.astimezone(timezone.utc).isoformat()[:10]
 
 
-def get_date_as_rfc3339(date: datetime| None = None, strip_microseconds=False) -> str:
+def get_date_as_rfc3339(date: datetime | None = None, strip_microseconds=False) -> str:
     """
     >>> get_date_as_rfc3339(datetime(2018, 9, 12, 1, 57, 54, 494142, tzinfo=timezone.utc))
     '2018-09-12T01:57:54.494142+00:00'
@@ -135,6 +135,7 @@ def as_day_name(dt: datetime | date) -> str:
 
 
 _WEEKEND_DAYS = {5, 6}
+
 
 @singledispatch
 def is_weekend(dt: object) -> bool:

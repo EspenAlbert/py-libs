@@ -8,6 +8,7 @@ from zero_3rdparty.dict_nested import read_nested, update
 def test_doctests():
     xdoctest.doctest_module(read_nested.__module__)
 
+
 d = {
     "apiVersion": "v1",
     "kind": "Service",

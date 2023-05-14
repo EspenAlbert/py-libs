@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from contextlib import suppress
 from enum import Enum
 from functools import singledispatch
@@ -6,13 +7,16 @@ from typing import (
     Any,
     Dict,
     Iterable,
+    Mapping,
     MutableMapping,
     Optional,
+    Reversible,
     Type,
     TypeVar,
     Union,
-    overload, Mapping, Reversible,
+    overload,
 )
+
 from typing_extensions import TypeAlias
 
 DictList: TypeAlias = Union[list, Mapping[str, object]]

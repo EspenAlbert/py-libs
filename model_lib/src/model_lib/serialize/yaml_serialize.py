@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Callable, List, Mapping, Match, Union
 
 from model_lib.dump_functions import base_model_dumper
-from model_lib.model_dump import PrimitiveT, register_dumper
+from model_lib.model_dump import register_dumper
 from pydantic import BaseModel
 from zero_3rdparty.dict_nested import read_nested
 from zero_3rdparty.file_utils import PathLike
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 try:
-    import yaml # type: ignore
+    import yaml  # type: ignore
 except ModuleNotFoundError:
     allow_ignore = "yes,true,1"
     ignore_name = "IGNORE_YAML_MISSING"

@@ -48,12 +48,12 @@ def update_no_overwrite(source: Dict[str, object], updates: Dict[str, object]) -
         updates[new_key] = value
     source.update(updates)
 
+
 KT = TypeVar("KT")
 VT = TypeVar("VT")
 
-def rename_keys(
-    source: Dict[str, VT], renames: dict[str, str]
-) -> dict[str, VT]:
+
+def rename_keys(source: Dict[str, VT], renames: dict[str, str]) -> dict[str, VT]:
     """
     >>> rename_keys({"a.2": 1, "b": 2}, {"a.2": "a"})
     {'a': 1, 'b': 2}
@@ -164,7 +164,6 @@ def sort_keys(some_dict: dict[KT, VT]) -> dict[KT, VT]:
         return sort_keys(value) if isinstance(value, dict) else value
 
     return {key: add_sorted_value(some_dict[key]) for key in sorted(some_dict.keys())}  # type: ignore
-
 
 
 def select_values(some_container: dict | list, allowed_values: tuple[Type, ...]):

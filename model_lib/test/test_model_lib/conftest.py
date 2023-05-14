@@ -6,4 +6,4 @@ assert (  # type: ignore
     model_dump,
     model_base,
     dump_functions,
-), "necessary for pants to infer import" # noqa
+), "necessary for pants to infer import"  # noqa

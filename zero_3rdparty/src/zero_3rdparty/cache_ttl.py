@@ -5,7 +5,9 @@ from functools import wraps
 from inspect import signature
 from time import monotonic
 from typing import Any, Callable, Hashable, TypeVar
+
 from typing_extensions import ParamSpec
+
 T = TypeVar("T")
 P = ParamSpec("P")
 _sentinel = object()
@@ -36,7 +38,9 @@ def _wrap_func(func, seconds):
 def _wrap_method(
     seconds: float, instance_key: Callable[[T], Hashable], meth: Callable[P, Any]
 ):
-    expire_times: dict[Hashable, tuple[float, Any]] = defaultdict(lambda: (0, _sentinel))
+    expire_times: dict[Hashable, tuple[float, Any]] = defaultdict(
+        lambda: (0, _sentinel)
+    )
 
     @wraps(meth)
     def inner(self, *args, **kwargs):

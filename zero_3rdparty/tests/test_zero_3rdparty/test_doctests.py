@@ -1,5 +1,9 @@
 from types import ModuleType
 from typing import Callable
+
+import pytest
+import xdoctest as xdoc  # type: ignore
+
 from zero_3rdparty import (
     datetime_utils,
     dict_nested,
@@ -10,11 +14,7 @@ from zero_3rdparty import (
     iter_utils,
     object_name,
     str_utils,
-
 )
-
-import pytest
-import xdoctest as xdoc  # type: ignore
 
 
 def doctest_modules(modules: list[ModuleType]):
@@ -27,6 +27,7 @@ def doctest_modules(modules: list[ModuleType]):
         return test_doctests
 
     return decorator
+
 
 @doctest_modules(
     [

@@ -12,6 +12,7 @@ from contextlib import suppress
 from contextvars import Context, ContextVar
 from dataclasses import dataclass
 from typing import Callable, Coroutine, Protocol, TypeVar, Union
+
 from typing_extensions import TypeAlias
 from zero_3rdparty.object_name import as_name
 
@@ -206,6 +207,7 @@ def get_context_instance_or_none(t: type[T]) -> T | None:
     with suppress(KeyError):
         return get_context_instance(t)
     return None
+
 
 def set_context_instance(t: T) -> T | None:
     return get_context_dict().set_instance(t)

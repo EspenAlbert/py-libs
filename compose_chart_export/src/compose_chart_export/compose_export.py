@@ -3,9 +3,9 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Callable, Iterable
+from typing import Callable, Iterable, cast
 
-import semver
+import semver  # type: ignore
 from compose_chart_export.chart_export import export_chart
 from compose_chart_export.chart_file_templates import (
     ChartTemplateSpec,
@@ -241,13 +241,14 @@ def create_spec(
     info: ComposeServiceInfo,
 ) -> tuple[str, ChartTemplateSpec]:
     compose_labels = info.labels
-    template_name = parse_template_name(compose_labels)
     ports = list(info.host_container_ports)
-    if ports:
-        template_name = template_name or ChartTemplate.SERVICE_DEPLOYMENT
+    if name := parse_template_name(compose_labels):
+        template_name = cast(ChartTemplate, name)
+    elif ports:
+        template_name = ChartTemplate.SERVICE_DEPLOYMENT
     else:
-        logger.info(f"no ports for {service_name}")
-        template_name = template_name or ChartTemplate.DEPLOYMENT_ONLY
+        template_name = ChartTemplate.DEPLOYMENT_ONLY
+    logger.info(f"using template name: {template_name} for {service_name}")
     target_volumes = parse_target_volumes(compose_labels)
     persistent_volumes = parse_persistent_volumes(compose_labels)
     use_resource_limits = parse_use_resource_limits(compose_labels)

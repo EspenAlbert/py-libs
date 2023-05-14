@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from model_lib.serialize.yaml_serialize import edit_helm_template, edit_yaml
 
@@ -25,12 +25,12 @@ def container_template(chart_path: Path) -> str:
     return rel_path
 
 
-def read_chart_version(path: Path):
-    return parse_payload(path / "Chart.yaml")["version"]
+def read_chart_version(path: Path) -> str:
+    return parse_payload(path / "Chart.yaml")["version"]  # type: ignore
 
 
-def read_app_version(path: Path):
-    return parse_payload(path / "Chart.yaml")["appVersion"]
+def read_app_version(path: Path) -> str:
+    return parse_payload(path / "Chart.yaml")["appVersion"]  # type: ignore
 
 
 def set_chart_version(chart: Path, version: str, app_version: str = ""):
@@ -48,7 +48,7 @@ def chart_has_no_changes(chart_path: Path, online_chart_path: Path) -> bool:
 
 
 def read_values(chart_path: Path) -> dict[str, Any]:
-    return parse_payload(chart_path / "values.yaml")
+    return cast(dict[str, Any], parse_payload(chart_path / "values.yaml"))
 
 
 def read_env_vars(chart_path: Path, target_name: str) -> dict[str, str]:

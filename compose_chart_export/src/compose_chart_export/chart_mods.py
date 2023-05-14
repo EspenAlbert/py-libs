@@ -127,7 +127,7 @@ def update_services(chart_dir: Path, ports: Iterable[PrefixPort], container_name
         not_found: Dict[int, PrefixPort] = {port.port: port for port in ports}
         for i, port_dict in enumerate(deepcopy(svc_ports)):
             port_number: int = port_dict.get("port")
-            new: PrefixPort = not_found.pop(port_number, None)
+            new: PrefixPort | None = not_found.pop(port_number, None)
             if new:
                 svc_ports[i] = port_name(new, container_name, "port")
         for port_prefix in not_found.values():

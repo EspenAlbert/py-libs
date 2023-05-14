@@ -174,7 +174,7 @@ def decode_settings_error(error: SettingsError) -> str:
     return error_field
 
 
-def port_info(number: int, *, url_prefix: str, protocol: str) -> FieldInfo:
+def port_info(number: int, *, url_prefix: str, protocol: str) -> int:
     """Used for pants plugin "artifacts" to know which url_prefix and protocol
     to use in Chart."""
     return Field(default=number)

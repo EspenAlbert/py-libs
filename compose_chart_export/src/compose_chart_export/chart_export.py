@@ -42,7 +42,7 @@ DAEMONSET = "daemonset"
 
 def _export_chart(
     spec: ChartTemplateSpec,
-    chart_path: Optional[Path] = None,
+    chart_path: Path,
     skip_generators: Optional[List[str]] = None,
 ) -> Path:
     clean_dir(chart_path)
@@ -56,23 +56,17 @@ def _export_chart(
     return chart_path
 
 
-def export_service_deployment(
-    spec: ChartTemplateSpec, chart_path: Optional[Path] = None
-) -> Path:
+def export_service_deployment(spec: ChartTemplateSpec, chart_path: Path) -> Path:
     return _export_chart(spec, chart_path, skip_generators=[daemonset_path])
 
 
-def export_deployment_only(
-    spec: ChartTemplateSpec, chart_path: Optional[Path] = None
-) -> Path:
+def export_deployment_only(spec: ChartTemplateSpec, chart_path: Path) -> Path:
     return _export_chart(
         spec, chart_path, skip_generators=[service_path, daemonset_path]
     )
 
 
-def export_daemonset(
-    spec: ChartTemplateSpec, chart_path: Optional[Path] = None
-) -> Path:
+def export_daemonset(spec: ChartTemplateSpec, chart_path: Path) -> Path:
     return _export_chart(
         spec, chart_path, skip_generators=[service_path, deployment_path]
     )

@@ -66,7 +66,7 @@ class PrefixPort:
         return cls.as_kub_port_name_raw(protocol, prefix)
 
     @classmethod
-    def as_kub_port_name_raw(cls, protocol: PortProtocol, prefix: str):
+    def as_kub_port_name_raw(cls, protocol: PortProtocol | str, prefix: str):
         protocol_with_underscore = protocol.replace("-", "_")
         prefix = prefix.replace(protocol_with_underscore, "")
         if prefix == "/":

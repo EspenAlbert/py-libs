@@ -113,7 +113,8 @@ class _NameDict:
 def iter_sorted_services(compose_payload: str | Path) -> list[tuple[str, dict]]:
     """`depends_on` if used if it exists, otherwise services are sorted by
     their order in the file."""
-    parsed: dict = parse_payload(compose_payload, FileFormat.yaml)
+    parsed = parse_payload(compose_payload, FileFormat.yaml)
+    assert isinstance(parsed, dict)
     services: dict = parsed["services"]
     services_sorted = sorted(
         _NameDict(name, d, i) for i, (name, d) in enumerate(services.items())
@@ -130,12 +131,12 @@ def read_compose_info(compose_path: Path, service_name: str) -> ComposeServiceIn
     command = read_nested_or_none(parsed, f"services.{service_name}.command") or []
     volumes = read_nested_or_none(parsed, f"services.{service_name}.volumes") or []
     return ComposeServiceInfo(
-        image=image,
-        labels=labels,
-        default_env=env,
-        default_ports=ports,
-        command=command,
-        default_volumes=volumes,
+        image=image,  # type: ignore
+        labels=labels,  # type: ignore
+        default_env=env,  # type: ignore
+        default_ports=ports,  # type: ignore
+        command=command,  # type: ignore
+        default_volumes=volumes,  # type: ignore
     )
 
 
@@ -145,7 +146,7 @@ def export_compose_dict(
     env_overrides: Optional[Dict[str, str]] = None,
     network_name: str | None = NETWORK_NAME_DEFAULT,
     volumes: Optional[List[str]] = None,
-    add_labels: Dict[str, str] = None,
+    add_labels: Dict[str, str] | None = None,
     command: Optional[List[str]] = None,
     only_override_existing_env_vars: bool = True,
     network_external: bool = True,

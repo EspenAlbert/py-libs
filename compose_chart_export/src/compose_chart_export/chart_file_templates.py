@@ -1,7 +1,9 @@
 # flake8: noqa
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, cast
+
+from typing_extensions import TypeAlias
 
 from model_lib.serialize.yaml_serialize import edit_helm_template
 from pydantic import Field, constr, validator
@@ -30,10 +32,10 @@ appVersion: {ReplaceStr.APP_VERSION}
 
 # start with number or character ". -_" allowed, + and / not allowed
 # https://atomist.github.io/sdm-pack-k8s/modules/_lib_kubernetes_labels_.html
-kubernetes_label_regex = constr(
-    regex=r"^([a-zA-Z0-9][-a-zA-Z0-9_\.]*[a-zA-Z0-9])?$", max_length=63
+kubernetes_label_regex: TypeAlias = cast(
+    str, constr(regex=r"^([a-zA-Z0-9][-a-zA-Z0-9_\.]*[a-zA-Z0-9])?$", max_length=63)
 )
-dns_safe = constr(regex=r"^[a-z-]+$")
+dns_safe: TypeAlias = cast(str, constr(regex=r"^[a-z-]+$"))
 
 
 class TemplateReplacements(Event):
@@ -328,7 +330,9 @@ def _add_template_spec(template: str, spec: ChartTemplateSpec):
                     # command=[],  # override by artifacts plugin
                     env=[],  # override by artifacts plugin
                 )
-                volume_mounts: list = container_spec.setdefault("volumeMounts", [])
+                volume_mounts: list = cast(
+                    list, container_spec.setdefault("volumeMounts", [])
+                )
                 if volumes := spec.container_host_path_volumes.get(name):
                     volume_mounts.extend(
                         dict(name=mount.name, mountPath=mount.container_path)

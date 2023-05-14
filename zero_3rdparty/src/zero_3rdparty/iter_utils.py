@@ -84,7 +84,7 @@ def flat_map(iterable: Iterable[Iterable[T]]) -> Iterable[T]:
     return chain.from_iterable(iterable)
 
 
-def first(iterable: Iterable[Any], first_type: Type[T] = object) -> T:
+def first(iterable: Iterable[Any], first_type: Type[T] | None = None) -> T:
     """
     >>> first(['a', 'b', 2], int)
     2
@@ -95,14 +95,16 @@ def first(iterable: Iterable[Any], first_type: Type[T] = object) -> T:
     >>> first(['a', 'b', 2])
     'a'
     """
-    return next(filter_on_type(iterable, first_type))
+    if first_type is None:
+        return next(iter(iterable))  # type: ignore
+    return next(instance for instance in filter_on_type(iterable, first_type))  # type: ignore
 
 
 def first_or_none(
     iterable: Iterable[Any],
-    first_type: Type[T] = object,
+    first_type: Type[T] | None = None,
     *,
-    condition: Callable[[T], bool] = None,
+    condition: Callable[[T], bool] | None = None,
     default: Optional[T] = None,
 ) -> Optional[T]:
     """
@@ -117,10 +119,11 @@ def first_or_none(
     """
     if condition:
         return next((instance for instance in iterable if condition(instance)), default)
-    return next(filter_on_type(iterable, first_type), default)
+    if first_type:
+        return next((instance for instance in filter_on_type(iterable, first_type)), default)
+    return next((instance for instance in iterable), default)
 
-
-def filter_on_type(iterable: Iterable[Any], t: Type[T]) -> Iterable[T]:
+def filter_on_type(iterable: Iterable[T], t: Type[T]) -> Iterable[T]:
     """
     >>> list(filter_on_type(['a', 'b', 2, 3.0, 4], str))
     ['a', 'b']
@@ -314,7 +317,7 @@ def _unpack_dict(raw: dict, allowed_falsy: Optional[set[object]]):
 _allowed_falsy = {False, 0}
 
 
-def ignore_falsy_recurse(allowed_falsy: Optional[set[object]] = None, **kwargs) -> dict:
+def ignore_falsy_recurse(allowed_falsy: Optional[set[Any]] = None, **kwargs) -> dict:
     """Ignores empty dictionaries or lists and None values.
     Warning:
         Keeps False & 0
@@ -328,7 +331,7 @@ def ignore_falsy_recurse(allowed_falsy: Optional[set[object]] = None, **kwargs) 
     """
     allowed_falsy = allowed_falsy or _allowed_falsy
     return {
-        key: _unpack(value, allowed_falsy)
+        key: _unpack(value, allowed_falsy)  # type: ignore
         for key, value in kwargs.items()
         if value or (not isinstance(value, (dict, list)) and value in allowed_falsy)
     }

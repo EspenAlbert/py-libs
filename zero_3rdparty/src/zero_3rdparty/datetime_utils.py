@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
 from functools import singledispatch
-from typing import Iterable, Optional, TypeVar, overload
+from typing import Iterable, Optional, TypeVar
 
 
-def get_date_as_rfc3339_without_time(date: datetime = None) -> str:
+def get_date_as_rfc3339_without_time(date: datetime | None = None) -> str:
     """
     >>> len(get_date_as_rfc3339_without_time()) == len('2019-08-14')
     True
@@ -20,7 +20,7 @@ def get_date_as_rfc3339_without_time(date: datetime = None) -> str:
     return date.astimezone(timezone.utc).isoformat()[:10]
 
 
-def get_date_as_rfc3339(date: datetime = None, strip_microseconds=False) -> str:
+def get_date_as_rfc3339(date: datetime| None = None, strip_microseconds=False) -> str:
     """
     >>> get_date_as_rfc3339(datetime(2018, 9, 12, 1, 57, 54, 494142, tzinfo=timezone.utc))
     '2018-09-12T01:57:54.494142+00:00'
@@ -136,14 +136,8 @@ def as_day_name(dt: datetime | date) -> str:
 
 _WEEKEND_DAYS = {5, 6}
 
-
-@overload
-def is_weekend(dt: str) -> bool:
-    ...
-
-
 @singledispatch
-def is_weekend(dt: datetime) -> bool:
+def is_weekend(dt: object) -> bool:
     """
     >>> sun = datetime(2023, month=1, day=22)
     >>> as_day_name(sun)
@@ -163,6 +157,11 @@ def is_weekend(dt: datetime) -> bool:
     >>> is_weekend('Friday')
     False
     """
+    raise NotImplementedError
+
+
+@is_weekend.register
+def _from_dt(dt: datetime) -> bool:
     return dt.weekday() in _WEEKEND_DAYS
 
 
@@ -187,9 +186,10 @@ def month_range(dt: datetime):
     (datetime.datetime(2022, 12, 1, 0, 0), datetime.datetime(2023, 1, 1, 0, 0))
     >>> # how to get the last microsecond of the month
     >>> from datetime import timedelta
-    >>> month_range(datetime(year=2022, month=12, day=22))[1] - timedelta(microseconds=1)
+    >>> end_of_month = month_range(datetime(year=2022, month=12, day=22))[1] - timedelta(microseconds=1)
+    >>> end_of_month
     datetime.datetime(2022, 12, 31, 23, 59, 59, 999999)
-    >>> _.year
+    >>> end_of_month.year
     2022
     """
     start = dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -207,6 +207,7 @@ def day_range(start: DT, end: DT, delta: timedelta) -> Iterable[DT]:
     """
     >>> start = datetime(year=2023, month=1, day=1)
     >>> end = datetime(year=2023, month=1, day=10)
+    >>> day: DT
     >>> [day.day for day in day_range(start, end, timedelta(days=1))]
     [1, 2, 3, 4, 5, 6, 7, 8, 9]
     """

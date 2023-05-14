@@ -23,7 +23,7 @@ class TypeDict(Dict[Type, Iterable[V]]):
 
     def get_by_key_and_strict(self, key: Type, strict=False) -> Optional[V]:
         assert isclass(key), f"not a class: {key}"
-        values = super().__getitem__(key)
+        values: list[tuple[V, bool]] = super().__getitem__(key)  # type: ignore
         return first_or_none(
             value for value, each_strict in values if strict == each_strict
         )
@@ -33,12 +33,12 @@ class TypeDict(Dict[Type, Iterable[V]]):
 
     def __getitem__(self, item: Type) -> Iterable[V]:
         for base_t in item.__mro__[:-1]:  # skip object
-            for value, strict in super().get(base_t, []):
-                if self.filter(item, strict, base_t):
-                    yield value
+            for value, strict in super().get(base_t, []):  # type: ignore
+                if self.filter(item, strict, base_t):  # type: ignore
+                    yield value  # type: ignore
 
     def pop_specific(self, key: Type, value: V, strict=False):
-        values: list = super().__getitem__(key)
+        values: list = super().__getitem__(key)  # type: ignore
         try:
             values.remove((value, strict))
         except ValueError:

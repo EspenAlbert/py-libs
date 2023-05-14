@@ -5,8 +5,9 @@ from functools import wraps
 from inspect import signature
 from time import monotonic
 from typing import Any, Callable, Hashable, TypeVar
-
+from typing_extensions import ParamSpec
 T = TypeVar("T")
+P = ParamSpec("P")
 _sentinel = object()
 
 
@@ -33,9 +34,9 @@ def _wrap_func(func, seconds):
 
 
 def _wrap_method(
-    seconds: float, instance_key: Callable[[T], Hashable], meth: Callable[[T, ...], Any]
+    seconds: float, instance_key: Callable[[T], Hashable], meth: Callable[P, Any]
 ):
-    expire_times = defaultdict(lambda: (0, _sentinel))
+    expire_times: dict[Hashable, tuple[float, Any]] = defaultdict(lambda: (0, _sentinel))
 
     @wraps(meth)
     def inner(self, *args, **kwargs):
@@ -54,11 +55,11 @@ def _wrap_method(
         for key in keys:
             expire_times[key] = (0, _sentinel)
 
-    inner.clear = clear
+    inner.clear = clear  # type: ignore
     return inner
 
 
-def cache_ttl(seconds: float | int) -> Callable[[T], T]:
+def cache_ttl(seconds: float | int) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """simple decorator if you want to cache the results of a call ignoring arguments
     Warning:
         1. Only caches a 'single value'
@@ -66,7 +67,7 @@ def cache_ttl(seconds: float | int) -> Callable[[T], T]:
     '"""
     assert isinstance(seconds, (float, int)), "ttl seconds must be int/float"
 
-    def decorator(func: T) -> T:
+    def decorator(func: Callable[P, T]) -> Callable[P, T]:
         if "self" in signature(func).parameters:
             return _wrap_method(seconds, id, func)
         return _wrap_func(func, seconds)

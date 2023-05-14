@@ -53,7 +53,7 @@ def read_files_in_dir(
 
 def filepath_in_same_dir(file_path: str, *other_filename: str) -> str:
     """
-    >>> filepath_in_same_dir(__file__, 'id_creator.py').endswith('utils/id_creator.py')
+    >>> filepath_in_same_dir(__file__, 'id_creator.py').endswith('id_creator.py')
     True
     """
     return os.path.join(os.path.dirname(file_path), *other_filename)

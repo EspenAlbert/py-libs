@@ -48,13 +48,12 @@ def update_no_overwrite(source: Dict[str, object], updates: Dict[str, object]) -
         updates[new_key] = value
     source.update(updates)
 
-
-str_or_substr = TypeVar("str_or_substr", bound=str)
-
+KT = TypeVar("KT")
+VT = TypeVar("VT")
 
 def rename_keys(
-    source: Dict[str, object], renames: Dict[str, str_or_substr]
-) -> Dict[str, object]:
+    source: Dict[str, VT], renames: dict[str, str]
+) -> dict[str, VT]:
     """
     >>> rename_keys({"a.2": 1, "b": 2}, {"a.2": "a"})
     {'a': 1, 'b': 2}
@@ -64,10 +63,6 @@ def rename_keys(
         new_key = renames.get(key, key)
         new_dict[new_key] = value
     return new_dict
-
-
-KT = TypeVar("KT")
-VT = TypeVar("VT")
 
 
 def pop_latest(d: Dict[KT, VT]) -> VT:
@@ -105,7 +100,7 @@ def merge(
     >>> merge(a, {1: "OVERWRITE"}, allow_overwrite=False)
     Traceback (most recent call last):
     ...
-    dict_utils.MergeDictError: MergeDictError(path='1')
+    zero_3rdparty.dict_utils.MergeDictError: MergeDictError(path='1')
     >>> merge(a, {1: "OVERWRITE"}, allow_overwrite=True)
     >>> a
     {1: 'OVERWRITE', 2: {'b': 'B', 'c': 'C'}, 3: {'d': 'D'}}
@@ -168,7 +163,8 @@ def sort_keys(some_dict: dict[KT, VT]) -> dict[KT, VT]:
     def add_sorted_value(value: VT):
         return sort_keys(value) if isinstance(value, dict) else value
 
-    return {key: add_sorted_value(some_dict[key]) for key in sorted(some_dict.keys())}
+    return {key: add_sorted_value(some_dict[key]) for key in sorted(some_dict.keys())}  # type: ignore
+
 
 
 def select_values(some_container: dict | list, allowed_values: tuple[Type, ...]):
@@ -193,17 +189,14 @@ def select_values(some_container: dict | list, allowed_values: tuple[Type, ...])
     return unpack_list_or_dict(some_container)
 
 
-KTStr = TypeVar("KTStr", bound=str)
-
-
-def as_case_insensitive(d: Mapping[KTStr, VT]) -> dict[KTStr, VT]:
+def as_case_insensitive(d: Mapping[str, VT]) -> dict[str, VT]:
     """
     >>> as_case_insensitive(dict(a=1, B=2, cD=3))
     {'a': 1, 'A': 1, 'B': 2, 'b': 2, 'cD': 3, 'cd': 3, 'CD': 3}
     """
-    new = {}
+    new: dict[str, VT] = {}
 
-    def add_env(key: str, value: str) -> None:
+    def add_env(key: str, value: VT) -> None:
         new[key] = value
         new[key.lower()] = value
         new[key.upper()] = value

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import concurrent.futures
 import logging
 import os
@@ -12,16 +13,16 @@ from zero_3rdparty.object_name import as_name
 
 logger = logging.getLogger(__name__)
 #: Normal callbacks for cleaning up on system exit
-_callbacks = []
+_callbacks = [] # type: ignore
 #: Late callbacks for stopping thread pools or other late finishers
-_late_callbacks = []
+_late_callbacks = [] # type: ignore
 #: Main thread callbacks
-_main_thread_callbacks = []
+_main_thread_callbacks = [] # type: ignore
 _registered = False
 _lock = Lock()
 
 
-def stop(reason: str, should_exit=True, timeout: float = None):
+def stop(reason: str, should_exit=True, timeout: float | None = None):
     if timeout is not None:
         set_shutdown_timeout(timeout)
     logger.warning(f"stopping everything, reason={reason}")

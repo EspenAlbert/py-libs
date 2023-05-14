@@ -116,7 +116,7 @@ def safe_complete(
         future.set_result(result)
 
 
-def safe_error(future: Future) -> Optional[Exception]:
+def safe_error(future: Future) -> Optional[BaseException]:
     if not future.done():
         return None
     try:
@@ -146,9 +146,10 @@ def as_incomplete_future(
     return fut_type()
 
 
-def safe_cancel(future: Optional[Future], reason: str = ""):
+def safe_cancel(future: Optional[Future], reason: str = "") -> None:
     if future and not future.done():
-        future.cancel(reason)
+        future.cancel()
+    return None
 
 
 def safe_wait(
@@ -157,13 +158,16 @@ def safe_wait(
     if not future:
         logger.warning("no future to wait for")
     try:
-        return future.result(timeout)
+        if isinstance(future, ConcFuture):
+            return future.result(timeout)
+        return future.result()
     except Exception as e:
         logger.exception(e)
+    return None
 
 
-def on_error_ignore(*error_t: Type[Exception]):
-    def on_error(error: Exception):
+def on_error_ignore(*error_t: Type[BaseException]) -> Callable[[BaseException], None]:
+    def on_error(error: BaseException):
         if isinstance(error, error_t):
             logger.info(f"ignored error: {error!r}")
             return

@@ -6,7 +6,8 @@ import logging
 from collections import defaultdict
 from contextlib import suppress
 from dataclasses import dataclass
-from typing import Any, Callable, Generic, Type, TypeVar, overload
+from typing import Any, Callable, Generic, Type, TypeVar, cast, Union
+from typing_extensions import TypeAlias
 
 from zero_3rdparty.error import BaseError
 from zero_3rdparty.iter_utils import first_or_none, public_dict
@@ -15,13 +16,13 @@ from zero_3rdparty.object_name import as_name
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
-
 @dataclass
 class Provider(Generic[T]):
     provider: Callable[[], T]
 
 
-_dependencies: dict[Type[T], Provider[T] | T] = {}
+ProviderOrInstance: TypeAlias = Union[T, Provider[T]]
+_dependencies: dict[Type, ProviderOrInstance] = {}
 _infer_instances: list[Any] = []
 
 
@@ -50,14 +51,14 @@ def instance_or_inferred(cls: Type[T]) -> T:
 def instance_or_none(cls: Type[T]) -> T | None:
     with suppress(DependencyNotSet):
         return instance(cls)
-
+    return None
 
 class ReBindingError(BaseError):
     def __init__(self, classes: list[Type]):
         self.classes = classes
 
 
-def get_dependencies() -> dict[Type[T], Provider[T] | T]:
+def get_dependencies() -> dict[Type, Provider[T] | T]:
     return _dependencies
 
 
@@ -66,15 +67,6 @@ def bind_infer_instances(instances: list[Any], clear_first: bool = False):
     if clear_first:
         _infer_instances.clear()
     _infer_instances.extend(instances)
-
-
-@overload
-def bind_instances(
-    instances: dict[Type, Any],
-    clear_first: bool = False,
-    allow_re_binding: bool = False,
-):
-    ...
 
 
 def bind_instances(
@@ -91,10 +83,10 @@ def bind_instances(
 
 
 @dataclass
-class _InjectDescriptor:
+class _InjectDescriptor(Generic[T]):
     cls: Type[T]
 
-    def __get__(self, _instance, owner) -> T:
+    def __get__(self, _instance, owner) -> T | _InjectDescriptor[T]:
         with suppress(DependencyNotSet):
             return instance(self.cls)
         if _instance is not None:
@@ -108,11 +100,11 @@ def as_dependency_cls(maybe_dependency: Any):
 
 
 def dependency(cls: Type[T]) -> T:
-    return _InjectDescriptor(cls)
+    return cast(T, _InjectDescriptor(cls))
 
 
 class MissingDependencies(BaseError):
-    def __init__(self, missing_dependencies: dict[Type[T], list[str]]):
+    def __init__(self, missing_dependencies: dict[Type, list[str]]):
         self.missing_dependencies = missing_dependencies
 
 
@@ -134,9 +126,9 @@ def _as_member_dependencies(member: Any) -> list[tuple[str, Type[T]]]:
 
 def validate_dependencies(instances: list[Any], allow_binding: bool = True) -> None:
     """Raises MissingDependencies."""
-    missing_dependencies: dict[Type[T], list[str]] = defaultdict(list)
+    missing_dependencies: dict[Type, list[str]] = defaultdict(list)
     for each_instance in instances:
-        for prop_name, cls in _as_member_dependencies(each_instance):
+        for prop_name, cls in _as_member_dependencies(each_instance):  # type: ignore
             if cls not in _dependencies:
                 if allow_binding and (
                     inferred_instance := first_or_none(instances, cls)

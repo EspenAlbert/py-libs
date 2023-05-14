@@ -1,4 +1,6 @@
+from __future__ import annotations
 from contextlib import suppress
+from enum import Enum
 from functools import singledispatch
 from typing import (
     Any,
@@ -9,10 +11,11 @@ from typing import (
     Type,
     TypeVar,
     Union,
-    overload,
+    overload, Mapping, Reversible,
 )
+from typing_extensions import TypeAlias
 
-DictList = Union[list, Dict[str, object]]
+DictList: TypeAlias = Union[list, Mapping[str, object]]
 
 
 def read_nested_or_none(container: DictList, simple_path: str) -> Optional[object]:
@@ -23,6 +26,7 @@ def read_nested_or_none(container: DictList, simple_path: str) -> Optional[objec
     """
     with suppress(Exception):
         return read_nested(container, simple_path)
+    return None
 
 
 def read_nested(container: DictList, simple_path: str) -> Any:
@@ -48,11 +52,14 @@ def iter_nested_keys(container: MutableMapping, root_path: str = "") -> Iterable
 
 
 T = TypeVar("T")
-_missing = object()
+
+
+class _Sentinel(Enum):
+    MISSING = object()
 
 
 def iter_nested_key_values(
-    container: MutableMapping, type_filter: Type[T] = _missing
+    container: MutableMapping, type_filter: Type[T] | _Sentinel = _Sentinel.MISSING
 ) -> Iterable[tuple[str, T]]:
     """
     >>> container_example = dict(a="ok", b=dict(c="nested"))
@@ -61,7 +68,7 @@ def iter_nested_key_values(
     """
     for key in iter_nested_keys(container):
         value = read_nested(container, key)
-        if type_filter is _missing or isinstance(value, type_filter):
+        if type_filter is _Sentinel.MISSING or isinstance(value, type_filter):
             yield key, value
 
 
@@ -153,29 +160,30 @@ def _as_accessor(
 
 
 def _safe_follow_path(container: DictList, simple_path: str):
-    current = container
+    current: DictList = container
     accessors = simple_path.split(".")
+    must_exist: list[str]
     *must_exist, final = accessors
     final_accessor = _as_accessor(final)
-    for i, accessor in enumerate(must_exist):
-        accessor = _as_accessor(accessor)
+    for i, raw_accessor in enumerate(must_exist):
+        accessor = _as_accessor(raw_accessor)
         try:
-            current = current[accessor]
+            current = current[accessor]  # type: ignore
         except LookupError:
-            last_container = [] if isinstance(final_accessor, int) else {}
+            last_container: DictList = [] if isinstance(final_accessor, int) else {}
             child_container = _create_nested_container(
                 last_container, must_exist[i + 1 :]
             )
             if isinstance(accessor, int):
-                current.append(child_container)
+                current.append(child_container)  # type: ignore
             else:
-                current[accessor] = child_container
+                current[accessor] = child_container  # type: ignore
             return last_container, final_accessor
     return current, final_accessor
 
 
 def _create_nested_container(
-    last_container: DictList, accessors: Iterable[str]
+    last_container: DictList, accessors: Reversible[str]
 ) -> DictList:
     """
     >>> _create_nested_container([], ["a", "b", "c"])
@@ -189,8 +197,8 @@ def _create_nested_container(
     ...
     AssertionError: no list existed at path ports.[1].name
     """
-    for accessor in reversed(accessors):
-        accessor = _as_accessor(accessor)
+    for raw_accessor in reversed(accessors):
+        accessor = _as_accessor(raw_accessor)
         if isinstance(accessor, int):
             assert accessor == 0, f"no list existed at path {'.'.join(accessors)}"
             last_container = [last_container]
@@ -203,9 +211,9 @@ def _follow_path(container: DictList, simple_path: str):
     current = container
     accessors = simple_path.split(".")
     *must_exist, final = accessors
-    for accessor in must_exist:
-        accessor = _as_accessor(accessor)
-        current = current[accessor]
+    for raw_accessor in must_exist:
+        accessor = _as_accessor(raw_accessor)
+        current = current[accessor]  # type: ignore
     final_accessor = _as_accessor(final)
     return current, final_accessor
 

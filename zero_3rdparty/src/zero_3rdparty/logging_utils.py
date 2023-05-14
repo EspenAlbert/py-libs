@@ -21,7 +21,7 @@ class LimitMessageLength(logging.Filter):
         super().__init__(name)
         self.length = length
 
-    def filter(self, record: logging.LogRecord) -> int:
+    def filter(self, record: logging.LogRecord) -> bool:
         if (
             (msg := getattr(record, "msg", None))
             and isinstance(msg, str)
@@ -31,7 +31,7 @@ class LimitMessageLength(logging.Filter):
         return super().filter(record)
 
 
-def limit_message_length(logger: logging.Logger = None) -> None:
+def limit_message_length(logger: logging.Logger | None = None) -> None:
     max_length = log_max_msg_length()
     filter = LimitMessageLength(length=max_length)
     if logger is None:
@@ -43,7 +43,7 @@ def limit_message_length(logger: logging.Logger = None) -> None:
         logger.addFilter(filter)
 
 
-def avoid_linebreaks(logger: logging.Logger = None):
+def avoid_linebreaks(logger: logging.Logger | None = None):
     replace_line_breaks_filter = ReplaceLineBreaks()
     if logger is None:
         logger = logging.getLogger()

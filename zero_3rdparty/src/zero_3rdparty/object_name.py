@@ -23,7 +23,7 @@ def _name(obj: Union[Type[object], object]) -> str:
     name = getattr(obj, "__qualname__", cast(Type[object], obj).__name__)
     module_name = getattr(obj, "__module__", "")
     if not module_name and isinstance(obj, ColAwaitable):
-        module_name = obj.cr_frame.f_globals["__name__"]
+        module_name = obj.cr_frame.f_globals["__name__"]  # type: ignore
     return ".".join((module_name or "__module__", name))
 
 
@@ -69,7 +69,8 @@ def as_name(obj: Union[Type[object], object]) -> str:
 def _detect_main_name() -> str:  # pragma: no cover
     try:
         filename = sys.modules["__main__"].__file__
-    except (AttributeError, KeyError):  # ipython/REPL
+        assert filename
+    except (AttributeError, KeyError, AssertionError):  # ipython/REPL
         return "__main__"
     else:
         path = Path(filename).absolute()
@@ -124,7 +125,7 @@ def func_arg_name_of_type(
     for name, value in get_type_hints(func).items():
         if value is arg_type or (not strict and is_subclass(value, arg_type)):
             return name
-
+    return None
 
 def is_subclass(maybe_class, classes) -> bool:
     return isclass(maybe_class) and issubclass(maybe_class, classes)
@@ -178,19 +179,23 @@ def unpack_optional_or_assume_class(maybe_optional) -> Union[Type, None]:
         return args[0]
     if isclass(maybe_optional):
         return maybe_optional
-
+    return None
 
 def unpack_first_arg(function: Callable) -> Type:
-    maybe_optional = first(func_arg_types(function))
+    maybe_optional: Type = first(func_arg_types(function))
     unpacked = unpack_optional_or_assume_class(maybe_optional)
     assert unpacked is not None, f"unable to find cls for {function}"
     return unpacked
 
 
 def as_caller_name(frames_back: int = 2, with_line_no: bool = False) -> str:
-    frame: FrameType = currentframe()
+    frame: FrameType | None = currentframe()
     for _ in range(frames_back):
+        if frame is None:
+            return ""
         frame = frame.f_back
+    if frame is None:
+        return ""
     code = frame.f_code
     if self := frame.f_locals.get("self"):
         name = f"{self.__class__.__name__}.{code.co_name}"
@@ -202,7 +207,7 @@ def as_caller_name(frames_back: int = 2, with_line_no: bool = False) -> str:
 
 
 def caller_module_and_name() -> tuple[str, str]:
-    code: FrameType = currentframe().f_back.f_back
+    code: FrameType = currentframe().f_back.f_back  # type: ignore
     module = code.f_globals["__name__"]
     if self := code.f_locals.get("self"):
         return module, f"{self.__class__.__name__}.{code.f_code.co_name}"
@@ -210,7 +215,7 @@ def caller_module_and_name() -> tuple[str, str]:
 
 
 def caller_module_name_line_no_path() -> tuple[str, str, int, str]:
-    code: FrameType = currentframe().f_back.f_back
+    code: FrameType = currentframe().f_back.f_back  # type: ignore
     module = code.f_globals["__name__"]
     path = code.f_globals["__file__"]
     if self := code.f_locals.get("self"):

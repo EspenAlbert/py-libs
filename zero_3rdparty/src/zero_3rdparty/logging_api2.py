@@ -165,7 +165,7 @@ def log(
                     f"response_{i}": each_response
                     for i, each_response in enumerate(responses)
                 }
-                log_extra(**fields)
+                log_extra(**fields)  # type: ignore
             elif responses != [None]:
                 names = ",".join(type(response).__name__ for response in responses)
                 log_extra(responses=names)
@@ -217,9 +217,9 @@ def log(
             return inner
 
     if func:
-        return decorator(func)
+        return decorator(func)  # type: ignore
 
-    return decorator
+    return decorator  # type: ignore
 
 
 class LogEventOrKwargs(Protocol):

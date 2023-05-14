@@ -31,13 +31,18 @@ def want_bytes(s: AnyStr, encoding: str = "utf-8") -> bytes:
 
 
 @singledispatch
-def want_bool(s: Union[str, bool]) -> bool:
+def want_bool(s: Union[str, bool, None]) -> bool:
     """
     >>> want_bool("False")
     False
     >>> want_bool("True")
     True
     """
+    raise NotImplementedError
+
+
+@want_bool.register
+def _want_bool_str(s: str) -> bool:
     return s.lower() in {"true", "1", "yes"}
 
 
@@ -172,7 +177,7 @@ def group_dict_or_match_error(re_str: str) -> Callable[[str], dict]:
     >>> group_dict_or_match_error(fleet_pattern)("some nonmatching str")
     Traceback (most recent call last):
     ...
-    str_utils.NoMatchError: pattern=\[(?P<ts>\S+)\s+(?P<log_level>\w+)\s+(?P<fleet_group>[^\]]+)\]\s?(?P<message>.*?)(elapsed:\s)?(?P<query_elapsed>\d+\.\d+)(?P<query_unit>\w+)\s*(?P<sql_query>.*) did not match some nonmatching str # noqa: W605
+    zero_3rdparty.str_utils.NoMatchError: pattern=\\[(?P<ts>\\S+)\\s+(?P<log_level>\\w+)\\s+(?P<fleet_group>[^\\]]+)\\]\\s?(?P<message>.*?)(elapsed:\\s)?(?P<query_elapsed>\\d+\\.\\d+)(?P<query_unit>\\w+)\\s*(?P<sql_query>.*) did not match=some nonmatching str
     """
     pattern: Pattern = re.compile(re_str)
 
@@ -232,7 +237,8 @@ def reduce_len(message_value: AnyStr) -> AnyStr:
     """
     total_length = len(message_value)
     one_fourth = total_length // 4
-    return message_value[:one_fourth] + "[...]" + message_value[-one_fourth:]
+    placeholder = "[...]" if isinstance(message_value, str) else b"[...]"
+    return message_value[:one_fourth] + placeholder + message_value[-one_fourth:]
 
 
 def ensure_within_len(msg: str, max_length: int, truncator="...") -> str:

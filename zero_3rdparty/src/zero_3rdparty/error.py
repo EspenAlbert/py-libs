@@ -118,9 +118,14 @@ assert _missing_category == set(), f"missing category for codes: {_missing_categ
 
 
 @singledispatch
-def as_error_code(error: BaseException) -> Code:
+def as_error_code(error: object) -> Code:
     """Use register on this method if having a code attribute is not enough."""
-    return getattr(error, "code", Code.UNKNOWN)
+    raise NotImplementedError
+
+
+@as_error_code.register(BaseException)
+def _base_error_default(error: BaseException) -> Code:
+    return getattr(error, "code", Code.UNKNOWN)  # type: ignore
 
 
 @as_error_code.register(Code)
@@ -132,7 +137,7 @@ def _identity(error: Code):
 @as_error_code.register(ConcTimeoutError)
 @as_error_code.register(AsyncTimeoutError)
 def _timeout(error: TimeoutError) -> Code:
-    return Code.TIMEOUT
+    return Code.TIMEOUT  # type: ignore
 
 
 def is_crash(code_or_error: str | BaseException):
@@ -198,7 +203,9 @@ def as_str_traceback_from_error(error: Exception) -> str:
 
 
 def as_str_traceback(tb: TracebackType | str | None) -> str:
-    if tb:
+    if isinstance(tb, str):
+        return tb
+    elif tb:
         return "".join(traceback.format_tb(tb))
     return ""
 

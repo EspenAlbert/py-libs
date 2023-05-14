@@ -1,4 +1,5 @@
-python_sources()
+resources(name="py-typed", sources=["py.typed"])
+python_sources(sources=["*.py"], dependencies=[":py-typed"])
 python_distribution(
     name="zero-3rdparty",
     dependencies=[":zero_3rdparty"],

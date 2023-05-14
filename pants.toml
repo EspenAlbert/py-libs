@@ -27,6 +27,7 @@ backend_packages.add = [
   "pants.backend.python.lint.flake8",
   "pants.backend.python.lint.isort",
   "pants.backend.python.mixed_interpreter_constraints",
+  "pants.backend.python.typecheck.mypy",
   "pants.backend.plugin_development",
   "pants_py_deploy" # for disabling the plugin, comment this line, and extra fields in py_deploy
 ]

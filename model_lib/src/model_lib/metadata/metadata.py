@@ -15,7 +15,7 @@ _METADATA_LOCAL_KEY = __name__
 T = TypeVar("T")
 
 
-set_copy_behavior(
+set_copy_behavior(  # type: ignore
     _METADATA_LOCAL_KEY,
     CopyConfig(
         thread_copy=True,
@@ -55,6 +55,6 @@ def set_metadata(key: str, value: Any) -> None:
     metadata[key] = value
 
 
-def pop_metadata(key: str, default: T = None) -> T | None:
+def pop_metadata(key: str, default: T | None = None) -> T | None:
     metadata = current_metadata()
     return metadata.pop(key, default)

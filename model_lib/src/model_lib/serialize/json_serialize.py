@@ -36,6 +36,7 @@ def orjson_dumps_parse() -> dump_parse:
     logger.warning(
         "orjson not installed running with stdlib json (pip install orjson to install a faster json serializer)"
     )
+    return None
 
 
 def stdlib_dumps_parse() -> dump_parse:

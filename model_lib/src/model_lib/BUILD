@@ -1,4 +1,5 @@
-python_sources(name="model_lib")
+resources(name="py-typed", sources=["py.typed"])
+python_sources(sources=["*.py"], dependencies=[":py-typed"])
 python_distribution(
     name="model-lib",
     # orjson is not a hard requirement

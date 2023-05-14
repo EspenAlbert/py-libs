@@ -11,12 +11,12 @@ from collections import UserDict
 from contextlib import suppress
 from contextvars import Context, ContextVar
 from dataclasses import dataclass
-from typing import Callable, Coroutine, Protocol, TypeVar
-
+from typing import Callable, Coroutine, Protocol, TypeVar, Union
+from typing_extensions import TypeAlias
 from zero_3rdparty.object_name import as_name
 
 T = TypeVar("T")
-KeyT = TypeVar("KeyT")
+KeyT: TypeAlias = Union[type, str]
 
 
 def identity(value: T) -> T:
@@ -70,7 +70,7 @@ class CopyConfig:
         return task_copy()
 
 
-_copy_config: dict[type, CopyConfig] = {}
+_copy_config: dict[KeyT, CopyConfig] = {}
 DEFAULT_CONFIG = CopyConfig()
 assert not DEFAULT_CONFIG.copy_to_thread
 assert DEFAULT_CONFIG.copy_to_task
@@ -130,7 +130,7 @@ class LocalDict(UserDict):
     def copy_to_new_task(self, task_name: str) -> LocalDict:
         on_done_calls = []
 
-        def should_include(t: type | str):
+        def should_include(t: KeyT):
             config = get_copy_behavior(t) or DEFAULT_CONFIG
             if on_done := config.on_copy_done:
                 on_done_calls.append(on_done)
@@ -205,7 +205,7 @@ def get_context_instance(t: type[T]) -> T:
 def get_context_instance_or_none(t: type[T]) -> T | None:
     with suppress(KeyError):
         return get_context_instance(t)
-
+    return None
 
 def set_context_instance(t: T) -> T | None:
     return get_context_dict().set_instance(t)

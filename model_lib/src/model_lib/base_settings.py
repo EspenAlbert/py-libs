@@ -41,6 +41,8 @@ from json import dumps
 from pathlib import Path
 from typing import Any, Dict, Generic, List, Optional, Type, TypeVar, Union
 
+from pydantic.fields import FieldInfo
+
 from model_lib.errors import EnvVarParsingFailure
 from model_lib.pydantic_utils import field_names
 from pydantic import BaseSettings, Field, root_validator
@@ -54,7 +56,7 @@ logger = logging.getLogger(__name__)
 
 def env_value_as_str(value: Any) -> str | None:
     if value is None:
-        return
+        return None
     if isinstance(value, (Path, bool, float, int)):
         value = str(value)
     if isinstance(value, (list, dict)):
@@ -64,10 +66,10 @@ def env_value_as_str(value: Any) -> str | None:
 
 
 def set_env_value(settings: Type[BaseSettings], field_name: str, value: str) -> None:
-    if value := env_value_as_str(value):
+    if value_str := env_value_as_str(value):
         key = env_var_name(settings, field_name)
-        os.environ[key] = value
-
+        os.environ[key] = value_str
+    return None
 
 def set_all_env_values(settings: BaseSettings):
     for field_name in settings.__fields__:
@@ -92,8 +94,8 @@ class BaseEnvVars(BaseSettings):
                 values[env_name] = value
         return values
 
-    def _build_values(
-        self,
+    def _build_values(  # type: ignore
+            self,
         init_kwargs: Dict[str, object],
         _env_file: Union[Path, str, None] = None,
         _env_file_encoding: Optional[str] = None,
@@ -143,7 +145,7 @@ class BaseEnvVars(BaseSettings):
 T = TypeVar("T")
 
 
-def container_or_default(container_default: T, cls_default: T) -> Field:
+def container_or_default(container_default: T, cls_default: T) -> FieldInfo:
     return Field(
         default_factory=DockerOrClsDefDefault(
             docker_default=container_default, cls_default=cls_default
@@ -172,7 +174,7 @@ def decode_settings_error(error: SettingsError) -> str:
     return error_field
 
 
-def port_info(number: int, *, url_prefix: str, protocol: str) -> Field:
+def port_info(number: int, *, url_prefix: str, protocol: str) -> FieldInfo:
     """Used for pants plugin "artifacts" to know which url_prefix and protocol
     to use in Chart."""
     return Field(default=number)

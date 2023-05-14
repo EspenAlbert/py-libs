@@ -5,7 +5,7 @@ import logging
 from contextlib import suppress
 from functools import singledispatch
 from pathlib import Path
-from typing import Any, Callable, Dict, Mapping, Optional, Tuple, Type, TypeVar
+from typing import Any, Callable, Dict, Mapping, Optional, Tuple, Type, TypeVar, cast
 
 from model_lib.constants import (
     FileFormat,
@@ -28,7 +28,7 @@ from .json_serialize import parse as parse_json
 from .yaml_serialize import parse_yaml_str
 
 logger = logging.getLogger(__name__)
-_registered_parsers: Dict[Type[RegisteredPayloadT, PayloadParser]] = {}
+_registered_parsers: Dict[Type, PayloadParser] = {}
 T = TypeVar("T")
 
 
@@ -71,19 +71,20 @@ def create_model(
         return (
             cls(**(model_args | extra_kwargs))
             if model_kwargs
-            else cls(model_args, **extra_kwargs)
+            else cls(model_args, **extra_kwargs)  # type: ignore
         )
-    return cls(**model_args) if model_kwargs else cls(model_args)
+    return cls(**model_args) if model_kwargs else cls(model_args)  # type: ignore
 
 
 def _lookup_safe(model_name: str) -> Type[T] | None:
     with suppress(UnknownModelError):
         return model_name_to_t(model_name)
+    return None
 
 
 def parse_model_metadata(
     payload: PayloadT,
-    format: FileFormat = FileFormat.json,
+    format: FileFormat | str = FileFormat.json,
     t: Type[T] | None = None,
     extra_kwargs: Mapping[str, Any] | None = None,
 ) -> Tuple[T, dict[str, Any]]:
@@ -102,18 +103,20 @@ def parse_model_metadata(
     metadata = parsed_payload.get("metadata", {})
     model_args = parsed_payload.get("model", parsed_payload)
     if t:
-        return create_model(t, model_args, extra_kwargs), metadata
+        return create_model(t, model_args, extra_kwargs or {}), metadata
     model_name = metadata.get("model_name")
     model_name_backup = metadata.get("model_name_backup")
-    model_cls = _lookup_safe(model_name) or _lookup_safe(model_name_backup)
+    model_cls: Type[T] | None = _lookup_safe(model_name) or _lookup_safe(
+        model_name_backup
+    )
     if model_cls is None:
         message = f"unknown models: {model_name}, {model_name_backup}"
         raise PayloadError(parsed_payload, message, metadata)
-    return create_model(model_cls, model_args, extra_kwargs), metadata
+    return create_model(model_cls, model_args, extra_kwargs or {}), metadata
 
 
 def parse_model_name_kwargs_list(payload: RegisteredPayloadT) -> list[T]:
-    raw_events: list = parse_payload(payload)
+    raw_events: list = cast(list, parse_payload(payload))
     parsed_events = []
     for cls_name_kwargs in raw_events:
         cls_name, kwargs = cls_name_kwargs.popitem()
@@ -160,7 +163,7 @@ def _parse_list(payload: list, format=FileFormat.json):
     return payload
 
 
-def get_parsers() -> Dict[Type[RegisteredPayloadT, PayloadParser]]:
+def get_parsers() -> dict[Type[RegisteredPayloadT], PayloadParser]:
     return _registered_parsers
 
 

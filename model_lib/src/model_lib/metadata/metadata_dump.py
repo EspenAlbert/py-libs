@@ -1,3 +1,4 @@
+from __future__ import annotations
 import logging
 from contextlib import suppress
 from copy import deepcopy
@@ -29,7 +30,7 @@ def add_metadata_dumper(call: MetadataDumper) -> RemoveDumper:
     call_names = {as_name(call): call for call in _dumpers}
     call_name = as_name(call)
     if same_name_call := call_names.get(call_name):
-        if same_name_call and same_name_call is call:
+        if same_name_call is call:
             logger.warning(f"metadat_dump_call_already_added={call_name}")
             return _no_removal
         _dumpers.remove(same_name_call)
@@ -61,7 +62,7 @@ class metadata_dumper:
         static_dict: dict,
         dump_event_id: bool = True,
         dump_time: bool = True,
-        extra_calls: list[MetadataDumper] = None,
+        extra_calls: list[MetadataDumper] | None = None,
         remove_existing: bool = False,
     ):
         self.calls = calls = [] if remove_existing else list(get_metadata_dumpers())

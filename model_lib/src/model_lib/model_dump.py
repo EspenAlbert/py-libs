@@ -28,7 +28,7 @@ def add_unregister(func: T) -> T:
     """https://stackoverflow.com/questions/25951651/unregister-for-
     singledispatch."""
     # build a dictionary mapping names to closure cells
-    closure = dict(zip(func.register.__code__.co_freevars, func.register.__closure__))
+    closure = dict(zip(func.register.__code__.co_freevars, func.register.__closure__))  # type: ignore
     registry = closure["registry"].cell_contents
     dispatch_cache = closure["dispatch_cache"].cell_contents
 
@@ -36,7 +36,7 @@ def add_unregister(func: T) -> T:
         del registry[cls]
         dispatch_cache.clear()
 
-    func.unregister = unregister
+    func.unregister = unregister  # type: ignore
     return func
 
 
@@ -53,7 +53,7 @@ def _register_yaml_dumper(instance_type: Type[T], dump_call: DumpCall):
     if instance_type in (str, bytes, bool, int, float):
         return
     with suppress(ModuleNotFoundError):
-        import yaml
+        import yaml  # type: ignore
 
         def represent(dumper: yaml.BaseDumper, instance: T):
             data = dump_call(instance)

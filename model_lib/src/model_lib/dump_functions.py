@@ -15,9 +15,8 @@ def base_model_dumper(model: BaseModel):
     Avoid having __root__ keys in the json and support our own defaults
     and dumping cached_properties, see test_dump_functions.py
     """
-    field_names = model.__fields__
-    if "__root__" in field_names:
-        return model.__root__
+    if root := getattr(model, "__root__", None):
+        return root
     return model.dict()
 
 
@@ -60,7 +59,7 @@ def dump_ignore_falsy(
             def new_dict(self, **extra_dict_kwargs):
                 return dump_call(self, extra_dict_kwargs)
 
-        _actual_class.dict = new_dict
+        _actual_class.dict = new_dict  # type: ignore
         return _actual_class
 
     return inner(cls) if cls else inner

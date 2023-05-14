@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from contextlib import suppress
-from typing import Iterable, Mapping, Type
+from typing import Iterable, Mapping, Type, Callable, Any
 
 from model_lib.constants import (
     METADATA_DUMP_KEY,
@@ -22,7 +22,7 @@ from model_lib import ModelT
 logger = logging.getLogger(__name__)
 
 
-_payload_dumpers = {
+_payload_dumpers: dict[FileFormat | str, Callable[[Any], str]] = {
     FileFormat.json: _dump_json,
     FileFormat.yaml: dump_yaml_str,
     FileFormat.yml: dump_yaml_str,
@@ -60,7 +60,7 @@ def dump_as_type_dict(instances: Iterable[ModelT], format: FileFormat) -> str:
     return dump({type(instance).__name__: instance for instance in instances}, format)
 
 
-def dump_safe(message: dict | object, format: FileFormat = FileFormat.json) -> str:
+def dump_safe(message: dict | object, format: FileFormat| str = FileFormat.json) -> str:
     try:
         return dump(message, format)
     except TypeError as e:
@@ -75,7 +75,7 @@ def dump_safe(message: dict | object, format: FileFormat = FileFormat.json) -> s
         with suppress(Exception):
             message_safe = {
                 key: value if is_safe(type(value)) else str(value)
-                for key, value in message.items()
+                for key, value in message.items()  # type: ignore
             }
             return dump(message_safe, format=format)
         # noinspection PyUnreachableCode

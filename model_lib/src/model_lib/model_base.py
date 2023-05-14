@@ -1,24 +1,27 @@
 from __future__ import annotations
 
 from functools import cached_property
-from typing import Generic, Iterable, List, Sequence, Type, TypeVar, Union
+from typing import Generic, Iterable, List, Sequence, Type, TypeVar, Union, TYPE_CHECKING
+
 
 from model_lib.errors import ClsNameAlreadyExist, UnknownModelError
 from pydantic import BaseModel, Extra
 from zero_3rdparty.object_name import as_name
 from zero_3rdparty.str_utils import want_bool
+if TYPE_CHECKING:
+    from pydantic.typing import AbstractSetIntStr, MappingIntStrAny, DictStrAny
 
 T = TypeVar("T")
-ModelT = TypeVar(name="ModelT", bound=BaseModel)
-_model_name_to_type: dict[str, Type[T]] = {
+ModelT = TypeVar("ModelT", bound=BaseModel)
+_model_name_to_type: dict[str, Type] = {
     "str": str,
     "int": int,
     "float": float,
-    bool: want_bool,
+    "bool": want_bool, # type: ignore
 }
 
 
-def model_name_to_t(name: str) -> Type[T]:
+def model_name_to_t(name: str) -> type:
     try:
         return _model_name_to_type[name]
     except KeyError as e:
@@ -53,10 +56,10 @@ class _Model(BaseModel):
     def dict(
         self,
         *,
-        include: Union["AbstractSetIntStr", "MappingIntStrAny"] = None,  # noqa
-        exclude: Union["AbstractSetIntStr", "MappingIntStrAny"] = None,  # noqa
+        include: Union["AbstractSetIntStr", "MappingIntStrAny"] = None,  # type: ignore
+        exclude: Union["AbstractSetIntStr", "MappingIntStrAny"] = None,  # type: ignore
         by_alias: bool = False,
-        skip_defaults: bool = None,
+        skip_defaults: bool = None,  # type: ignore
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
@@ -106,7 +109,7 @@ class SeqModel(_Model, Generic[T]):
     def __init_subclass__(cls, **kwargs):
         assert "__root__" in cls.__fields__
 
-    def __iter__(self) -> Iterable[T]:
+    def __iter__(self) -> Iterable[T]:  # type: ignore
         return iter(self.__root__)
 
     def __getitem__(self, item):

@@ -5,7 +5,7 @@ import re
 from io import StringIO
 from os import getenv
 from pathlib import Path
-from typing import Callable, List, Mapping, Match
+from typing import Callable, List, Mapping, Match, Union
 
 from model_lib.dump_functions import base_model_dumper
 from model_lib.model_dump import PrimitiveT, register_dumper
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 try:
-    import yaml
+    import yaml # type: ignore
 except ModuleNotFoundError:
     allow_ignore = "yes,true,1"
     ignore_name = "IGNORE_YAML_MISSING"
@@ -44,7 +44,7 @@ except ModuleNotFoundError:
         def SafeDumper(self):
             raise yaml_missing
 
-    yaml = yaml_dummy()
+    yaml = yaml_dummy()  # type: ignore
 
 
 def dump_yaml_str(
@@ -96,7 +96,7 @@ def parse_yaml_file(path: PathLike) -> dict:
         return yaml.safe_load(f)
 
 
-def parse_yaml_str(payload: str) -> PrimitiveT:
+def parse_yaml_str(payload: str) -> Union[dict, list]:
     return yaml.safe_load(StringIO(payload))
 
 
@@ -104,7 +104,7 @@ class edit_yaml:
     def __init__(
         self,
         path: PathLike,
-        yaml_path: str = None,
+        yaml_path: str | None = None,
         out_file="",
         width=1000,
         read_only=False,
@@ -148,7 +148,7 @@ class edit_helm_template:
     def make_template_loadable(self) -> None:
         """template -> yaml."""
         old_text = Path(self.path).read_text()
-        self.template_lines = standalone_template_lines = []
+        self.template_lines = standalone_template_lines = []  # type: ignore
         yaml_parts: List[str] = []
         for line in old_text.split("\n"):
             if line.startswith("{{"):
@@ -182,13 +182,12 @@ class edit_helm_template:
     def __init__(
         self,
         path: PathLike,
-        out_path: PathLike = None,
+        out_path: PathLike | None = None,
         yaml_path=None,
     ):
         self.path = Path(path)
-        self.template_lines: List[str] = []
-        self.out_path = out_path or path
-        self.out_path = Path(self.out_path)
+        self.template_lines: List[str] = []  # type: ignore
+        self.out_path: Path = Path(out_path or path)
 
         self.edit_yaml = edit_yaml(self.out_path, yaml_path, width=1000)
         # TRANSFORM FILE

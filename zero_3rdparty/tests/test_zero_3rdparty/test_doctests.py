@@ -1,6 +1,3 @@
-from types import ModuleType
-from typing import Callable
-
 import pytest
 import xdoctest as xdoc  # type: ignore
 
@@ -17,19 +14,8 @@ from zero_3rdparty import (
 )
 
 
-def doctest_modules(modules: list[ModuleType]):
-    def decorator(_: Callable):
-        @pytest.mark.parametrize("module", modules)
-        def test_doctests(module):
-            return_code = xdoc.doctest_module(module.__file__, command="all")
-            assert not return_code["failed"]
-
-        return test_doctests
-
-    return decorator
-
-
-@doctest_modules(
+@pytest.mark.parametrize(
+    "module",
     [
         datetime_utils,
         dict_nested,
@@ -40,7 +26,8 @@ def doctest_modules(modules: list[ModuleType]):
         iter_utils,
         object_name,
         str_utils,
-    ]
+    ],
 )
-def test_devops_doctests():
-    pass
+def test_zero_3rdparty_doctests(module):
+    return_code = xdoc.doctest_module(module.__file__, command="all", verbose=1)
+    assert not return_code["failed"]

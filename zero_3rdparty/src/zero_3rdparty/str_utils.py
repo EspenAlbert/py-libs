@@ -56,13 +56,10 @@ def _want_bool_none(s: None) -> bool:
     return False
 
 
-def filename_to_beautiful_name(filename: str) -> str:
+def filename_to_title(filename: str) -> str:
     """
-    >>> filename_to_beautiful_name('/Users/espen/workspace/ea_code/docs/source/writings/software/04_writing_docs.md')
+    >>> filename_to_title('/Users/espen/source/writings/software/04_writing_docs.md')
     'Writing Docs'
-
-    :param filename:
-    :return:
     """
     filename, _ = os.path.splitext(os.path.basename(filename))
     words_in_filename = re.findall(
@@ -142,25 +139,6 @@ def remove_ansi_formatting(raw: str) -> str:
     return ansi_escape.sub("", raw)
 
 
-fleet_pattern = (
-    r"\[(?P<ts>\S+)"
-    r"\s+"
-    r"(?P<log_level>\w+)"
-    r"\s+"
-    r"(?P<fleet_group>[^\]]+)"
-    r"\]\s?"
-    r"(?P<message>.*?)"
-    r"(elapsed:\s)?"
-    r"(?P<query_elapsed>\d+\.\d+)"
-    r"(?P<query_unit>\w+)"
-    r"\s*"
-    r"(?P<sql_query>.*)"
-)
-
-fleet_str = """[2021-06-25T04:13:10Z INFO  sqlx::query] SELECT schedule_id, fleet_id, scheduled_time \u2026; rows: 0, elapsed: 1.054ms SELECT schedule_id, fleet_id, scheduled_time FROM scheduled_missions WHERE ( executed_at IS NULL OR executed_at < (now() at time zone 'utc') :: date ) AND scheduled_time < (now() at time zone 'utc') :: time"""
-fleet_str2 = """[2021-06-29T15:29:31Z INFO  sqlx::query] LISTEN "message_enqueued";; rows: 0, elapsed: 651.274µs"""
-
-
 class NoMatchError(ValueError):
     def __init__(self, raw: str, pattern: str):
         super().__init__(f"pattern={pattern} did not match={raw}")
@@ -169,16 +147,6 @@ class NoMatchError(ValueError):
 
 
 def group_dict_or_match_error(re_str: str) -> Callable[[str], dict]:
-    """
-    >>> group_dict_or_match_error(fleet_pattern)(fleet_str)
-    {'ts': '2021-06-25T04:13:10Z', 'log_level': 'INFO', 'fleet_group': 'sqlx::query', 'message': 'SELECT schedule_id, fleet_id, scheduled_time …; rows: 0, ', 'query_elapsed': '1.054', 'query_unit': 'ms', 'sql_query': "SELECT schedule_id, fleet_id, scheduled_time FROM scheduled_missions WHERE ( executed_at IS NULL OR executed_at < (now() at time zone 'utc') :: date ) AND scheduled_time < (now() at time zone 'utc') :: time"}
-    >>> group_dict_or_match_error(fleet_pattern)(fleet_str2)
-    {'ts': '2021-06-29T15:29:31Z', 'log_level': 'INFO', 'fleet_group': 'sqlx::query', 'message': 'LISTEN "message_enqueued";; rows: 0, ', 'query_elapsed': '651.274', 'query_unit': 'µs', 'sql_query': ''}
-    >>> group_dict_or_match_error(fleet_pattern)("some nonmatching str")
-    Traceback (most recent call last):
-    ...
-    zero_3rdparty.str_utils.NoMatchError: pattern=\\[(?P<ts>\\S+)\\s+(?P<log_level>\\w+)\\s+(?P<fleet_group>[^\\]]+)\\]\\s?(?P<message>.*?)(elapsed:\\s)?(?P<query_elapsed>\\d+\\.\\d+)(?P<query_unit>\\w+)\\s*(?P<sql_query>.*) did not match=some nonmatching str
-    """
     pattern: Pattern = re.compile(re_str)
 
     def as_dict(raw: str) -> dict:

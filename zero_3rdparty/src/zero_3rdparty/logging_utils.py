@@ -92,5 +92,4 @@ def setup_logging(
     )
     if running_in_container_environment():
         avoid_linebreaks()
-        #: dispatcher logging a VectorMap can take up many 1000 symbols.
         limit_message_length()

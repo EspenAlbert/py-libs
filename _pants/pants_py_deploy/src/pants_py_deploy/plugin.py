@@ -274,14 +274,19 @@ async def fix_docker_compose(
     request: DockerComposeFileFixer.Batch,
     compose_files: ComposeFiles,
 ) -> FixResult:
+    batch_files = set(request.files)
     input_snapshot = request.snapshot
     digest_contents = await Get(DigestContents, Digest, input_snapshot.digest)
     updated_contents = modify_existing_compose(compose_files, digest_contents)
     updates_paths = {file_content.path for file_content in updated_contents}
     new_files = compose_files.paths_managed.keys() - updates_paths
     new_contents = create_compose_files(new_files, compose_files)
-    all_contents = updated_contents + new_contents
-    output_snapshot = await Get(Snapshot, CreateDigest(all_contents))
+    batch_contents = [
+        content
+        for content in updated_contents + new_contents
+        if content.path in batch_files
+    ]
+    output_snapshot = await Get(Snapshot, CreateDigest(batch_contents))
     return FixResult(
         input=input_snapshot,
         output=output_snapshot,

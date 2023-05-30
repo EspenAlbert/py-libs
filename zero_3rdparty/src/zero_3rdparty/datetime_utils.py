@@ -21,7 +21,9 @@ def get_date_as_rfc3339_without_time(date: datetime | None = None) -> str:
 
 
 @singledispatch
-def dump_date_as_rfc3339(date: datetime | float | None, strip_microseconds=False) -> str:
+def dump_date_as_rfc3339(
+    date: datetime | float | None, strip_microseconds=False
+) -> str:
     """
     >>> dump_date_as_rfc3339(datetime(2018, 9, 12, 1, 57, 54, 494142, tzinfo=timezone.utc))
     '2018-09-12T01:57:54.494142+00:00'
@@ -32,9 +34,7 @@ def dump_date_as_rfc3339(date: datetime | float | None, strip_microseconds=False
 
 
 @dump_date_as_rfc3339.register
-def _dump_date_as_rfc3339_date(
-    date: datetime, strip_microseconds: bool = False
-) -> str:
+def _dump_date_as_rfc3339_date(date: datetime, strip_microseconds: bool = False) -> str:
     if strip_microseconds:
         date = date.replace(microsecond=0)
     return date.astimezone(timezone.utc).isoformat()
@@ -48,9 +48,7 @@ def _dump_date_as_rfc3339_none(
 
 
 @dump_date_as_rfc3339.register
-def _dump_date_as_rfc3339_float(
-    date: float, strip_microseconds: bool = False
-) -> str:
+def _dump_date_as_rfc3339_float(date: float, strip_microseconds: bool = False) -> str:
     dt = datetime.fromtimestamp(date, tz=timezone.utc)
     return _dump_date_as_rfc3339_date(dt, strip_microseconds)
 

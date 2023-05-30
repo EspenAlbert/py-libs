@@ -126,14 +126,14 @@ def ensure_chart_version_valid(chart_version: str):
     """
     check_version = chart_version if chart_version[0].isdigit() else chart_version[1:]
     try:
-        semver.parse_version_info(check_version)
+        semver.VersionInfo.parse(check_version)
         return chart_version
     except ValueError:
         updated_version = f"0.0.1-{chart_version}"
         logger.warning(
             f"not a valid semver: {chart_version}, will try: {updated_version}"
         )
-    semver.parse_version_info(updated_version)
+    semver.VersionInfo.parse(updated_version)
     return updated_version
 
 

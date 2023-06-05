@@ -1,4 +1,5 @@
 import logging
+import os
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
@@ -45,7 +46,8 @@ def _export_chart(
     chart_path: Path,
     skip_generators: Optional[List[str]] = None,
 ) -> Path:
-    clean_dir(chart_path)
+    if chart_path.is_dir() and os.listdir(chart_path):
+        clean_dir(chart_path)
     skip_generators = skip_generators or []
     for rel_path, content_generator in PATH_TO_GENERATORS.items():
         if rel_path in skip_generators:

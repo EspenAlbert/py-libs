@@ -87,11 +87,11 @@ class ExtraContainer(BaseModel):
 
 
 def parse_service_name_extra_containers(
-    compose_path: Path,
+    compose_path: Path, chart_name: str
 ) -> tuple[str, list[ExtraContainer]]:
     extra_containers = []
     service_names = []
-    service_names_with_chart_name = []
+    chart_name_service_name = {}
     for each_service_name, info in iter_compose_info(compose_path):
         if info.labels.get("extra_container") == "true":
             container_name = each_service_name.replace("_", "-")
@@ -100,12 +100,17 @@ def parse_service_name_extra_containers(
                     name=container_name, env=info.default_env, command=info.command
                 )
             )
-        elif parse_chart_name(info.labels):
-            service_names_with_chart_name.append(each_service_name)
+        elif service_chart_name := parse_chart_name(info.labels):
+            chart_name_service_name[service_chart_name] = each_service_name
         else:
             service_names.append(each_service_name)
-    if service_names_with_chart_name:
-        service_names = service_names_with_chart_name
+    if chart_name and chart_name_service_name:
+        found_service = chart_name_service_name.get(chart_name)
+        if not found_service:
+            raise ValueError(f"chart name: {chart_name} not found in {compose_path}")
+        return found_service, extra_containers
+    if chart_name_service_name:
+        service_names = list(chart_name_service_name.values())
     if not service_names:
         raise ValueError(f"No main service name found in {compose_path}")
     if len(service_names) > 1:
@@ -147,7 +152,9 @@ def export_from_compose(
 ):
     chart_version = ensure_chart_version_valid(chart_version)
     compose_path = Path(compose_path)
-    service_name, extra_containers = parse_service_name_extra_containers(compose_path)
+    service_name, extra_containers = parse_service_name_extra_containers(
+        compose_path, chart_name
+    )
     info = read_compose_info(compose_path, service_name)
     env = info.default_env
     compose_labels = info.labels

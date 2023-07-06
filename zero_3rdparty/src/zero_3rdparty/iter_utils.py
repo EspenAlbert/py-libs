@@ -14,6 +14,7 @@ from typing import (
     Iterable,
     List,
     Optional,
+    Sequence,
     Tuple,
     Type,
     TypeVar,
@@ -351,3 +352,8 @@ def ignore_falsy(**kwargs) -> dict:
 
 def ignore_none(**kwargs) -> dict:
     return {key: value for key, value in kwargs.items() if value is not None}
+
+
+def iter_slices(sequence: Sequence[T], max: int = 100) -> Iterable[Sequence[T]]:
+    for start in range(0, len(sequence), max):
+        yield sequence[start : start + max]

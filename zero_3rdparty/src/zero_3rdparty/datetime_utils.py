@@ -130,12 +130,23 @@ def date_filename(dt: Optional[datetime] = None) -> str:
 
 def date_filename_with_seconds(dt: Optional[datetime] = None) -> str:
     """
-    Example: 2021-04-07T08-46-02
+    >>> date_filename_with_seconds(datetime(year=2023, month=5, day=2, hour=9, minute=4, tzinfo=timezone.utc))
+    '2023-05-02T09-04-00'
+    >>> date_filename_with_seconds(datetime(year=2023, month=5, day=2, hour=9, minute=4))
+    '2023-05-02T09-04-00'
     """
     dt = dt or utc_now()
     seconds = dt.second
     filename = date_filename(dt)
-    return filename[:-1] + f"-{seconds:02}"
+    return filename.removesuffix("Z") + f"-{seconds:02}"
+
+
+def iso_format_truncate_to_seconds(dt: datetime) -> str:
+    """
+    >>> iso_format_truncate_to_seconds(datetime(year=2023, month=5, day=2, hour=9, minute=4, tzinfo=timezone.utc))
+    '2023-05-02T09:04:00'
+    """
+    return dt.isoformat(timespec="seconds").removesuffix("+00:00")
 
 
 def parse_date_filename_with_seconds(raw: str) -> datetime:
@@ -231,3 +242,34 @@ def day_range(start: DT, end: DT, delta: timedelta) -> Iterable[DT]:
     steps = int((end - start) / delta)
     for index in range(steps):
         yield start + (delta * index)
+
+
+def day_ranges(start: DT, end: DT, delta: timedelta) -> Iterable[tuple[DT, DT]]:
+    """Returns a [(start1, end1), (start2, end2)] where end1==start2.
+
+    >>> start = datetime(year=2023, month=1, day=1)
+    >>> end = datetime(year=2023, month=1, day=11)
+    >>> [(dt_i.day, dt_j.day) for dt_i, dt_j in day_ranges(start, end, timedelta(days=5))]
+    [(1, 6), (6, 11)]
+    >>> [(dt_i.day, dt_j.day) for dt_i, dt_j in day_ranges(start, end.replace(day=10), timedelta(days=5))]
+    [(1, 6)]
+    """
+    for next_dt in day_range(start, end, delta):
+        next_dt_end = next_dt + delta
+        if next_dt_end > end:
+            break
+        yield next_dt, next_dt_end
+
+
+def week_dt(year: int, week: int) -> datetime:
+    """
+    >>> week_dt(2023, 1)
+    datetime.datetime(2023, 1, 2, 0, 0)
+    >>> week_dt(2023, 18)
+    datetime.datetime(2023, 5, 1, 0, 0)
+    """
+    jan_1st = datetime(year, 1, 1)
+    start_monday = jan_1st - timedelta(days=jan_1st.weekday())
+    if week_nr(start_monday) != 1:
+        start_monday += timedelta(weeks=1)
+    return start_monday + timedelta(weeks=week - 1)

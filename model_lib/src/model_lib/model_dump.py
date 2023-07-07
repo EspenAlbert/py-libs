@@ -59,8 +59,8 @@ def _register_yaml_dumper(instance_type: Type[T], dump_call: DumpCall):
             data = dump_call(instance)
             return dumper.represent_data(data)
 
-        yaml.add_representer(instance_type, represent, yaml.SafeDumper)
-        yaml.add_representer(instance_type, represent, yaml.Dumper)
+        yaml.add_multi_representer(instance_type, represent, yaml.SafeDumper)
+        yaml.add_multi_representer(instance_type, represent, yaml.Dumper)
 
 
 def register_dumper(

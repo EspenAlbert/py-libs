@@ -4,6 +4,9 @@ import pytest
 from model_lib.errors import DumperExist, NoDumper
 from model_lib.model_base import Event
 from model_lib.model_dump import dump, register_dumper
+from zero_3rdparty.enum_utils import StrEnum
+
+from model_lib import dump as dump_with_extension
 
 
 def test_register_and_remove_call():
@@ -55,3 +58,12 @@ def test_dumping_model_with_cached_property():
         "first_name": "first",
         "last_name": "second",
     }
+
+
+class _MyEnum(StrEnum):
+    A = "A"
+    B = "B"
+
+
+def test_dumping_enum_to_yaml():
+    assert dump_with_extension(dict(key=_MyEnum.A), "yaml") == "key: A\n"

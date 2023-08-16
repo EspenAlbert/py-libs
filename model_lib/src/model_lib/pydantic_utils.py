@@ -6,7 +6,7 @@ from typing import Any, List, Type, TypeVar, Union
 
 import pydantic
 from pydantic import BaseModel, conint
-from typing_extensions import TypeAlias, Annotated
+from typing_extensions import Annotated, TypeAlias
 
 IS_SETTINGS_INSTALLED = False
 IS_PYDANTIC_V2 = int(pydantic.VERSION.split(".")[0]) >= 2
@@ -28,9 +28,9 @@ else:
     from pydantic.datetime_parse import parse_datetime
     from pydantic import parse_obj_as
 
-from model_lib.model_dump import register_dumper
-from zero_3rdparty.datetime_utils import as_ms_precision_utc, ensure_tz
-from zero_3rdparty.iter_utils import first
+from model_lib.model_dump import register_dumper  # noqa: E402
+from zero_3rdparty.datetime_utils import as_ms_precision_utc, ensure_tz  # noqa: E402
+from zero_3rdparty.iter_utils import first  # noqa: E402
 
 
 def env_var_name(
@@ -222,6 +222,7 @@ def _parse_timedelta_td(td: timedelta):
 @parse_timedelta.register
 def _parse_timedelta_float(td: float):
     return timedelta(seconds=td)
+
 
 @parse_timedelta.register
 def _parse_timedelta_int(td: int):

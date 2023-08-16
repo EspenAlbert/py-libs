@@ -48,6 +48,8 @@ __all__ = (  # noqa F405
     "dump_as_list",
     "dump_as_dict",
     "dump_ignore_falsy",
+    "env_var_name",
+    "env_var_names",
     "field_names",
     "parse_model",
     "parse_payload",

@@ -3,12 +3,13 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Dict, List, Tuple, cast
 
-from model_lib import Event, Entity
 from model_lib.pydantic_utils import IS_PYDANTIC_V2
 from model_lib.serialize.yaml_serialize import edit_helm_template
 from pydantic import Field, constr
 from typing_extensions import TypeAlias
 from zero_3rdparty.enum_utils import StrEnum
+
+from model_lib import Entity, Event
 
 
 class ReplaceStr(StrEnum):
@@ -82,12 +83,14 @@ class HostPathContainerPath(Entity):
 
     if IS_PYDANTIC_V2:
         from pydantic import model_validator
+
         @model_validator(mode="after")
         def ensure_container_path(self):
             self.container_path = self.container_path or self.host_path
 
     else:
         from pydantic import validator
+
         @validator("container_path", always=True)
         def use_host_path_if_empty(cls, value: str, values: dict):
             if not value:

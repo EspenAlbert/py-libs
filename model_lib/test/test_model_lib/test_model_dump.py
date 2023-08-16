@@ -7,7 +7,8 @@ from model_lib.model_dump import dump, register_dumper
 from model_lib.pydantic_utils import IS_PYDANTIC_V2
 from zero_3rdparty.enum_utils import StrEnum
 
-from model_lib import dump as dump_with_extension, FileFormat
+from model_lib import FileFormat
+from model_lib import dump as dump_with_extension
 
 
 def test_register_and_remove_call():

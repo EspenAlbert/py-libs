@@ -1,5 +1,1 @@
-__defaults__(
-    all=dict(
-        resolve=parametrize("python-default", "pydantic-v1")
-    )
-)
+__defaults__(all=dict(resolve=parametrize("python-default", "pydantic-v1")))

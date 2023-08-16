@@ -2,13 +2,21 @@ from functools import cached_property
 
 from model_lib.constants import FileFormat
 from model_lib.model_dump import dump
+from model_lib.pydantic_utils import IS_PYDANTIC_V2, model_json
 from pydantic import Field
 
-from model_lib import Entity, dump_ignore_falsy
+from model_lib import Entity
+from model_lib import dump as dump_format
+from model_lib import dump_ignore_falsy
 
+if IS_PYDANTIC_V2:
+    from pydantic import RootModel
 
-class BaseAsList(Entity):
-    __root__: list[str]
+    BaseAsList = RootModel[list[str]]
+else:
+
+    class BaseAsList(Entity):
+        __root__: list[str]
 
 
 class RootAsChild(Entity):
@@ -22,15 +30,22 @@ class RootAsChild(Entity):
 
 def test_compare_dump_behavior_with_pydantic():
     model = RootAsChild(pets=["p1", "p2"], owner="bob")
-    assert model.json() == '{"pets": ["p1", "p2"], "owner": "bob"}'
-    assert dump(model) == {"pets": ["p1", "p2"], "owner": "bob"}
+    pydantic_json = model_json(model)
+    if IS_PYDANTIC_V2:
+        assert pydantic_json == '{"pets":["p1","p2"],"owner":"bob"}'
+    else:
+        assert pydantic_json == '{"pets": ["p1", "p2"], "owner": "bob"}'
+    assert dump_format(model, "json") == '{"pets":["p1","p2"],"owner":"bob"}'
     child = RootAsChild(pets=["p1", "p2"], owner="bob")
     assert child.owner_prop == "bob-prop"
-    # example of property also dumped in default json
-    assert (
-        child.json()
-        == '{"pets": ["p1", "p2"], "owner": "bob", "owner_prop": "bob-prop"}'
-    )
+    # example of property also dumped in default json for pydantic v1
+    if IS_PYDANTIC_V2:
+        assert model_json(child) == '{"pets":["p1","p2"],"owner":"bob"}'
+    else:
+        assert (
+            child.json()
+            == '{"pets": ["p1", "p2"], "owner": "bob", "owner_prop": "bob-prop"}'
+        )
 
 
 @dump_ignore_falsy
@@ -71,4 +86,5 @@ def test_dumping_should_not_include_cached_property():
     assert instance.full_name == "n ln"
     assert dump(instance) == dict(name="n", last_name="ln")
     parent = _ParentWithCached(child=instance)
-    assert dump(parent) == {"child": {"last_name": "ln", "name": "n"}}
+    assert dump(parent) == {"child": _MyCachedPropModel(last_name="ln", name="n")}
+    assert dump_format(parent, "json") == '{"child":{"name":"n","last_name":"ln"}}'

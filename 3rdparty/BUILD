@@ -4,7 +4,7 @@ python_requirements(
         "PyYaml": ["yaml"],
         "pytest-freezegun": ["freezegun"],
     },
-    resolve=parametrize("python-default", "pydantic-v1")
+    resolve=parametrize("python-default", "pydantic-v1"),
 )
 
 python_requirement(

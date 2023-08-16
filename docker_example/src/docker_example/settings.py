@@ -1,6 +1,5 @@
-from pydantic import BaseSettings
-
 from model_lib import port_info
+from pydantic import BaseSettings
 
 
 class DockerExampleSettings(BaseSettings):

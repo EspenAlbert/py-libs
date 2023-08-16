@@ -8,6 +8,7 @@ from docker_compose_parser.file_models import (
     export_compose_dict_from_services,
     iter_compose_info,
 )
+from model_lib import FileFormat, dump, parse_payload
 from pants.engine.fs import FileContent
 from pants_py_deploy.fields import COMPOSE_NETWORK_NAME
 from pants_py_deploy.models import (
@@ -17,8 +18,6 @@ from pants_py_deploy.models import (
     FileEnvVars,
 )
 from zero_3rdparty.str_utils import ensure_suffix
-
-from model_lib import FileFormat, dump, parse_payload
 
 
 def create_compose_files(

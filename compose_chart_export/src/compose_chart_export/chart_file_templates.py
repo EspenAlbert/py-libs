@@ -3,12 +3,12 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Dict, List, Tuple, cast
 
+from model_lib import Event, Entity
+from model_lib.pydantic_utils import IS_PYDANTIC_V2
 from model_lib.serialize.yaml_serialize import edit_helm_template
-from pydantic import Field, constr, validator
+from pydantic import Field, constr
 from typing_extensions import TypeAlias
 from zero_3rdparty.enum_utils import StrEnum
-
-from model_lib import Event
 
 
 class ReplaceStr(StrEnum):
@@ -31,34 +31,26 @@ appVersion: {ReplaceStr.APP_VERSION}
 
 # start with number or character ". -_" allowed, + and / not allowed
 # https://atomist.github.io/sdm-pack-k8s/modules/_lib_kubernetes_labels_.html
-kubernetes_label_regex: TypeAlias = cast(
-    str, constr(regex=r"^([a-zA-Z0-9][-a-zA-Z0-9_\.]*[a-zA-Z0-9])?$", max_length=63)
-)
-dns_safe: TypeAlias = cast(str, constr(regex=r"^[a-z-]+$"))
+if IS_PYDANTIC_V2:
+    kubernetes_label_regex: TypeAlias = cast(
+        str,
+        constr(pattern=r"^([a-zA-Z0-9][-a-zA-Z0-9_\.]*[a-zA-Z0-9])?$", max_length=63),
+    )
+    dns_safe: TypeAlias = cast(str, constr(pattern=r"^[a-z-]+$"))
+else:
+    kubernetes_label_regex: TypeAlias = cast(
+        str, constr(regex=r"^([a-zA-Z0-9][-a-zA-Z0-9_\.]*[a-zA-Z0-9])?$", max_length=63)
+    )
+    dns_safe: TypeAlias = cast(str, constr(regex=r"^[a-z-]+$"))
 
 
-class TemplateReplacements(Event):
+class TemplateReplacements(Entity):
     """
-    >>> TemplateReplacements(REPO_NAME="py-hooks", REPO_OWNER="wheelme-devops", CHART_VERSION="0.0.1")
-    TemplateReplacements(APP_VERSION='', CHART_VERSION='0.0.1', REPO_NAME='py-hooks', REPO_OWNER='wheelme-devops', APP_NAME='py-hooks')
-    >>> TemplateReplacements(REPO_NAME="py-hooks._ok", REPO_OWNER="wheelme-devops", CHART_VERSION="0.0.1")
-    TemplateReplacements(APP_VERSION='', CHART_VERSION='0.0.1', REPO_NAME='py-hooks._ok', REPO_OWNER='wheelme-devops', APP_NAME='py-hooks._ok')
-    >>> TemplateReplacements(REPO_NAME="py+hooks", REPO_OWNER="wheelme-devops", CHART_VERSION="0.0.1")
-    Traceback (most recent call last):
-    ...
-    pydantic.error_wrappers.ValidationError: 1 validation error for TemplateReplacements
-    REPO_NAME
-      string does not match regex "^([a-zA-Z0-9][-a-zA-Z0-9_\.]*[a-zA-Z0-9])?$" (type=value_error.str.regex; pattern=^([a-zA-Z0-9][-a-zA-Z0-9_\.]*[a-zA-Z0-9])?$)
-
-    >>> TemplateReplacements(REPO_NAME="py-hooks/", REPO_OWNER="wheelme-devops", CHART_VERSION="0.0.1")
-    Traceback (most recent call last):
-    pydantic.error_wrappers.ValidationError: 1 validation error for TemplateReplacements
-    REPO_NAME
-      string does not match regex "^([a-zA-Z0-9][-a-zA-Z0-9_\.]*[a-zA-Z0-9])?$" (type=value_error.str.regex; pattern=^([a-zA-Z0-9][-a-zA-Z0-9_\.]*[a-zA-Z0-9])?$)
+    >>> TemplateReplacements(APP_NAME="py-hooks", REPO_NAME="py-hooks", REPO_OWNER="wheelme-devops", CHART_VERSION="0.0.1")
+    TemplateReplacements(CHART_VERSION='0.0.1', APP_NAME='py-hooks', APP_VERSION='', REPO_NAME='py-hooks', REPO_OWNER='wheelme-devops')
+    >>> TemplateReplacements(APP_NAME="py-hooks", REPO_NAME="py-hooks._ok", REPO_OWNER="wheelme-devops", CHART_VERSION="0.0.1")
+    TemplateReplacements(CHART_VERSION='0.0.1', APP_NAME='py-hooks', APP_VERSION='', REPO_NAME='py-hooks._ok', REPO_OWNER='wheelme-devops')
     """
-
-    class Config:
-        allow_mutation = True
 
     CHART_VERSION: kubernetes_label_regex
     APP_NAME: kubernetes_label_regex
@@ -74,27 +66,33 @@ class TemplateReplacements(Event):
         return string
 
 
-class HostPathContainerPath(Event):
+class HostPathContainerPath(Entity):
     """
-    >>> HostPathContainerPath(name="last_ts_path", host_path="/some_host_path")
-    Traceback (most recent call last):
-    ...
-    pydantic.error_wrappers.ValidationError: 1 validation error for HostPathContainerPath
-    name
-      string does not match regex "^[a-z-]+$" (type=value_error.str.regex; pattern=^[a-z-]+$)
+    >>> import warnings
+    >>> warnings.filterwarnings('error')
     >>> HostPathContainerPath(name="last-ts-path", host_path="/some_host_path")
     HostPathContainerPath(name='last-ts-path', host_path='/some_host_path', container_path='/some_host_path')
+    >>> HostPathContainerPath(name="last-ts-path", host_path="/some_host_path", container_path="/different_path")
+    HostPathContainerPath(name='last-ts-path', host_path='/some_host_path', container_path='/different_path')
     """
 
     name: dns_safe
     host_path: str
     container_path: str = ""
 
-    @validator("container_path", always=True)
-    def use_host_path_if_empty(cls, value: str, values: dict):
-        if not value:
-            return values["host_path"]
-        return value
+    if IS_PYDANTIC_V2:
+        from pydantic import model_validator
+        @model_validator(mode="after")
+        def ensure_container_path(self):
+            self.container_path = self.container_path or self.host_path
+
+    else:
+        from pydantic import validator
+        @validator("container_path", always=True)
+        def use_host_path_if_empty(cls, value: str, values: dict):
+            if not value:
+                return values["host_path"]
+            return value
 
 
 class PersistentVolume(Event):

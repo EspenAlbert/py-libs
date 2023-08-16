@@ -28,12 +28,11 @@ from docker_compose_parser.file_models import (
     iter_compose_info,
     read_compose_info,
 )
+from model_lib import FileFormat, parse_model, parse_payload
 from model_lib.serialize.yaml_serialize import edit_yaml
 from pydantic import BaseModel
 from zero_3rdparty.file_utils import PathLike, copy
 from zero_3rdparty.str_utils import want_bool
-
-from model_lib import FileFormat, parse_model, parse_payload
 
 logger = logging.getLogger(__name__)
 

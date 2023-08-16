@@ -43,11 +43,13 @@ enable_resolves = true
 
 [python.resolves]
 pants-plugins = "_pants/3rdparty/lock.txt"
+pydantic-v1 = "_pants/3rdparty/pydantic-v1"
 python-default = "3rdparty/python/default.lock"
 
 [python.resolves_to_interpreter_constraints]
 pants-plugins = [">=3.9,<3.10"]
 python-default = [">=3.9"]
+pydantic-v1 = [">=3.9"]
 
 [black]
 config = "pyproject.toml"

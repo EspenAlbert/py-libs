@@ -4,4 +4,16 @@ python_requirements(
         "PyYaml": ["yaml"],
         "pytest-freezegun": ["freezegun"],
     },
+    resolve=parametrize("python-default", "pydantic-v1")
+)
+
+python_requirement(
+    name="pydantic_v1",
+    requirements=["pydantic==1.10.2"],
+    resolve="pydantic-v1",
+)
+python_requirement(
+    name="pydantic_v2",
+    requirements=["pydantic==2.1.1", "pydantic-settings==2.0.3"],
+    resolve="python-default",
 )

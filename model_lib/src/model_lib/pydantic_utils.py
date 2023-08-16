@@ -88,7 +88,7 @@ def model_dump(model, **kwargs):
         return model.dict(**kwargs)
 
 
-def model_json(model: BaseModel, **kwargs):
+def model_json(model: BaseModel, **kwargs) -> str:
     if IS_PYDANTIC_V2:
         return model.model_dump_json(**kwargs)
     else:

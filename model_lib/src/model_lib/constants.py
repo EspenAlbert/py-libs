@@ -18,6 +18,7 @@ class FileFormat(StrEnum):
     json_pretty = "pretty_json"
     yaml = "yaml"
     yml = "yml"
+    # only recommended to use with pydantic2
     json_pydantic = "json_pydantic"
     pydantic_json = "pydantic_json"
 

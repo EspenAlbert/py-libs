@@ -60,6 +60,9 @@ config = ".flake8"
 [isort]
 config ="pyproject.toml"
 
+[mypy]
+config = "mypy.ini"
+
 [coverage-py]
 interpreter_constraints = [">=3.9"]
 report = ["xml", "html"]

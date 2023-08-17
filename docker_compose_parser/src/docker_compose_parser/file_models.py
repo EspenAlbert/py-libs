@@ -19,7 +19,7 @@ NETWORK_NAME_DEFAULT = "compose-default"
 
 class ComposeServiceInfo(Entity):
     if IS_PYDANTIC_V2:
-        model_config = dict(populate_by_name=True, extra=Extra.allow)
+        model_config = dict(populate_by_name=True, extra=Extra.allow)  # type: ignore
     else:
 
         class Config:
@@ -34,7 +34,7 @@ class ComposeServiceInfo(Entity):
     command: List[str] = Field(default_factory=list)
 
     if IS_PYDANTIC_V2:
-        from pydantic import field_validator
+        from pydantic import field_validator  # type: ignore
 
         @field_validator("command", mode="before")
         def split_str(cls, value: Any) -> list[str]:
@@ -49,7 +49,7 @@ class ComposeServiceInfo(Entity):
             return value
 
     else:
-        from pydantic import validator
+        from pydantic import validator  # type: ignore
 
         @validator("command", pre=True)
         def split_str(cls, value: Any) -> list[str]:

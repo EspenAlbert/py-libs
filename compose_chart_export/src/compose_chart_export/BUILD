@@ -1,7 +1,7 @@
 python_sources()
 python_distribution(
     name="compose-chart-export",
-    dependencies=[":compose_chart_export"],
+    dependencies=[":compose_chart_export@resolve=python-default"],
     long_description_path="compose_chart_export/readme.md",
     provides=setup_py(
         name="compose_chart_export",

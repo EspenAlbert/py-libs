@@ -43,7 +43,7 @@ def env_var_name(
 
         model_config = settings.model_config
         source = EnvSettingsSource(
-            settings,
+            settings,  # type: ignore
             case_sensitive=model_config["case_sensitive"],
             env_prefix=model_config["env_prefix"],
             env_nested_delimiter=model_config["env_nested_delimiter"],

@@ -10,12 +10,12 @@ from zero_3rdparty.iter_utils import ignore_falsy_recurse
 from model_lib import ModelT, register_dumper
 
 if IS_PYDANTIC_V2:
-    from pydantic import RootModel
+    from pydantic import RootModel  # type: ignore
 
     def base_model_dumper(model: BaseModel):
         if isinstance(model, RootModel):
             return model.root
-        fields = model.model_fields
+        fields = model.model_fields  # type: ignore
         return {key: value for key, value in model if key in fields}
 
 else:

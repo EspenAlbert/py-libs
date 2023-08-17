@@ -107,12 +107,12 @@ class TypeEvent:
 
 
 if IS_PYDANTIC_V2:
-    from pydantic import RootModel
+    from pydantic import RootModel  # type: ignore
 
     SeqModelT = TypeVar("SeqModelT")
 
     class SeqModel(RootModel[list[SeqModelT]], Generic[SeqModelT]):
-        def __iter__(self) -> Iterable[T]:  # type: ignore
+        def __iter__(self) -> Iterable[SeqModelT]:  # type: ignore
             return iter(self.root)
 
         def __getitem__(self, item):
@@ -123,7 +123,7 @@ if IS_PYDANTIC_V2:
 
 else:
 
-    class SeqModel(_Model, Generic[T]):
+    class SeqModel(_Model, Generic[T]):  # type: ignore
         __root__: Sequence[T]
 
         def __init_subclass__(cls, **kwargs):

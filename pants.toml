@@ -43,7 +43,7 @@ enable_resolves = true
 
 [python.resolves]
 pants-plugins = "_pants/3rdparty/lock.txt"
-pydantic-v1 = "_pants/3rdparty/pydantic-v1"
+pydantic-v1 = "3rdparty/python/pydantic-v1.lock"
 python-default = "3rdparty/python/default.lock"
 
 [python.resolves_to_interpreter_constraints]

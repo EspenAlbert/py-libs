@@ -5,7 +5,8 @@ from functools import total_ordering
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional
 
-from pydantic import Extra, Field, validator
+from model_lib.pydantic_utils import IS_PYDANTIC_V2
+from pydantic import Extra, Field
 from zero_3rdparty.dict_nested import read_nested_or_none
 from zero_3rdparty.dict_utils import merge, sort_keys
 from zero_3rdparty.iter_utils import ignore_falsy as ignore_falsy_method
@@ -17,10 +18,13 @@ NETWORK_NAME_DEFAULT = "compose-default"
 
 
 class ComposeServiceInfo(Entity):
-    class Config:
-        allow_mutation = True
-        allow_population_by_field_name = True
-        extra = Extra.allow
+    if IS_PYDANTIC_V2:
+        model_config = dict(populate_by_name=True, extra=Extra.allow)  # type: ignore
+    else:
+
+        class Config:
+            allow_population_by_field_name = True
+            extra = Extra.allow
 
     image: Optional[str] = None
     labels: Dict[str, str] = Field(default_factory=dict)
@@ -29,17 +33,35 @@ class ComposeServiceInfo(Entity):
     default_volumes: list[str] = Field(alias="volumes", default_factory=list)
     command: List[str] = Field(default_factory=list)
 
-    @validator("command", pre=True)
-    def split_str(cls, value: Any) -> list[str]:
-        if isinstance(value, str):
-            return value.split()
-        return value
+    if IS_PYDANTIC_V2:
+        from pydantic import field_validator  # type: ignore
 
-    @validator("default_env", pre=True)
-    def parse_list(cls, value):
-        if isinstance(value, list):
-            return key_equal_value_to_dict(value)
-        return value
+        @field_validator("command", mode="before")
+        def split_str(cls, value: Any) -> list[str]:
+            if isinstance(value, str):
+                return value.split()
+            return value
+
+        @field_validator("default_env", mode="before")
+        def parse_list(cls, value):
+            if isinstance(value, list):
+                return key_equal_value_to_dict(value)
+            return value
+
+    else:
+        from pydantic import validator  # type: ignore
+
+        @validator("command", pre=True)
+        def split_str(cls, value: Any) -> list[str]:
+            if isinstance(value, str):
+                return value.split()
+            return value
+
+        @validator("default_env", pre=True)
+        def parse_list(cls, value):
+            if isinstance(value, list):
+                return key_equal_value_to_dict(value)
+            return value
 
     @property
     def host_container_ports(self) -> Iterable[tuple[int, int]]:

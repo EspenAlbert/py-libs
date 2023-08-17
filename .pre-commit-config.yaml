@@ -1,0 +1,20 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.3.0
+  hooks:
+  - id: no-commit-to-branch
+
+- repo: local
+  hooks:
+  - id: lint
+    name: Lint
+    entry: pants --changed-since=HEAD --changed-dependents=transitive lint --only="['black', 'flake8', 'helm', 'helmchart', 'regex-lint', 'docformatter']"
+    types: [python]
+    language: system
+    pass_filenames: false
+  - id: test
+    name: Test
+    entry: pants --changed-since=HEAD --changed-dependents=transitive test
+    types: [python]
+    language: system
+    pass_filenames: false

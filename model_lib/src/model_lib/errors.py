@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import Type, TypeVar
+from typing import Any, Type, TypeVar
 
 from model_lib.constants import FileFormat, PayloadT
-from pydantic.env_settings import SettingsError
 from zero_3rdparty.error import BaseError
 
 T = TypeVar("T")
@@ -32,7 +31,7 @@ class DumperExist(Exception):
 
 
 class EnvVarParsingFailure(BaseError):
-    def __init__(self, errors: list[SettingsError]):
+    def __init__(self, errors: list[Any]):
         self.errors = errors
 
 

@@ -15,8 +15,12 @@ METADATA_MODEL_NAME_BACKUP_FIELD = "model_name_backup"
 class FileFormat(StrEnum):
     json = "json"
     pretty_json = "pretty_json"
+    json_pretty = "pretty_json"
     yaml = "yaml"
     yml = "yml"
+    # only recommended to use with pydantic2
+    json_pydantic = "json_pydantic"
+    pydantic_json = "pydantic_json"
 
 
 PayloadParser = Callable[[RegisteredPayloadT, FileFormat], ModelRawT]

@@ -4,6 +4,7 @@ import pytest
 from model_lib.errors import UnknownModelError
 from model_lib.model_base import Entity, Event, SeqModel, model_name_to_t
 from model_lib.model_dump import dump
+from model_lib.pydantic_utils import IS_PYDANTIC_V2
 
 
 class _MyEventModelBase(Event):
@@ -51,15 +52,25 @@ class _Person(Entity):
     name: str
 
 
-class _People(SeqModel[_Person]):
-    __root__: list[_Person]
+if IS_PYDANTIC_V2:
+
+    class _People(SeqModel[_Person]):
+        pass
+
+else:
+
+    class _People(SeqModel[_Person]):
+        __root__: list[_Person]
 
 
 def test_iterating_over_people():
     p1 = _Person(name="p1")
     p2 = _Person(name="p2")
     people_list = [p1, p2]
-    people = _People(__root__=people_list)
+    if IS_PYDANTIC_V2:
+        people = _People(people_list)
+    else:
+        people = _People(__root__=people_list)
     assert len(people) == 2
     assert list(people) == people_list
     for i, person in enumerate(people):

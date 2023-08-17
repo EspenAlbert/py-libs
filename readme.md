@@ -1,4 +1,7 @@
 <p align="center">
+    <a href="https://github.com/EspenAlbert/py-libs/actions/workflows/ci.yaml" target="_blank">
+        <img src="https://github.com/EspenAlbert/py-libs/actions/workflows/ci.yaml/badge.svg">
+    </a>
     <a href="https://pypi.org/project/model-lib/" target="_blank">
         <img src="https://img.shields.io/pypi/v/model-lib.svg">
     </a>

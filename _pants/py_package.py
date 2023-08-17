@@ -12,8 +12,7 @@ def py_package(
     extra_dependencies = extra_dependencies or []
     all_dependencies = [
         f":{folder_name}@resolve={resolve}",
-        f"!!//3rdparty:pydantic_v2",
-        f"//3rdparty:pydantic_v1_or_later",
+        "!!//3rdparty:pydantic_v2_settings", # settings are optional
     ] + extra_dependencies
     resources(name="py-typed", sources=["py.typed"])
     python_sources(sources=["*.py"], dependencies=[":py-typed"])

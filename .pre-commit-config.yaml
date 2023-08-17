@@ -12,4 +12,9 @@ repos:
     types: [python]
     language: system
     pass_filenames: false
-
+  - id: test
+    name: Test
+    entry: pants --changed-since=HEAD --changed-dependents=transitive test
+    types: [python]
+    language: system
+    pass_filenames: false

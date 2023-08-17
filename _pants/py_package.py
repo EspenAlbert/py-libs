@@ -1,3 +1,4 @@
+VERSION = "0.0.25b1"
 def py_package(
     *,
     description: str,
@@ -32,7 +33,7 @@ def py_package(
         long_description_path=f"{folder_name}/readme.md",
         provides=setup_py(
             name=distribution_name,
-            version="0.0.25b1",
+            version=VERSION,
             description=description,
             author="Espen Albert",
             classifiers=[

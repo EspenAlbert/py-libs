@@ -1,9 +1,6 @@
 name: CI - Lint Test Package
 
-on:
-  push:
-    branches:
-      - main
+on: push
 jobs:
   build:
     runs-on: ubuntu-latest

@@ -12,6 +12,7 @@ def py_package(
     all_dependencies = [
         f":{folder_name}@resolve={resolve}",
         f"!!//3rdparty:pydantic_v2",
+        f"//3rdparty:pydantic_v1_or_later",
     ] + extra_dependencies
     resources(name="py-typed", sources=["py.typed"])
     python_sources(sources=["*.py"], dependencies=[":py-typed"])
@@ -31,7 +32,7 @@ def py_package(
         long_description_path=f"{folder_name}/readme.md",
         provides=setup_py(
             name=distribution_name,
-            version="0.0.24",
+            version="0.0.25b1",
             description=description,
             author="Espen Albert",
             classifiers=[

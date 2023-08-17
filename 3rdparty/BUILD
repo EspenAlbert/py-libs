@@ -20,3 +20,10 @@ python_requirement(
     resolve="python-default",
     modules=["pydantic", "pydantic_core", "pydantic_settings"],
 )
+
+python_requirement(
+    name="pydantic_v1_or_later",
+    requirements=["pydantic>=1.10.2,<3"],
+    resolve="pydantic-v1-or-v2",
+    modules=["pydantic", "pydantic_core", "pydantic_settings"],
+)

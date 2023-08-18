@@ -25,6 +25,5 @@
 - An experiment for sharing python packages
 - [model_lib-pydantic base models with convenient dump methods](./model_lib/readme.md)
   - `pip install model-lib`
-- [zero_lib-handy standalone scripts without 3rdparty dependencies](./zero_3rdparty)
+- [zero_lib-handy standalone scripts without 3rdparty dependencies](./zero_3rdparty/readme.md)
   - `pip install zero-3rdparty`
-

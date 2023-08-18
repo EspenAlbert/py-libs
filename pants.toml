@@ -62,6 +62,8 @@ config ="pyproject.toml"
 
 [mypy]
 config = "mypy.ini"
+install_from_resolve="python-default"
+interpreter_constraints=[">=3.10"]
 
 [coverage-py]
 interpreter_constraints = [">=3.9"]

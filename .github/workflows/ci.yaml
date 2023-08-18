@@ -18,9 +18,8 @@ jobs:
       - name: Check BUILD files
         run: "pants tailor --check update-build-files --check ::"
       - name: Lint
-        # isort fails for some reason, output(fmt) != output(lint)
         run: |
-          pants lint --only="['black', 'flake8', 'helm', 'helmchart', 'regex-lint', 'docformatter']" ::
+          pants lint ::
         if: success() || failure()
       - name: Test
         if: success() || failure()

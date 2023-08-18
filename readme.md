@@ -57,6 +57,9 @@ flowchart TD
 
 ## Local Installation
 
+- [Install pants](https://www.pantsbuild.org/v2.17/docs/installation)
+	- `brew install pantsbuild/tap/pants`
+
 ```shell
 export PANTS_PYTHON_RESOLVES_TO_INTERPRETER_CONSTRAINTS="{'python-default': ['==3.10.*']}" # choose the version of python you like
 pants export --export-resolve=python-default

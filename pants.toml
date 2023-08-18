@@ -61,6 +61,7 @@ interpreter_constraints=[">=3.10"]
 config ="pyproject.toml"
 install_from_resolve="python-default"
 interpreter_constraints=[">=3.10"]
+# pants doesn't understand 1st party imports since it runs in a different chroot
 args = "--ignore=I001"
 
 

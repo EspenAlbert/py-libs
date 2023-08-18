@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Callable, Coroutine, Protocol, TypeVar, Union
 
 from typing_extensions import TypeAlias
+
 from zero_3rdparty.object_name import as_name
 
 T = TypeVar("T")

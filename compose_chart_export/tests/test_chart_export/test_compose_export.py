@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+
 from compose_chart_export.chart_read import (
     read_app_version,
     read_chart_version,

@@ -11,8 +11,9 @@ from pathlib import Path
 from typing import Callable, Literal, Type, TypeVar, Union, ValuesView
 from uuid import UUID
 
-from model_lib.errors import DumperExist, NoDumper
 from typing_extensions import TypeAlias
+
+from model_lib.errors import DumperExist, NoDumper
 
 T = TypeVar("T")
 PrimitiveT: TypeAlias = Union[dict, str, list, int, float, bool]

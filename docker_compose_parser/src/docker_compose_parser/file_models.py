@@ -5,14 +5,14 @@ from functools import total_ordering
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional
 
-from model_lib.pydantic_utils import IS_PYDANTIC_V2
 from pydantic import Extra, Field
+
+from model_lib import Entity, FileFormat, parse_payload
+from model_lib.pydantic_utils import IS_PYDANTIC_V2
 from zero_3rdparty.dict_nested import read_nested_or_none
 from zero_3rdparty.dict_utils import merge, sort_keys
 from zero_3rdparty.iter_utils import ignore_falsy as ignore_falsy_method
 from zero_3rdparty.iter_utils import key_equal_value_to_dict
-
-from model_lib import Entity, FileFormat, parse_payload
 
 NETWORK_NAME_DEFAULT = "compose-default"
 

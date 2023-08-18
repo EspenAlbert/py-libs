@@ -7,13 +7,13 @@ from os import getenv
 from pathlib import Path
 from typing import Callable, List, Mapping, Match, Union
 
-from model_lib.dump_functions import base_model_dumper
-from model_lib.model_dump import register_dumper
 from pydantic import BaseModel
-from zero_3rdparty.dict_nested import read_nested
-from zero_3rdparty.file_utils import PathLike
 
 from model_lib import DumperExist
+from model_lib.dump_functions import base_model_dumper
+from model_lib.model_dump import register_dumper
+from zero_3rdparty.dict_nested import read_nested
+from zero_3rdparty.file_utils import PathLike
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +92,7 @@ def dump_yaml_file(path: PathLike, data: Mapping, width=1000, sort_keys: bool = 
 
 
 def parse_yaml_file(path: PathLike) -> dict:
-    with open(str(path), "rt") as f:
+    with open(str(path)) as f:
         return yaml.safe_load(f)
 
 

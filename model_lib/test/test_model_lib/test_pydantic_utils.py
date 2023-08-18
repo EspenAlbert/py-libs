@@ -1,6 +1,9 @@
 from datetime import timedelta, timezone
 
 import pydantic
+from pydantic import BaseModel, Field
+
+from model_lib import Event
 from model_lib.constants import FileFormat
 from model_lib.pydantic_utils import (
     IS_PYDANTIC_V2,
@@ -19,10 +22,7 @@ from model_lib.pydantic_utils import (
     utc_datetime_ms,
 )
 from model_lib.serialize import dump, parse_model
-from pydantic import BaseModel, Field
 from zero_3rdparty.iter_utils import ignore_falsy
-
-from model_lib import Event
 
 
 class _ExampleModel(BaseModel):

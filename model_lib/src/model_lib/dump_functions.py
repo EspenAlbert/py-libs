@@ -3,11 +3,11 @@ from __future__ import annotations
 from functools import partial
 from typing import Callable, Optional, Type
 
-from model_lib.pydantic_utils import IS_PYDANTIC_V2, model_dump
 from pydantic import BaseModel
-from zero_3rdparty.iter_utils import ignore_falsy_recurse
 
 from model_lib import ModelT, register_dumper
+from model_lib.pydantic_utils import IS_PYDANTIC_V2, model_dump
+from zero_3rdparty.iter_utils import ignore_falsy_recurse
 
 if IS_PYDANTIC_V2:
     from pydantic import RootModel  # type: ignore

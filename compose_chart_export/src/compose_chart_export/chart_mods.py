@@ -91,7 +91,7 @@ def update_containers(
                     dict(name=name, valueFrom=dict(fieldRef=dict(fieldPath=field_ref)))
                 )
                 continue
-            value_template = "{{ .Values.%s.%s | quote }}" % (
+            value_template = "{{{{ .Values.{}.{} | quote }}}}".format(
                 container_name_underscore,
                 name.replace("-", "_").replace(".", "_"),
             )

@@ -22,8 +22,46 @@
 </p>
 
 # py-libs
+
 - An experiment for sharing python packages
+- [compose_chart_export](./compose_chart_export/readme.md)
+	- `pip install compose-chart-export`
+- [docker_compose_parser](./docker_compose_parser/readme.md)
+	- `pip install docker-compose-parser`
 - [model_lib-pydantic base models with convenient dump methods](./model_lib/readme.md)
-  - `pip install model-lib`
+	- `pip install model-lib`
 - [zero_lib-handy standalone scripts without 3rdparty dependencies](./zero_3rdparty/readme.md)
-  - `pip install zero-3rdparty`
+	- `pip install zero-3rdparty`
+
+## Hierarchy
+
+```mermaid
+flowchart TD
+    model_lib --> zero_3rdparty
+    compose_chart_export --> model_lib
+    docker_compose_parser --> model_lib
+    compose_chart_export --> docker_compose_parser
+    pants_py_deploy --> compose_chart_export
+    pants_py_deploy --> docker_compose_parser
+
+    click zero_3rdparty href "/py-libs/zero_3rdparty" "zero_3rdparty docs"
+    click model_lib href "/py-libs/model_lib" "model_lib docs"
+    click docker_compose_parser href "/py-libs/docker_compose_parser" "docker_compose_parser docs"
+    click compose_chart_export href "/py-libs/compose_chart_export" "compose_chart_export docs"
+    click pants_py_deploy href "/py-libs/_pants/pants_py_deploy" "pants_py_deploy docs"
+```
+
+- (Click) on a library to see the documentation
+- The higher up in the hierarchy the more dependencies needs to be installed
+	- e.g., `zero_3rdparty` has no dependencies and `pants_py_deploy` depends on all the others
+
+## Local Installation
+
+- [Install pants](https://www.pantsbuild.org/v2.17/docs/installation)
+	- `brew install pantsbuild/tap/pants`
+
+```shell
+export PANTS_PYTHON_RESOLVES_TO_INTERPRETER_CONSTRAINTS="{'python-default': ['==3.10.*']}" # choose the version of python you like
+pants export --export-resolve=python-default
+# import the venv to pycharm/vs code, e.g., dist/export/python/virtualenvs/python-default/3.10.12
+```

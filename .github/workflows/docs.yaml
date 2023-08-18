@@ -1,9 +1,6 @@
 name: docs
-on:
-  push:
-    branches:
-      - docs-support
-      - main
+on: push
+
 permissions:
   contents: write
 jobs:

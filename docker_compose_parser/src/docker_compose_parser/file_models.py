@@ -45,8 +45,9 @@ class ComposeServiceInfo(Entity):
         @field_validator("default_env", mode="before")
         def parse_list(cls, value):
             if isinstance(value, list):
-                return key_equal_value_to_dict(value)
-            return value
+                value = key_equal_value_to_dict(value)
+            # pydantic v2 will not "convert" values to strings
+            return {k: str(v) for k, v in value.items()}
 
     else:
         from pydantic import validator  # type: ignore

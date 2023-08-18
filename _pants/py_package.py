@@ -1,3 +1,4 @@
+VERSION = "0.0.27"
 def py_package(
     *,
     description: str,
@@ -11,7 +12,7 @@ def py_package(
     extra_dependencies = extra_dependencies or []
     all_dependencies = [
         f":{folder_name}@resolve={resolve}",
-        f"!!//3rdparty:pydantic_v2",
+        "!!//3rdparty:pydantic_v2_settings", # settings are optional
     ] + extra_dependencies
     resources(name="py-typed", sources=["py.typed"])
     python_sources(sources=["*.py"], dependencies=[":py-typed"])
@@ -31,7 +32,7 @@ def py_package(
         long_description_path=f"{folder_name}/readme.md",
         provides=setup_py(
             name=distribution_name,
-            version="0.0.24",
+            version=VERSION,
             description=description,
             author="Espen Albert",
             classifiers=[
@@ -41,7 +42,10 @@ def py_package(
             extras_require=extras_require or {},
             long_description_content_type="text/markdown",
             license="MIT",
-            url="https://github.com/EspenAlbert/py-libs",
+            project_urls={
+                "Source": f"https://github.com/EspenAlbert/py-libs/tree/main/{folder_name}",
+                "Documentation": f'https://espenalbert.github.io/py-libs/{folder_name}',
+            }
         ),
         wheel=True,
         sdist=False,

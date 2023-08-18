@@ -1,0 +1,65 @@
+site_name: py-libs documentation
+site_url: https://espenalbert.github.io/py-libs/
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+  language: en
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+      primary: teal
+      accent: purple
+    - scheme: slate
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode
+      primary: teal
+      accent: lime
+
+plugins:
+  - social
+  - search
+
+repo_name: EspenAlbert/py-libs
+repo_url: https://github.com/EspenAlbert/py-libs
+edit_uri: edit/main/docs/
+extra:
+  social:
+    - icon: fontawesome/brands/github-alt
+      link: https://github.com/EspenAlbert
+
+nav:
+- Get Started: index.md
+- Model Lib: model_lib
+- Compose Chart Export: compose_chart_export
+- Docker Compose Parser: docker_compose_parser
+- zero-3rdparty: zero_3rdparty
+
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - admonition
+  - pymdownx.arithmatex:
+      generic: true
+  - footnotes
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.mark
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg

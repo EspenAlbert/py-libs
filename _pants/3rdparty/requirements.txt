@@ -2,7 +2,7 @@ PyYAML==6.0.1
 pydantic==1.10.2
 typing_extensions>=4.3.0
 orjson==3.6.5
-model-lib==0.0.24
-docker-compose-parser==0.0.24
-compose-chart-export==0.0.24
-zero-3rdparty==0.0.24
+model-lib==0.0.27
+docker-compose-parser==0.0.27
+compose-chart-export==0.0.27
+zero-3rdparty==0.0.27

@@ -5,12 +5,13 @@ from asyncio import CancelledError as _AsyncCancelledError
 from asyncio import Future as AsyncFuture
 from asyncio import TimeoutError as _AsyncTimeoutError
 from asyncio import gather, wrap_future
+from collections.abc import Iterable
 from concurrent.futures import CancelledError as _CancelledError
 from concurrent.futures import Future as _ConcFuture
 from concurrent.futures import TimeoutError as _ConcTimeoutError
 from contextlib import suppress
 from functools import wraps
-from typing import Any, Callable, Iterable, Optional, Type, TypeVar, Union
+from typing import Any, Callable, TypeVar, Union
 
 from typing_extensions import TypeAlias
 
@@ -75,7 +76,7 @@ def add_done_callback(
 def add_done_callback_ignore_errors(
     future: Future,
     call: Callable,
-    *errors: Type[Exception],
+    *errors: type[Exception],
     _only_on_ok: bool = False,
     _only_on_error: bool = False,
     **callback_kwargs,
@@ -99,8 +100,8 @@ def add_done_callback_ignore_errors(
 
 def safe_complete(
     future: Future,
-    error: Optional[BaseException] = None,
-    result: Optional[object] = None,
+    error: BaseException | None = None,
+    result: object | None = None,
 ):
     if error:
         # asyncio.CancelledError(BaseException)
@@ -116,7 +117,7 @@ def safe_complete(
         future.set_result(result)
 
 
-def safe_error(future: Future) -> Optional[BaseException]:
+def safe_error(future: Future) -> BaseException | None:
     if not future.done():
         return None
     try:
@@ -138,23 +139,19 @@ def safe_result(future: Future) -> Any:
         return future.result()
 
 
-def as_incomplete_future(
-    future: Optional[Future], fut_type: Type = ConcFuture
-) -> Future:
+def as_incomplete_future(future: Future | None, fut_type: type = ConcFuture) -> Future:
     if future and not future.done():
         return future
     return fut_type()
 
 
-def safe_cancel(future: Optional[Future], reason: str = "") -> None:
+def safe_cancel(future: Future | None, reason: str = "") -> None:
     if future and not future.done():
         future.cancel()
     return None
 
 
-def safe_wait(
-    future: Future[ResultT], timeout: Optional[float] = None
-) -> Optional[ResultT]:
+def safe_wait(future: Future[ResultT], timeout: float | None = None) -> ResultT | None:
     if not future:
         logger.warning("no future to wait for")
     try:
@@ -166,7 +163,7 @@ def safe_wait(
     return None
 
 
-def on_error_ignore(*error_t: Type[BaseException]) -> Callable[[BaseException], None]:
+def on_error_ignore(*error_t: type[BaseException]) -> Callable[[BaseException], None]:
     def on_error(error: BaseException):
         if isinstance(error, error_t):
             logger.info(f"ignored error: {error!r}")

@@ -1,6 +1,7 @@
 from functools import cached_property
 
 import pytest
+
 from model_lib.errors import UnknownModelError
 from model_lib.model_base import Entity, Event, SeqModel, model_name_to_t
 from model_lib.model_dump import dump

@@ -1,9 +1,12 @@
+import logging
 from dataclasses import dataclass
 from time import sleep
 
 import pytest
+
 from zero_3rdparty.cache_ttl import cache_ttl, clear_cache
 
+logger = logging.getLogger(__name__)
 SLEEP_TIME = 0.01
 TOTAL_RUNTIME = 0.30
 
@@ -17,7 +20,7 @@ def test_cache_ttl(cache_time, expected_max_length):
     @cache_ttl(cache_time)
     def counter():
         nonlocal _current_count
-        print("counter called")
+        logger.info("counter called")
         _current_count += 1
         return _current_count
 
@@ -30,7 +33,7 @@ def call_cached_function(func):
     for i in range(round(TOTAL_RUNTIME / SLEEP_TIME)):
         result = func()
         time = i * SLEEP_TIME
-        print(f"result @ {time:.2f}s = {result}")
+        logger.info(f"result @ {time:.2f}s = {result}")
         values.add(result)
         sleep(SLEEP_TIME)
     return values

@@ -25,8 +25,8 @@ if IS_PYDANTIC_V2:
     from pydantic import TypeAdapter
     from pydantic.v1.datetime_parse import parse_datetime
 else:
-    from pydantic.datetime_parse import parse_datetime
     from pydantic import parse_obj_as
+    from pydantic.datetime_parse import parse_datetime
 
 from model_lib.model_dump import register_dumper  # noqa: E402
 from zero_3rdparty.datetime_utils import as_ms_precision_utc, ensure_tz  # noqa: E402

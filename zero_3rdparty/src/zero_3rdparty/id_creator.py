@@ -1,7 +1,6 @@
 import string
 from random import choices
 from time import time
-from typing import Tuple
 from uuid import uuid4
 
 
@@ -118,7 +117,7 @@ def ms_time_and_random(random_length: int = 5, separator: str = "-") -> str:
     return f"{time():.3f}{separator}{simple_id(random_length)}"
 
 
-def as_ms_time_and_random(ms_time: str, separator: str = "-") -> Tuple[float, str]:
+def as_ms_time_and_random(ms_time: str, separator: str = "-") -> tuple[float, str]:
     """
     >>> as_ms_time_and_random('1620244384.258-k7d3N')
     (1620244384.258, 'k7d3N')

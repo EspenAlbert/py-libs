@@ -4,37 +4,38 @@ from __future__ import annotations
 import logging
 import sys
 from collections.abc import Awaitable as ColAwaitable
+from collections.abc import Iterable
 from functools import lru_cache, partial
 from inspect import Parameter, currentframe, isclass, signature
 from pathlib import Path
 from types import FrameType
-from typing import Callable, Iterable, Type, TypeVar, Union, cast, get_type_hints
+from typing import Callable, TypeVar, cast, get_type_hints
 
 from zero_3rdparty.iter_utils import first
 
 logger = logging.getLogger(__name__)
 
 
-def _name(obj: Union[Type[object], object]) -> str:
+def _name(obj: type[object] | object) -> str:
     """Get object qualified name."""
     if not hasattr(obj, "__name__") and hasattr(obj, "__class__"):
         obj = obj.__class__
 
-    name = getattr(obj, "__qualname__", cast(Type[object], obj).__name__)
+    name = getattr(obj, "__qualname__", cast(type[object], obj).__name__)
     module_name = getattr(obj, "__module__", "")
     if not module_name and isinstance(obj, ColAwaitable):
         module_name = obj.cr_frame.f_globals["__name__"]  # type: ignore
     return ".".join((module_name or "__module__", name))
 
 
-def short_name(obj: Union[Type[object], object]) -> str:
+def short_name(obj: type[object] | object) -> str:
     _name = as_name(obj)
     if "." in _name:
         return _name.rsplit(".", maxsplit=1)[1]
     return _name
 
 
-def as_name(obj: Union[Type[object], object]) -> str:
+def as_name(obj: type[object] | object) -> str:
     """Get non-qualified name of obj, resolve real name of ``__main__``.
     Examples.
 
@@ -100,7 +101,7 @@ def func_arg_names(
     ]
 
 
-def func_arg_types(func: Callable) -> list[Type]:
+def func_arg_types(func: Callable) -> list[type]:
     param_types = [
         value for _name, value in get_type_hints(func).items() if _name != "return"
     ]
@@ -120,8 +121,8 @@ def call_signature(func, args=None, kwargs=None):
 
 
 def func_arg_name_of_type(
-    func: Callable, arg_type: Type, strict: bool = True
-) -> Union[str, None]:
+    func: Callable, arg_type: type, strict: bool = True
+) -> str | None:
     for name, value in get_type_hints(func).items():
         if value is arg_type or (not strict and is_subclass(value, arg_type)):
             return name
@@ -135,15 +136,15 @@ def is_subclass(maybe_class, classes) -> bool:
 T = TypeVar("T")
 
 
-def func_args_of_instance(func: Callable, arg_type: Type[T]) -> Iterable[tuple[str, T]]:
+def func_args_of_instance(func: Callable, arg_type: type[T]) -> Iterable[tuple[str, T]]:
     for name, value in get_type_hints(func).items():
         if isinstance(value, arg_type):
             yield name, value
 
 
 def func_args_of_instance_or_type(
-    func: Callable, arg_type: Type[T]
-) -> Iterable[tuple[str, Union[T, Type[T]]]]:
+    func: Callable, arg_type: type[T]
+) -> Iterable[tuple[str, T | type[T]]]:
     for name, value in get_type_hints(func).items():
         if isinstance(value, arg_type):
             yield name, value
@@ -151,12 +152,12 @@ def func_args_of_instance_or_type(
             yield name, value
 
 
-def func_return_type(func: Callable) -> Union[Type, None]:
+def func_return_type(func: Callable) -> type | None:
     return get_type_hints(func).get("return", None)
 
 
 def func_default_instances(
-    func: Callable, default_type: Type[T]
+    func: Callable, default_type: type[T]
 ) -> Iterable[tuple[str, T]]:
     for name, parameter in signature(func).parameters.items():
         if isinstance(parameter.default, default_type):
@@ -164,8 +165,8 @@ def func_default_instances(
 
 
 def func_default_instances_or_classes(
-    func: Callable, default_type: Type[T]
-) -> Iterable[tuple[str, Union[T, Type[T]]]]:
+    func: Callable, default_type: type[T]
+) -> Iterable[tuple[str, T | type[T]]]:
     for name, parameter in signature(func).parameters.items():
         default = parameter.default
         if isinstance(default, default_type):
@@ -174,7 +175,7 @@ def func_default_instances_or_classes(
             yield name, default
 
 
-def unpack_optional_or_assume_class(maybe_optional) -> Union[Type, None]:
+def unpack_optional_or_assume_class(maybe_optional) -> type | None:
     args = getattr(maybe_optional, "__args__", [])
     if not isclass(maybe_optional) and args and isclass(args[0]):
         return args[0]
@@ -183,8 +184,8 @@ def unpack_optional_or_assume_class(maybe_optional) -> Union[Type, None]:
     return None
 
 
-def unpack_first_arg(function: Callable) -> Type:
-    maybe_optional: Type = first(func_arg_types(function))
+def unpack_first_arg(function: Callable) -> type:
+    maybe_optional: type = first(func_arg_types(function))
     unpacked = unpack_optional_or_assume_class(maybe_optional)
     assert unpacked is not None, f"unable to find cls for {function}"
     return unpacked

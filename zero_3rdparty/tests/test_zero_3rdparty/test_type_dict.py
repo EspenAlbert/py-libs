@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Type
 
 import pytest
+
 from zero_3rdparty.type_dict import TypeDict
 
 
@@ -38,15 +39,15 @@ class _TypeDictParam:
 # fmt: off
 _TYPE_TEST_PARAMS = [
     # Good cases
-    _TypeDictParam(name='same cls', add_cls=_Base, get_cls=_Base, strict=False),
-    _TypeDictParam(name='same cls & strict', add_cls=_Base, get_cls=_Base, strict=True),
-    _TypeDictParam(name='sub cls', add_cls=_Base, get_cls=_SubBase, strict=False),
-    _TypeDictParam(name='sub_sub cls', add_cls=_Base, get_cls=_SubSubBase, strict=False),
+    _TypeDictParam(name="same cls", add_cls=_Base, get_cls=_Base, strict=False),
+    _TypeDictParam(name="same cls & strict", add_cls=_Base, get_cls=_Base, strict=True),
+    _TypeDictParam(name="sub cls", add_cls=_Base, get_cls=_SubBase, strict=False),
+    _TypeDictParam(name="sub_sub cls", add_cls=_Base, get_cls=_SubSubBase, strict=False),
     # Bad cases
-    _TypeDictParam(name='different cls', add_cls=_Base, get_cls=_NormalCls,
+    _TypeDictParam(name="different cls", add_cls=_Base, get_cls=_NormalCls,
                    strict=False),
-    _TypeDictParam(name='sub cls strict', add_cls=_Base, get_cls=_SubBase, strict=True),
-    _TypeDictParam(name='sub_sub cls strict', add_cls=_Base, get_cls=_SubSubBase,
+    _TypeDictParam(name="sub cls strict", add_cls=_Base, get_cls=_SubBase, strict=True),
+    _TypeDictParam(name="sub_sub cls strict", add_cls=_Base, get_cls=_SubSubBase,
                    strict=True),
 ]
 # fmt: on

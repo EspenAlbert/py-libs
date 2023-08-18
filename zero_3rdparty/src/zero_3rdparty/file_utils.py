@@ -100,7 +100,7 @@ def ensure_parents_write_text(path: os.PathLike, text: str, log: bool = False) -
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
     if log:
-        print(f"writing to {path}", f"text={text}", sep="\n")
+        logger.info(f"writing to {path}, text={text}")
 
 
 def file_modified_time(path: os.PathLike) -> float:

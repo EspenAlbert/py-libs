@@ -3,9 +3,10 @@ from __future__ import annotations
 from functools import cached_property
 from typing import Generic, Iterable, List, Sequence, Type, TypeVar
 
+from pydantic import BaseModel, ConfigDict, Extra
+
 from model_lib.errors import ClsNameAlreadyExist, UnknownModelError
 from model_lib.pydantic_utils import IS_PYDANTIC_V2, model_dump
-from pydantic import BaseModel, ConfigDict, Extra
 from zero_3rdparty.object_name import as_name
 from zero_3rdparty.str_utils import want_bool
 

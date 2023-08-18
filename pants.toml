@@ -1,5 +1,5 @@
 [GLOBAL]
-pants_version = "2.16.0"
+pants_version = "2.17.0rc3"
 print_stacktrace = true
 level = "warn"
 build_file_prelude_globs = ["_pants/py_deploy.py", "_pants/py_package.py"]
@@ -21,11 +21,9 @@ backend_packages.add = [
   "pants.backend.docker",
   "pants.backend.experimental.helm",
   "pants.backend.experimental.python",
+  "pants.backend.experimental.python.lint.ruff",
   "pants.backend.python",
-  "pants.backend.python.lint.docformatter",
   "pants.backend.python.lint.black",
-  "pants.backend.python.lint.flake8",
-  "pants.backend.python.lint.isort",
   "pants.backend.python.mixed_interpreter_constraints",
   "pants.backend.python.typecheck.mypy",
   "pants.backend.plugin_development",
@@ -54,14 +52,18 @@ pydantic-v1 = [">=3.9"]
 [black]
 config = "pyproject.toml"
 
-[flake8]
-config = ".flake8"
-
-[isort]
-config ="pyproject.toml"
-
 [mypy]
-config = "mypy.ini"
+config = "pyproject.toml"
+install_from_resolve="python-default"
+interpreter_constraints=[">=3.10"]
+
+[ruff]
+config ="pyproject.toml"
+install_from_resolve="python-default"
+interpreter_constraints=[">=3.10"]
+# pants doesn't understand 1st party imports since it runs in a different chroot
+args = "--ignore=I001"
+
 
 [coverage-py]
 interpreter_constraints = [">=3.9"]

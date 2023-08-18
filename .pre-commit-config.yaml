@@ -8,7 +8,7 @@ repos:
   hooks:
   - id: lint
     name: Lint
-    entry: pants --changed-since=HEAD --changed-dependents=transitive lint --only="['black', 'flake8', 'helm', 'helmchart', 'regex-lint', 'docformatter']"
+    entry: pants --changed-since=HEAD --changed-dependents=transitive lint
     types: [python]
     language: system
     pass_filenames: false

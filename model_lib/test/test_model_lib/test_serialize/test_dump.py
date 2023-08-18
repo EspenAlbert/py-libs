@@ -1,9 +1,8 @@
+from model_lib import Event
 from model_lib.constants import FileFormat
 from model_lib.metadata import EventMetadata, iter_tags
 from model_lib.serialize import parse_model_metadata
 from model_lib.serialize.dump import dump_with_metadata
-
-from model_lib import Event
 
 
 class _MyModel(Event):

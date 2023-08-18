@@ -1,7 +1,5 @@
 import pytest
 import xdoctest as xdoc  # type: ignore
-from model_lib.metadata import context_dict, metadata, metadata_dump, metadata_fields
-from model_lib.serialize import base_64, json_serialize, parse, yaml_serialize
 
 from model_lib import (
     base_settings,
@@ -12,6 +10,8 @@ from model_lib import (
     model_dump,
     pydantic_utils,
 )
+from model_lib.metadata import context_dict, metadata, metadata_dump, metadata_fields
+from model_lib.serialize import base_64, json_serialize, parse, yaml_serialize
 
 
 @pytest.mark.parametrize(

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable, Mapping
 from contextlib import suppress
-from typing import Any, Callable, Iterable, Mapping, Type
+from typing import Any, Callable
 
+from model_lib import ModelT
 from model_lib.constants import (
     METADATA_DUMP_KEY,
     METADATA_MODEL_NAME_FIELD,
@@ -17,8 +19,6 @@ from model_lib.serialize.json_serialize import dump as _dump_json
 from model_lib.serialize.json_serialize import parse as _parse_json
 from model_lib.serialize.json_serialize import pretty_dump as _dump_pretty_json
 from model_lib.serialize.yaml_serialize import dump_yaml_str
-
-from model_lib import ModelT
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ def dump_safe(
         safe_types = set(registered_types())
         safe_types_tuple = tuple(safe_types)
 
-        def is_safe(value: Type):
+        def is_safe(value: type):
             return value in safe_types or issubclass(value, safe_types_tuple)
 
         with suppress(Exception):

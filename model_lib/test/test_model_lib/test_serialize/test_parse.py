@@ -1,3 +1,4 @@
+from model_lib import Event
 from model_lib.constants import (
     METADATA_DUMP_KEY,
     METADATA_MODEL_NAME_BACKUP_FIELD,
@@ -7,8 +8,6 @@ from model_lib.constants import (
 )
 from model_lib.serialize.dump import dump, dump_with_metadata
 from model_lib.serialize.parse import parse_model_metadata
-
-from model_lib import Event
 
 
 class _MyModelWithAge(Event):

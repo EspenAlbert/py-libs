@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Mapping, Optional, Type, TypeVar
+from collections.abc import Mapping
+from typing import Any, TypeVar
 
 from zero_3rdparty.error import BaseError
 from zero_3rdparty.id_creator import simple_id
@@ -9,7 +10,7 @@ from zero_3rdparty.id_creator import simple_id
 logger = logging.getLogger(__name__)
 
 
-def update_no_overwrite(source: Dict[str, object], updates: Dict[str, object]) -> None:
+def update_no_overwrite(source: dict[str, object], updates: dict[str, object]) -> None:
     """
     Warning:
         Will modify both source and updates
@@ -53,7 +54,7 @@ KT = TypeVar("KT")
 VT = TypeVar("VT")
 
 
-def rename_keys(source: Dict[str, VT], renames: dict[str, str]) -> dict[str, VT]:
+def rename_keys(source: dict[str, VT], renames: dict[str, str]) -> dict[str, VT]:
     """
     >>> rename_keys({"a.2": 1, "b": 2}, {"a.2": "a"})
     {'a': 1, 'b': 2}
@@ -65,7 +66,7 @@ def rename_keys(source: Dict[str, VT], renames: dict[str, str]) -> dict[str, VT]
     return new_dict
 
 
-def pop_latest(d: Dict[KT, VT]) -> VT:
+def pop_latest(d: dict[KT, VT]) -> VT:
     """
     >>> pop_latest({"a": 1, "b": 2})
     2
@@ -86,7 +87,7 @@ class MergeDictError(BaseError):
 def merge(
     a: dict,
     b: dict,
-    path: Optional[List[str]] = None,
+    path: list[str] | None = None,
     allow_overwrite: bool = False,
     allow_new: bool = True,
 ) -> None:
@@ -166,7 +167,7 @@ def sort_keys(some_dict: dict[KT, VT]) -> dict[KT, VT]:
     return {key: add_sorted_value(some_dict[key]) for key in sorted(some_dict.keys())}  # type: ignore
 
 
-def select_values(some_container: dict | list, allowed_values: tuple[Type, ...]):
+def select_values(some_container: dict | list, allowed_values: tuple[type, ...]):
     def ok_value(value: Any):
         if isinstance(value, (dict, list)):
             return bool(value)

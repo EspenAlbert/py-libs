@@ -1,17 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping, MutableMapping, Reversible
 from contextlib import suppress
 from enum import Enum
 from functools import singledispatch
 from typing import (
     Any,
-    Dict,
-    Iterable,
-    Mapping,
-    MutableMapping,
-    Optional,
-    Reversible,
-    Type,
     TypeVar,
     Union,
     overload,
@@ -22,7 +16,7 @@ from typing_extensions import TypeAlias
 DictList: TypeAlias = Union[list, Mapping[str, object]]
 
 
-def read_nested_or_none(container: DictList, simple_path: str) -> Optional[object]:
+def read_nested_or_none(container: DictList, simple_path: str) -> object | None:
     """
     >>> read_nested_or_none({"a": [{"b": 2}]}, "a.[0].b")
     2
@@ -63,7 +57,7 @@ class _Sentinel(Enum):
 
 
 def iter_nested_key_values(
-    container: MutableMapping, type_filter: Type[T] | _Sentinel = _Sentinel.MISSING
+    container: MutableMapping, type_filter: type[T] | _Sentinel = _Sentinel.MISSING
 ) -> Iterable[tuple[str, T]]:
     """
     >>> container_example = dict(a="ok", b=dict(c="nested"))
@@ -78,11 +72,11 @@ def iter_nested_key_values(
 
 @overload
 def update(
-    container: Dict[str, object],
+    container: dict[str, object],
     simple_path: str,
     new_value: object,
     ensure_parents: bool = True,
-) -> Dict[str, object]:
+) -> dict[str, object]:
     ...
 
 
@@ -135,7 +129,7 @@ def update(
 
 def _as_accessor(
     accessor: str, start_symbols: str = "([{", end_symbols: str = ")]}"
-) -> Union[str, int]:
+) -> str | int:
     """
     >>> _as_accessor("a")
     'a'

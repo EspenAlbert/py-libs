@@ -1,6 +1,7 @@
 from copy import deepcopy
 
 import pytest
+
 from zero_3rdparty.dict_nested import read_nested, update
 
 d = {

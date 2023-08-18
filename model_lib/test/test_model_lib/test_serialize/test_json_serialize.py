@@ -1,4 +1,5 @@
 import pytest
+
 from model_lib.serialize.json_serialize import (
     dump,
     parse,

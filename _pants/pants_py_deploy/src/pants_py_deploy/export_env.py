@@ -27,7 +27,7 @@ class ClsModifier(typing.Generic[NodeType], ast.NodeTransformer):
 
     def visit_ClassDef(self, node: ast.ClassDef) -> typing.Optional[ast.ClassDef]:
         if node.name in self.skip_settings:
-            print(f"skipping: {node.name}")
+            logger.info(f"skipping: {node.name}")
             return None
         bases = {base.id for base in node.bases}
         if "BaseSettings" not in bases and "BaseEnvVars" not in bases:
@@ -110,7 +110,9 @@ class EnvReader(ClsModifier[ast.AnnAssign]):
     def env_vars_str(self):
         return {key: str(v) for key, v in self.env_vars.items()}
 
-    def __call__(self, node: ast.AnnAssign) -> typing.Optional[ast.AnnAssign]:
+    def __call__(  # noqa: C901
+        self, node: ast.AnnAssign
+    ) -> typing.Optional[ast.AnnAssign]:
         if name_value := assign_as_name_value(node):
             name, value = name_value
             name_with_prefix = f"{self.prefix}{name}"

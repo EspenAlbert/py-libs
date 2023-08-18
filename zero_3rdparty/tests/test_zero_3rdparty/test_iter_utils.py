@@ -34,15 +34,14 @@ def test_want_list_from_single_value():
 
 
 def test_want_list_from_generator():
-    generator = want_list((i for i in range(5)))
+    generator = want_list(i for i in range(5))
     after = list(generator)
     assert after == [0, 1, 2, 3, 4]
 
 
 def test_want_list_from_generator_func():
     def a():
-        for i in range(5):
-            yield i
+        yield from range(5)
 
     generator = want_list(a())
     after = list(generator)

@@ -61,7 +61,7 @@ config = ".flake8"
 config ="pyproject.toml"
 
 [mypy]
-config = "mypy.ini"
+config = "pyproject.toml"
 install_from_resolve="python-default"
 interpreter_constraints=[">=3.10"]
 

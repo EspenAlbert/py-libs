@@ -139,9 +139,7 @@ def safe_result(future: Future) -> Any:
         return future.result()
 
 
-def as_incomplete_future(
-    future: Future | None, fut_type: type = ConcFuture
-) -> Future:
+def as_incomplete_future(future: Future | None, fut_type: type = ConcFuture) -> Future:
     if future and not future.done():
         return future
     return fut_type()
@@ -153,9 +151,7 @@ def safe_cancel(future: Future | None, reason: str = "") -> None:
     return None
 
 
-def safe_wait(
-    future: Future[ResultT], timeout: float | None = None
-) -> ResultT | None:
+def safe_wait(future: Future[ResultT], timeout: float | None = None) -> ResultT | None:
     if not future:
         logger.warning("no future to wait for")
     try:

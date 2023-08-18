@@ -23,9 +23,7 @@ backend_packages.add = [
   "pants.backend.experimental.python",
   "pants.backend.experimental.python.lint.ruff",
   "pants.backend.python",
-  "pants.backend.python.lint.docformatter",
   "pants.backend.python.lint.black",
-  "pants.backend.python.lint.isort",
   "pants.backend.python.mixed_interpreter_constraints",
   "pants.backend.python.typecheck.mypy",
   "pants.backend.plugin_development",
@@ -54,9 +52,6 @@ pydantic-v1 = [">=3.9"]
 [black]
 config = "pyproject.toml"
 
-[isort]
-config ="pyproject.toml"
-
 [mypy]
 config = "pyproject.toml"
 install_from_resolve="python-default"
@@ -66,6 +61,7 @@ interpreter_constraints=[">=3.10"]
 config ="pyproject.toml"
 install_from_resolve="python-default"
 interpreter_constraints=[">=3.10"]
+args = "--ignore=I001"
 
 
 [coverage-py]

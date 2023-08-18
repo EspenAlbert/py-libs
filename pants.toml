@@ -104,5 +104,5 @@ linux_amd = "//:linux_amd"
 linux_arm = "//:linux_arm"
 
 [tailor]
-ignore_adding_targets=["_pants:_pants"]
+ignore_adding_targets=["_pants:_pants", "//:root"]
 ignore_paths=["compose_chart_export/tests/test_chart_export/charts/**"]

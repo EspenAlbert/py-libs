@@ -4,8 +4,9 @@ import logging
 from contextlib import suppress
 from typing import Any, Callable, Optional, TypeVar
 
-from model_lib.model_dump import dump as model_dump
 from typing_extensions import TypeAlias
+
+from model_lib.model_dump import dump as model_dump
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")

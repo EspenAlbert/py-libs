@@ -6,9 +6,10 @@ import logging
 from collections import defaultdict
 from contextlib import suppress
 from dataclasses import dataclass
-from typing import Any, Callable, Generic, Type, TypeVar, Union, cast
+from typing import Any, Callable, Generic, TypeVar, Union, cast
 
 from typing_extensions import TypeAlias
+
 from zero_3rdparty.error import BaseError
 from zero_3rdparty.iter_utils import first_or_none, public_dict
 from zero_3rdparty.object_name import as_name
@@ -23,22 +24,22 @@ class Provider(Generic[T]):
 
 
 ProviderOrInstance: TypeAlias = Union[T, Provider[T]]
-_dependencies: dict[Type, ProviderOrInstance] = {}
+_dependencies: dict[type, ProviderOrInstance] = {}
 _infer_instances: list[Any] = []
 
 
 class DependencyNotSet(BaseError):
-    def __init__(self, cls: Type):
+    def __init__(self, cls: type):
         self.cls = cls
 
 
-def instance(cls: Type[T]) -> T:
+def instance(cls: type[T]) -> T:
     if _instance := _dependencies.get(cls):
         return _instance.provider() if isinstance(_instance, Provider) else _instance
     raise DependencyNotSet(cls)
 
 
-def instance_or_inferred(cls: Type[T]) -> T:
+def instance_or_inferred(cls: type[T]) -> T:
     try:
         return instance(cls)
     except DependencyNotSet as e:
@@ -49,18 +50,18 @@ def instance_or_inferred(cls: Type[T]) -> T:
         raise e
 
 
-def instance_or_none(cls: Type[T]) -> T | None:
+def instance_or_none(cls: type[T]) -> T | None:
     with suppress(DependencyNotSet):
         return instance(cls)
     return None
 
 
 class ReBindingError(BaseError):
-    def __init__(self, classes: list[Type]):
+    def __init__(self, classes: list[type]):
         self.classes = classes
 
 
-def get_dependencies() -> dict[Type, Provider[T] | T]:
+def get_dependencies() -> dict[type, Provider[T] | T]:
     return _dependencies
 
 
@@ -72,7 +73,7 @@ def bind_infer_instances(instances: list[Any], clear_first: bool = False):
 
 
 def bind_instances(
-    instances: dict[Type[T], Provider | T],
+    instances: dict[type[T], Provider | T],
     clear_first: bool = False,
     allow_re_binding: bool = False,
 ):
@@ -86,7 +87,7 @@ def bind_instances(
 
 @dataclass
 class _InjectDescriptor(Generic[T]):
-    cls: Type[T]
+    cls: type[T]
 
     def __get__(self, _instance, owner) -> T | _InjectDescriptor[T]:
         with suppress(DependencyNotSet):
@@ -101,16 +102,16 @@ def as_dependency_cls(maybe_dependency: Any):
         return maybe_dependency.cls
 
 
-def dependency(cls: Type[T]) -> T:
+def dependency(cls: type[T]) -> T:
     return cast(T, _InjectDescriptor(cls))
 
 
 class MissingDependencies(BaseError):
-    def __init__(self, missing_dependencies: dict[Type, list[str]]):
+    def __init__(self, missing_dependencies: dict[type, list[str]]):
         self.missing_dependencies = missing_dependencies
 
 
-def _as_member_dependencies(member: Any) -> list[tuple[str, Type[T]]]:
+def _as_member_dependencies(member: Any) -> list[tuple[str, type[T]]]:
     """
     Tip:
         cannot use inspect.getmembers since it will ignore dependencies
@@ -128,7 +129,7 @@ def _as_member_dependencies(member: Any) -> list[tuple[str, Type[T]]]:
 
 def validate_dependencies(instances: list[Any], allow_binding: bool = True) -> None:
     """Raises MissingDependencies."""
-    missing_dependencies: dict[Type, list[str]] = defaultdict(list)
+    missing_dependencies: dict[type, list[str]] = defaultdict(list)
     for each_instance in instances:
         for prop_name, cls in _as_member_dependencies(each_instance):  # type: ignore
             if cls not in _dependencies:

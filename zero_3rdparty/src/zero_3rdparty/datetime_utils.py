@@ -2,9 +2,10 @@
 format-codes."""
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import date, datetime, timedelta, timezone
 from functools import singledispatch
-from typing import Iterable, Optional, TypeVar
+from typing import TypeVar
 
 
 def get_date_as_rfc3339_without_time(date: datetime | None = None) -> str:
@@ -71,7 +72,7 @@ def utc_now_ms_precision():
     return as_ms_precision_utc(utc_now())
 
 
-def ms_between(start: datetime, end: Optional[datetime] = None) -> float:
+def ms_between(start: datetime, end: datetime | None = None) -> float:
     end = end or utc_now()
     return (end.timestamp() - start.timestamp()) * 1000
 
@@ -116,7 +117,7 @@ def dump_as_kub_time(dt: datetime) -> str:
     return dt.isoformat(sep="T").replace("+00:00", "Z")
 
 
-def date_filename(dt: Optional[datetime] = None) -> str:
+def date_filename(dt: datetime | None = None) -> str:
     """
     Example: 2020-03-16T17-52Z
     """
@@ -128,7 +129,7 @@ def date_filename(dt: Optional[datetime] = None) -> str:
     )
 
 
-def date_filename_with_seconds(dt: Optional[datetime] = None) -> str:
+def date_filename_with_seconds(dt: datetime | None = None) -> str:
     """
     >>> date_filename_with_seconds(datetime(year=2023, month=5, day=2, hour=9, minute=4, tzinfo=timezone.utc))
     '2023-05-02T09-04-00'

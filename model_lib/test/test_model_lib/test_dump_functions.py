@@ -1,13 +1,12 @@
 from functools import cached_property
 
+from pydantic import Field
+
+from model_lib import Entity, dump_ignore_falsy
+from model_lib import dump as dump_format
 from model_lib.constants import FileFormat
 from model_lib.model_dump import dump
 from model_lib.pydantic_utils import IS_PYDANTIC_V2, model_json
-from pydantic import Field
-
-from model_lib import Entity
-from model_lib import dump as dump_format
-from model_lib import dump_ignore_falsy
 
 if IS_PYDANTIC_V2:
     from pydantic import RootModel

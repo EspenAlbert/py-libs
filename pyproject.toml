@@ -35,6 +35,11 @@ line-length = 88
 target-version="py39"
 show-fixes=true
 exclude=["_pants/*.py"]
-extend-ignore=[ "E501"]
+extend-ignore=[ "E501", "UP006", "UP007", "UP035"]
 flake8-quotes = {inline-quotes = 'double', multiline-quotes = 'double'}
 extend-select = ['Q', 'RUF100', 'C90', 'UP', 'I', 'T']
+isort = { known-first-party = ['tests'] }
+
+[tool.ruff.extend-per-file-ignores]
+"model_lib/src/model_lib/__init__.py" = ["I001"]
+"model_lib/src/model_lib/metadata/__init__.py" = ["I001"]

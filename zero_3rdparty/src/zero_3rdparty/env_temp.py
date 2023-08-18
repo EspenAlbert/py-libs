@@ -1,7 +1,8 @@
 import logging
 import os
+from collections.abc import Mapping
 from contextlib import contextmanager
-from typing import ContextManager, Mapping
+from typing import ContextManager
 
 logger = logging.getLogger(__name__)
 

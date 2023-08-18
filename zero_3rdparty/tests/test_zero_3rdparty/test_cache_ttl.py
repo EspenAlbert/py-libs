@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from time import sleep
 
 import pytest
+
 from zero_3rdparty.cache_ttl import cache_ttl, clear_cache
 
 SLEEP_TIME = 0.01

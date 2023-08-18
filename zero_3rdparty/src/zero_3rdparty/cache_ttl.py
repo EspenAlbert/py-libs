@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Hashable
 from functools import wraps
 from inspect import signature
 from time import monotonic
-from typing import Any, Callable, Hashable, TypeVar
+from typing import Any, Callable, TypeVar
 
 from typing_extensions import ParamSpec
 

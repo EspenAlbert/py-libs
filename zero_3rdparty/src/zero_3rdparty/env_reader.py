@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from os import getenv
-from typing import Any, Callable, Iterable, TypeVar
+from typing import Any, Callable, TypeVar
 
 from zero_3rdparty.run_env import in_test_env
 from zero_3rdparty.str_utils import want_bool

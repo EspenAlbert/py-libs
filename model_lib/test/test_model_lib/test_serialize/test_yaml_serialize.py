@@ -1,9 +1,9 @@
 from dataclasses import asdict, dataclass
 
 import pytest
-from model_lib.serialize import dump
 
 from model_lib import Entity, Event, register_dumper
+from model_lib.serialize import dump
 
 
 @dataclass

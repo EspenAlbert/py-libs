@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Container
 from dataclasses import fields
-from typing import Any, Callable, Container, Type, TypeVar
+from typing import Any, Callable, TypeVar
 
 T = TypeVar("T")
 
 
-def field_names(cls: Type[T] | T) -> list[str]:
+def field_names(cls: type[T] | T) -> list[str]:
     return [f.name for f in fields(cls)]  # type: ignore
 
 

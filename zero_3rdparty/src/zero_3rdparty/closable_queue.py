@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
 from contextlib import suppress
 from functools import partial
 from queue import Empty, Queue
-from typing import Generic, Iterable, TypeVar
+from typing import Generic, TypeVar
 
 logger = logging.getLogger(__name__)
 

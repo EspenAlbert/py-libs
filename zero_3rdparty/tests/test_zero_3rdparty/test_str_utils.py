@@ -1,4 +1,5 @@
 import pytest
+
 from zero_3rdparty.str_utils import NoMatchError, group_dict_or_match_error
 
 log_pattern = r"\[(?P<ts>\S+)" r"\s+" r"(?P<log_level>\w+)" r"\]\s?" r"(?P<message>.*)"

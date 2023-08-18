@@ -1,12 +1,11 @@
 from datetime import datetime
-from typing import Dict
 
 import pytest
+
+from model_lib import Event, dump
 from model_lib.constants import FileFormat
 from zero_3rdparty.datetime_utils import utc_now
 from zero_3rdparty.enum_utils import StrEnum
-
-from model_lib import Event, dump
 
 
 class _Status(StrEnum):
@@ -39,7 +38,7 @@ def test_dumping_value():
 
 
 class _MyModelStatusKeys(Event):
-    status_ts: Dict[_Status, datetime]
+    status_ts: dict[_Status, datetime]
 
 
 @pytest.mark.freeze_time("2020-01-01")

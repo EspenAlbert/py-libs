@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import ClassVar
 
 import pytest
+
 from zero_3rdparty.dependency import (
     DependencyNotSet,
     MissingDependencies,

@@ -1,4 +1,4 @@
-VERSION = "0.0.25b1"
+VERSION = "0.0.27"
 def py_package(
     *,
     description: str,
@@ -42,7 +42,10 @@ def py_package(
             extras_require=extras_require or {},
             long_description_content_type="text/markdown",
             license="MIT",
-            url="https://github.com/EspenAlbert/py-libs",
+            project_urls={
+                "Source": f"https://github.com/EspenAlbert/py-libs/tree/main/{folder_name}",
+                "Documentation": f'https://espenalbert.github.io/py-libs/{folder_name}',
+            }
         ),
         wheel=True,
         sdist=False,

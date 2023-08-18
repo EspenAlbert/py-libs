@@ -10,16 +10,16 @@
 //   ],
 //   "generated_with_requirements": [
 //     "PyYAML==6.0.1",
-//     "compose-chart-export==0.0.25b1",
-//     "docker-compose-parser==0.0.25b1",
-//     "model-lib==0.0.25b1",
+//     "compose-chart-export==0.0.27",
+//     "docker-compose-parser==0.0.27",
+//     "model-lib==0.0.27",
 //     "orjson==3.6.5",
 //     "pantsbuild.pants.testutil<2.17,>=2.16.0a0",
 //     "pantsbuild.pants<2.17,>=2.16.0a0",
 //     "pydantic==1.10.2",
 //     "pydevd-pycharm==231.8109.197",
 //     "typing_extensions>=4.3.0",
-//     "zero-3rdparty==0.0.25b1"
+//     "zero-3rdparty==0.0.27"
 //   ],
 //   "manylinux": "manylinux2014",
 //   "requirement_constraints": [],
@@ -218,44 +218,44 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "a9a71d942143491069021c1dced545dd6997680231bd7d864208031b5b216ed0",
-              "url": "https://files.pythonhosted.org/packages/d7/1e/3fd7d39cfcd2808acf7eb969fee0266d7307ceb28c7e9b458c9280f9e615/compose_chart_export-0.0.25b1-py3-none-any.whl"
+              "hash": "26179a0d9736279845e024f2ffe129d4c1ca257adeb297ae568d4e0d1b12457b",
+              "url": "https://files.pythonhosted.org/packages/21/87/7ff6a874be293823cd9efafb481096eec2796d2ae0f636b44e5b2ee7034d/compose_chart_export-0.0.27-py3-none-any.whl"
             }
           ],
           "project_name": "compose-chart-export",
           "requires_dists": [
-            "docker-compose-parser==0.0.25b1",
-            "model-lib==0.0.25b1",
+            "docker-compose-parser==0.0.27",
+            "model-lib==0.0.27",
             "pydantic-settings>=2.0.3; extra == \"pydantic_v2\"",
             "pydantic<3,>=1.10.2",
             "pydantic<=2,>=1.10.2; extra == \"pydantic_v1\"",
             "pydantic<=3,>=2.1.1; extra == \"pydantic_v2\"",
             "semver==2.13.0",
             "typing-extensions>=4.3.0",
-            "zero-3rdparty==0.0.25b1"
+            "zero-3rdparty==0.0.27"
           ],
           "requires_python": ">=3.9",
-          "version": "0.0.25b1"
+          "version": "0.0.27"
         },
         {
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "91669dac7631b032ea2fdb5b8b68f5f44396e453e86227e7baa7aa5112d4f62f",
-              "url": "https://files.pythonhosted.org/packages/9a/d9/4d93f99aec698a90903119ecdc7f8119eb803b1b2e9a18064747cd4d690a/docker_compose_parser-0.0.25b1-py3-none-any.whl"
+              "hash": "c81f3f217e67b668278ffceb71207acee28b006a54bb4c5b3e5af13d6c5eb5d2",
+              "url": "https://files.pythonhosted.org/packages/7a/13/b33fa8e7d79223ffadb4ec6ad58d297b59d56339ab7c1fd48118b46bc334/docker_compose_parser-0.0.27-py3-none-any.whl"
             }
           ],
           "project_name": "docker-compose-parser",
           "requires_dists": [
-            "model-lib==0.0.25b1",
+            "model-lib==0.0.27",
             "pydantic-settings>=2.0.3; extra == \"pydantic_v2\"",
             "pydantic<3,>=1.10.2",
             "pydantic<=2,>=1.10.2; extra == \"pydantic_v1\"",
             "pydantic<=3,>=2.1.1; extra == \"pydantic_v2\"",
-            "zero-3rdparty==0.0.25b1"
+            "zero-3rdparty==0.0.27"
           ],
           "requires_python": ">=3.9",
-          "version": "0.0.25b1"
+          "version": "0.0.27"
         },
         {
           "artifacts": [
@@ -421,8 +421,8 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "2367713306da1694cb955192a3ec1fca6d0fd89d5c026f0c1c8c908dc01924d3",
-              "url": "https://files.pythonhosted.org/packages/2e/5a/7c6c281fd870d83e70dff9188e5e93be69e2d84e28dc66db1b6f5be7a0ad/model_lib-0.0.25b1-py3-none-any.whl"
+              "hash": "e13d4a56eab00da2abd9d041faffbaee43977ba99befc454e98497c88a756903",
+              "url": "https://files.pythonhosted.org/packages/c8/9d/550f403267f7121c6b1bc90ff520f86c7c51876b4c4944b1a64533edb595/model_lib-0.0.27-py3-none-any.whl"
             }
           ],
           "project_name": "model-lib",
@@ -434,10 +434,10 @@
             "pydantic<=2,>=1.10.2; extra == \"pydantic_v1\"",
             "pydantic<=3,>=2.1.1; extra == \"pydantic_v2\"",
             "typing-extensions>=4.3.0",
-            "zero-3rdparty==0.0.25b1"
+            "zero-3rdparty==0.0.27"
           ],
           "requires_python": ">=3.9",
-          "version": "0.0.25b1"
+          "version": "0.0.27"
         },
         {
           "artifacts": [
@@ -1261,20 +1261,19 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "b3d74cf5a9dc0893fe0ff1db13a5dcbaf9c2259b1bb5e7cf78de3b982dda34b0",
-              "url": "https://files.pythonhosted.org/packages/2e/0d/5b0d304416210f04265cbe1a1a9fe90372104812df3da617be0c26eab2f8/zero_3rdparty-0.0.25b1-py3-none-any.whl"
+              "hash": "5487b1320b06fd5453c9137563f6058830f4bfb0f7d6154aa95b09395ad4aafb",
+              "url": "https://files.pythonhosted.org/packages/08/31/9c7bee6f639423f16094fe69d06645d55acc26cc4054d615bfbd0948fbd8/zero_3rdparty-0.0.27-py3-none-any.whl"
             }
           ],
           "project_name": "zero-3rdparty",
           "requires_dists": [
             "pydantic-settings>=2.0.3; extra == \"pydantic_v2\"",
-            "pydantic<3,>=1.10.2",
             "pydantic<=2,>=1.10.2; extra == \"pydantic_v1\"",
             "pydantic<=3,>=2.1.1; extra == \"pydantic_v2\"",
             "typing-extensions>=4.3.0"
           ],
           "requires_python": ">=3.9",
-          "version": "0.0.25b1"
+          "version": "0.0.27"
         }
       ],
       "platform_tag": null
@@ -1286,16 +1285,16 @@
   "prefer_older_binary": false,
   "requirements": [
     "PyYAML==6.0.1",
-    "compose-chart-export==0.0.25b1",
-    "docker-compose-parser==0.0.25b1",
-    "model-lib==0.0.25b1",
+    "compose-chart-export==0.0.27",
+    "docker-compose-parser==0.0.27",
+    "model-lib==0.0.27",
     "orjson==3.6.5",
     "pantsbuild.pants.testutil<2.17,>=2.16.0a0",
     "pantsbuild.pants<2.17,>=2.16.0a0",
     "pydantic==1.10.2",
     "pydevd-pycharm==231.8109.197",
     "typing_extensions>=4.3.0",
-    "zero-3rdparty==0.0.25b1"
+    "zero-3rdparty==0.0.27"
   ],
   "requires_python": [
     "<3.10,>=3.9"

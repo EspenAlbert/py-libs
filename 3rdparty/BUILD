@@ -6,6 +6,11 @@ python_requirements(
     },
     resolve=parametrize("python-default", "pydantic-v1"),
 )
+python_requirements(
+    name="3rd_party_tools",
+    source="requirements_tools.txt",
+    resolve="python-default",
+)
 
 python_requirement(
     name="pydantic_v1",

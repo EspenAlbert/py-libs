@@ -7,7 +7,6 @@ profile="black"
 color_output = true
 known_protos="protos"
 known_tests="tests*"
-known_third_party="gitlab"
 sections = "FUTURE,STDLIB,THIRDPARTY,PROTOS,FIRSTPARTY,LOCALFOLDER,TESTS"
 
 [tool.pytest.ini_options]
@@ -29,3 +28,13 @@ ignore_errors = true
 # support for pydantic v1+v2 is hard to satisfy type hints
 module="model_lib.pydantic_utils,compose_chart_export.chart_file_templates"
 disable_error_code = "import,attr-defined,no-redef,misc,assignment,call-arg"
+
+
+[tool.ruff]
+line-length = 88
+target-version="py39"
+show-fixes=true
+exclude=["_pants/*.py"]
+extend-ignore=[ "E501"]
+flake8-quotes = {inline-quotes = 'double', multiline-quotes = 'double'}
+extend-select = ['Q', 'RUF100', 'C90', 'UP', 'I', 'T']

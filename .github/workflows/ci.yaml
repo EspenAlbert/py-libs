@@ -6,6 +6,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_PAT }}
       - uses: actions/setup-python@v4
         with:
           python-version: '3.9'
@@ -14,6 +16,8 @@ jobs:
           python-version: '3.11'
       - name: Initialize Pants
         uses: pantsbuild/actions/init-pants@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         with:
           # cache0 makes it easy to bust the cache if needed
           gha-cache-key: cache0-py-3-10

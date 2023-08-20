@@ -38,6 +38,7 @@ def py_package(
             classifiers=[
                 "Programming Language :: Python :: 3.9",
                 "Programming Language :: Python :: 3.10",
+                "Programming Language :: Python :: 3.11",
             ],
             extras_require=extras_require or {},
             long_description_content_type="text/markdown",

@@ -39,6 +39,9 @@ root_patterns = ["/*/src", "/*/", "/*/tests", "/*/test", "/_pants/*/src", "/_pan
 interpreter_constraints=[">=3.9"]
 enable_resolves = true
 
+[python-infer]
+use_rust_parser = true
+
 [python.resolves]
 pants-plugins = "_pants/3rdparty/lock.txt"
 pydantic-v1 = "3rdparty/python/pydantic-v1.lock"
@@ -55,7 +58,7 @@ config = "pyproject.toml"
 [mypy]
 config = "pyproject.toml"
 install_from_resolve="python-default"
-interpreter_constraints=[">=3.10"]
+interpreter_constraints=[">=3.11"]
 
 [ruff]
 config ="pyproject.toml"

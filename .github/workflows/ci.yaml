@@ -9,6 +9,9 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.9'
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
       - name: Initialize Pants
         uses: pantsbuild/actions/init-pants@main
         with:

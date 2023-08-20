@@ -4,8 +4,21 @@ repos:
   hooks:
   - id: no-commit-to-branch
 
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  # Ruff version.
+  rev: v0.0.285
+  hooks:
+  - id: ruff
+
 - repo: local
   hooks:
+  - id: build_files_check
+    name: build_files_check
+    entry: "pants tailor --check update-build-files --check ::"
+    language: system
+    files: BUILD$
+    types: [file]
+    pass_filenames: false
   - id: lint
     name: Lint
     entry: pants --changed-since=HEAD --changed-dependents=transitive lint

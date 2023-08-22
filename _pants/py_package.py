@@ -1,4 +1,4 @@
-VERSION = "0.0.27"
+VERSION = env("VERSION", "0.0.28a2")
 def py_package(
     *,
     description: str,

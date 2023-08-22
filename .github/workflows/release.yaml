@@ -1,0 +1,30 @@
+name: release
+on:
+  push:
+    tags:
+      - v*
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_PAT }}
+      - name: Initialize Pants
+        uses: pantsbuild/actions/init-pants@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+        with:
+          # cache0 makes it easy to bust the cache if needed
+          gha-cache-key: cache0-py-3-10
+          named-caches-hash: ${{ hashFiles('3rdparty/*.txt') }}
+      - name: publish_to_pypi
+        env:
+          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+          PANTS_TWINE_ARGS: "['-p $TWINE_PASSWORD', '-u __token__']"
+          VERSION: $GITHUB_REF_NAME
+        run: |
+          pants publish zero_3rdparty/src/::
+          pants publish model_lib/src/::
+          pants publish docker_compose_parser/src/::
+          pants publish compose_chart_export/src/::

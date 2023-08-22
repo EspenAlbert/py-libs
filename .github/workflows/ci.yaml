@@ -13,6 +13,8 @@ jobs:
           token: ${{ secrets.GH_PAT }}
       - name: pants_init
         uses: "./.github/templates/pants_init"
+        with:
+          gh_pat: secrets.GH_PAT
       - uses: actions/setup-python@v4
         with:
           python-version: '3.9'

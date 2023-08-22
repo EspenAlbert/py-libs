@@ -12,6 +12,8 @@ jobs:
           token: ${{ secrets.GH_PAT }}
       - name: pants_init
         uses: "./.github/templates/pants_init"
+        with:
+          gh_pat: secrets.GH_PAT
       - name: publish_to_pypi
         env:
           PANTS_TWINE_ARGS: "['-p ${{ secrets.TWINE_PASSWORD }}', '-u __token__']"

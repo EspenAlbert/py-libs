@@ -13,5 +13,7 @@ jobs:
           token: ${{ secrets.GH_PAT }}
       - name: pants_init
         uses: "./.github/templates/pants_init"
+        with:
+          gh_pat: secrets.GH_PAT
       - name: mypy
         run: "pants --tag='-arm' check ::"

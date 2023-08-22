@@ -1,14 +1,6 @@
 [tool.black]
 line-length = 88
 
-[tool.isort]
-line_length = 88
-profile="black"
-color_output = true
-known_protos="protos"
-known_tests="tests*"
-sections = "FUTURE,STDLIB,THIRDPARTY,PROTOS,FIRSTPARTY,LOCALFOLDER,TESTS"
-
 [tool.pytest.ini_options]
 addopts="--tb=short -vv --xdoc --xdoctest-style=google"
 log_cli_level="INFO"

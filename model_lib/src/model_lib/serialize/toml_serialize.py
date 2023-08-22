@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 import logging
+import re
 import sys
 from contextlib import suppress
 from dataclasses import dataclass
+from textwrap import indent
 from typing import Any, Callable, Union
 
 logger = logging.getLogger(__name__)
@@ -70,3 +74,19 @@ _loads = toml.loads
 
 def parse_toml_str(data: str, **kwargs) -> Union[dict, list]:
     return _loads(data, **kwargs)
+
+
+_array_pattern = re.compile(r"[^\s]+\s=\s\[(.*)\]$")
+
+
+def add_line_breaks(updated: str) -> str:
+    lines = []
+    for line in updated.splitlines():
+        if len(line) > 88 and (long_array_match := _array_pattern.match(line)):
+            inner_content_old = long_array_match.group(1)
+            inner_content_new = inner_content_old.replace(", ", ",\n")
+            inner_content_new = indent(inner_content_new, "  ")
+            inner_content_new = f"\n{inner_content_new},\n"
+            line = line.replace(inner_content_old, inner_content_new)
+        lines.append(line)
+    return "\n".join(lines)

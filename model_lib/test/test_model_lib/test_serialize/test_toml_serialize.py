@@ -1,4 +1,5 @@
-from model_lib import Event, dump, parse_model, parse_payload
+from model_lib import Event, FileFormat, dump, parse_model, parse_payload
+from model_lib.serialize.toml_serialize import add_line_breaks
 
 _toml_example = """\
 [GLOBAL]
@@ -70,7 +71,7 @@ class _TomlModel(Event):
     child: _TomlChild
 
 
-_SOME_TOML = 'name = "I am toml!"\n\n[child]\nage = 2\n'
+_SOME_TOML = 'name = "I am toml!"\n\n[child]\nage = 2'
 
 model_example = _TomlModel(name="I am toml!", child=_TomlChild(age=2))
 
@@ -83,3 +84,35 @@ def test_dump_toml():
 
 def test_parse_model():
     assert parse_model(_SOME_TOML, t=_TomlModel, format="toml") == model_example
+
+
+_example = """\
+[GLOBAL]
+backend_packages = ["pants.backend.awslambda.python", "pants.backend.build_files.fmt.black", "pants.backend.codegen.protobuf.python", "pants.backend.docker", "pants.backend.experimental.helm", "pants.backend.experimental.python", "pants.backend.experimental.python.lint.ruff", "pants.backend.python", "pants.backend.python.lint.black", "pants.backend.python.mixed_interpreter_constraints", "pants.backend.python.typecheck.mypy"]
+build_file_prelude_globs = ["_pants/*.py"]
+"""
+_example_with_linebreaks = """\
+[GLOBAL]
+backend_packages = [
+  "pants.backend.awslambda.python",
+  "pants.backend.build_files.fmt.black",
+  "pants.backend.codegen.protobuf.python",
+  "pants.backend.docker",
+  "pants.backend.experimental.helm",
+  "pants.backend.experimental.python",
+  "pants.backend.experimental.python.lint.ruff",
+  "pants.backend.python",
+  "pants.backend.python.lint.black",
+  "pants.backend.python.mixed_interpreter_constraints",
+  "pants.backend.python.typecheck.mypy",
+]
+build_file_prelude_globs = ["_pants/*.py"]"""
+
+
+def test_add_line_breaks():
+    assert add_line_breaks(_example) == _example_with_linebreaks
+
+
+def test_toml_compact():
+    payload = parse_payload(_example, FileFormat.toml_compact)
+    assert dump(payload, FileFormat.toml_compact) == _example

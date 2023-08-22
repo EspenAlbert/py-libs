@@ -23,6 +23,7 @@ class FileFormat(StrEnum):
     pydantic_json = "pydantic_json"
     # pip install tomlkit
     toml = "toml"
+    toml_compact = "toml_compact"
 
 
 PayloadParser = Callable[[RegisteredPayloadT, FileFormat], ModelRawT]

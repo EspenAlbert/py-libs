@@ -36,6 +36,7 @@ _format_parsers: Dict[FileFormat, Callable[[str], ModelRawT]] = {
     FileFormat.json: parse_json,
     FileFormat.yaml: parse_yaml_str,
     FileFormat.toml: parse_toml_str,
+    FileFormat.toml_compact: parse_toml_str,
 }
 _file_format_to_raw_format: Dict[str, FileFormat] = {
     ".json": FileFormat.json,

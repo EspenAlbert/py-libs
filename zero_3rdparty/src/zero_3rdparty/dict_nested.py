@@ -16,6 +16,7 @@ DictList: TypeAlias = Union[list, Mapping[str, object]]
 T = TypeVar("T")
 _MISSING: Any = object()
 
+
 def read_nested_or_none(container: DictList, simple_path: str) -> object | None:
     """
     >>> read_nested_or_none({"a": [{"b": 2}]}, "a.[0].b")
@@ -32,9 +33,7 @@ def read_nested(container: DictList, simple_path: str) -> Any:
     return last_container[final_accessor]
 
 
-def pop_nested(
-    container: DictList, simple_path: str, default: T = _MISSING
-) -> T:
+def pop_nested(container: DictList, simple_path: str, default: T = _MISSING) -> T:
     last_container, final_accessor = _follow_path(container, simple_path)
     try:
         return last_container.pop(final_accessor)

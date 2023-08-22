@@ -3,9 +3,6 @@ name: pants_init
 runs:
   using: composite
   steps:
-  - uses: actions/checkout@v3
-    with:
-      token: ${{ secrets.GH_PAT }}
   - name: Initialize Pants
     uses: pantsbuild/actions/init-pants@main
     env:

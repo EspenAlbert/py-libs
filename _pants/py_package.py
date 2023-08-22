@@ -1,4 +1,4 @@
-VERSION = env("VERSION", "0.0.28a2")
+VERSION = "0.0.28a2"
 def py_package(
     *,
     description: str,
@@ -7,6 +7,7 @@ def py_package(
     distribution_name: str = "",
     extras_require: dict = None,
 ):
+    version = env("VERSION", VERSION)
     parent = build_file_dir()
     folder_name = parent.name
     extra_dependencies = extra_dependencies or []

@@ -20,8 +20,7 @@ jobs:
           named-caches-hash: ${{ hashFiles('3rdparty/*.txt') }}
       - name: publish_to_pypi
         env:
-          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
-          PANTS_TWINE_ARGS: "['-p $TWINE_PASSWORD', '-u __token__']"
+          PANTS_TWINE_ARGS: "['-p ${{ secrets.TWINE_PASSWORD }}', '-u __token__']"
           VERSION: $GITHUB_REF_NAME
         run: |
           pants publish zero_3rdparty/src/::

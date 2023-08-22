@@ -1,0 +1,14 @@
+name: CI - Typecheck
+
+on:
+  push:
+    branches:
+      - "**"
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: pants_init
+        uses: "../templates/pants_init"
+      - name: mypy
+        run: "pants --tag='-arm' check ::"

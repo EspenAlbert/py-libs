@@ -21,6 +21,8 @@ class FileFormat(StrEnum):
     # only recommended to use with pydantic2
     json_pydantic = "json_pydantic"
     pydantic_json = "pydantic_json"
+    # pip install tomlkit
+    toml = "toml"
 
 
 PayloadParser = Callable[[RegisteredPayloadT, FileFormat], ModelRawT]

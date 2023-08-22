@@ -24,6 +24,7 @@
 //     "pytest-subtests==0.5.0",
 //     "pytest==6.2.5",
 //     "semver==2.13.0",
+//     "tomlkit==0.12.1",
 //     "typing_extensions>=4.3.0",
 //     "xdoctest==0.15.4",
 //     "yarl==1.8.2"
@@ -1240,6 +1241,24 @@
           "artifacts": [
             {
               "algorithm": "sha256",
+              "hash": "712cbd236609acc6a3e2e97253dfc52d4c2082982a88f61b640ecf0817eab899",
+              "url": "https://files.pythonhosted.org/packages/a0/6d/808775ed618e51edaa7bbe6759e22e1c7eafe359af6e084700c6d39d3455/tomlkit-0.12.1-py3-none-any.whl"
+            },
+            {
+              "algorithm": "sha256",
+              "hash": "38e1ff8edb991273ec9f6181244a6a391ac30e9f5098e7535640ea6be97a7c86",
+              "url": "https://files.pythonhosted.org/packages/0d/07/d34a911a98e64b07f862da4b10028de0c1ac2222ab848eaf5dd1877c4b1b/tomlkit-0.12.1.tar.gz"
+            }
+          ],
+          "project_name": "tomlkit",
+          "requires_dists": [],
+          "requires_python": ">=3.7",
+          "version": "0.12.1"
+        },
+        {
+          "artifacts": [
+            {
+              "algorithm": "sha256",
               "hash": "440d5dd3af93b060174bf433bccd69b0babc3b15b1a8dca43789fd7f61514b36",
               "url": "https://files.pythonhosted.org/packages/ec/6b/63cc3df74987c36fe26157ee12e09e8f9db4de771e0f3404263117e75b95/typing_extensions-4.7.1-py3-none-any.whl"
             },
@@ -1556,6 +1575,7 @@
     "pytest-subtests==0.5.0",
     "pytest==6.2.5",
     "semver==2.13.0",
+    "tomlkit==0.12.1",
     "typing_extensions>=4.3.0",
     "xdoctest==0.15.4",
     "yarl==1.8.2"

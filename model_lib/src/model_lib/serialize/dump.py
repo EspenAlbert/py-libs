@@ -18,9 +18,20 @@ from model_lib.pydantic_utils import model_json
 from model_lib.serialize.json_serialize import dump as _dump_json
 from model_lib.serialize.json_serialize import parse as _parse_json
 from model_lib.serialize.json_serialize import pretty_dump as _dump_pretty_json
+from model_lib.serialize.toml_serialize import dump_toml_str
 from model_lib.serialize.yaml_serialize import dump_yaml_str
 
 logger = logging.getLogger(__name__)
+
+
+def dump_as_toml_str(instance: object, **kwargs) -> str:
+    # dumps to json and parse 1st to support custom types
+    # and since an error will have a side effect on the instance creating a _TomlObject
+    if isinstance(instance, list):
+        raw: list = dump_as_list(instance)
+    else:
+        raw: dict = dump_as_dict(instance)  # type: ignore
+    return dump_toml_str(raw, **kwargs)
 
 
 _payload_dumpers: dict[FileFormat | str, Callable[[Any], str]] = {
@@ -31,6 +42,7 @@ _payload_dumpers: dict[FileFormat | str, Callable[[Any], str]] = {
     FileFormat.json_pretty: _dump_pretty_json,
     FileFormat.json_pydantic: model_json,
     FileFormat.pydantic_json: model_json,
+    FileFormat.toml: dump_as_toml_str,
 }
 
 

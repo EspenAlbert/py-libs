@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, MutableMapping, Reversible
 from contextlib import suppress
-from enum import Enum
 from functools import singledispatch
 from typing import (
     Any,
@@ -14,7 +13,8 @@ from typing import (
 from typing_extensions import TypeAlias
 
 DictList: TypeAlias = Union[list, Mapping[str, object]]
-
+T = TypeVar("T")
+_MISSING: Any = object()
 
 def read_nested_or_none(container: DictList, simple_path: str) -> object | None:
     """
@@ -30,6 +30,18 @@ def read_nested_or_none(container: DictList, simple_path: str) -> object | None:
 def read_nested(container: DictList, simple_path: str) -> Any:
     last_container, final_accessor = _follow_path(container, simple_path)
     return last_container[final_accessor]
+
+
+def pop_nested(
+    container: DictList, simple_path: str, default: T = _MISSING
+) -> T:
+    last_container, final_accessor = _follow_path(container, simple_path)
+    try:
+        return last_container.pop(final_accessor)
+    except (IndexError, KeyError) as e:
+        if default is _MISSING:
+            raise e
+        return default
 
 
 def iter_nested_keys(container: MutableMapping, root_path: str = "") -> Iterable[str]:
@@ -49,15 +61,8 @@ def iter_nested_keys(container: MutableMapping, root_path: str = "") -> Iterable
             yield from iter_nested_keys(child, child_root_path)
 
 
-T = TypeVar("T")
-
-
-class _Sentinel(Enum):
-    MISSING = object()
-
-
 def iter_nested_key_values(
-    container: MutableMapping, type_filter: type[T] | _Sentinel = _Sentinel.MISSING
+    container: MutableMapping, type_filter: type[T] = _MISSING
 ) -> Iterable[tuple[str, T]]:
     """
     >>> container_example = dict(a="ok", b=dict(c="nested"))
@@ -66,7 +71,7 @@ def iter_nested_key_values(
     """
     for key in iter_nested_keys(container):
         value = read_nested(container, key)
-        if type_filter is _Sentinel.MISSING or isinstance(value, type_filter):
+        if type_filter is _MISSING or isinstance(value, type_filter):
             yield key, value
 
 

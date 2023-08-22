@@ -2,7 +2,12 @@ from copy import deepcopy
 
 import pytest
 
-from zero_3rdparty.dict_nested import read_nested, update
+from zero_3rdparty.dict_nested import (
+    pop_nested,
+    read_nested,
+    read_nested_or_none,
+    update,
+)
 
 d = {
     "apiVersion": "v1",
@@ -64,3 +69,20 @@ def test_update_list_type_hints():
     a_list = update([], simple_path="[0]", new_value="ok")
     a_list.append("ok2")
     assert a_list == ["ok", "ok2"]
+
+
+def test_pop_nested():
+    active_d = deepcopy(d)
+    assert pop_nested(active_d, "spec.ports.[0]") == {
+        "port": 443,
+        "protocol": "TCP",
+        "targetPort": 5601,
+    }
+    assert read_nested(active_d, "spec.ports") == []
+    assert pop_nested(active_d, "metadata.name") == "kibana"
+    assert read_nested_or_none(active_d, "metadata.name") is None
+    with pytest.raises(IndexError):
+        pop_nested(active_d, "spec.ports.[0]")
+    with pytest.raises(KeyError):
+        pop_nested(active_d, "metadata.name")
+    assert pop_nested(active_d, "metadata.name", "default") == "default"

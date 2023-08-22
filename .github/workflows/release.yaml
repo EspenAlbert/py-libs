@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: pants_init
-        uses: "../templates/pants_init"
+        uses: "./.github/templates/pants_init"
       - name: publish_to_pypi
         env:
           PANTS_TWINE_ARGS: "['-p ${{ secrets.TWINE_PASSWORD }}', '-u __token__']"

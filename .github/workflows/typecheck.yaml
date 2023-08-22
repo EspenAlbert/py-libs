@@ -9,6 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: pants_init
-        uses: "../templates/pants_init"
+        uses: "./.github/templates/pants_init"
       - name: mypy
         run: "pants --tag='-arm' check ::"

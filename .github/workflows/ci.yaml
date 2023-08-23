@@ -1,6 +1,9 @@
 name: CI - Lint Test Package
 
-on: push
+on:
+  push:
+    branches:
+      - "**"
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -8,20 +11,16 @@ jobs:
       - uses: actions/checkout@v3
         with:
           token: ${{ secrets.GH_PAT }}
+      - name: pants_init
+        uses: "./.github/templates/pants_init"
+        with:
+          gh_pat: secrets.GH_PAT
       - uses: actions/setup-python@v4
         with:
           python-version: '3.9'
       - uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      - name: Initialize Pants
-        uses: pantsbuild/actions/init-pants@main
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-        with:
-          # cache0 makes it easy to bust the cache if needed
-          gha-cache-key: cache0-py-3-10
-          named-caches-hash: ${{ hashFiles('3rdparty/*.txt') }}
       - name: Check BUILD files
         run: "pants tailor --check update-build-files --check ::"
       - name: Lint
@@ -36,17 +35,8 @@ jobs:
       - name: Package
         if: success() || failure()
         run: "pants --tag='-arm' package ::"
-      - name: mypy
-        if: success() || failure()
-        run: "pants --tag='-arm' check ::"
       - name: Upload coverage
         uses: codecov/codecov-action@v3
         if: success() || failure()
         with:
           files: ./dist/coverage/python/coverage.xml
-      - name: Upload pants log
-        uses: actions/upload-artifact@v3
-        with:
-          name: pants-log
-          path: .pants.d/pants.log
-        if: always() # We want the log even on failures & cancelling

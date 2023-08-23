@@ -1,1 +1,1 @@
-python_tests(interpreter_constraints=test_versions)
+python_tests(**test_params())

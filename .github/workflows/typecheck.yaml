@@ -1,0 +1,22 @@
+name: CI - Typecheck
+
+on:
+  push:
+    branches:
+      - "**"
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_PAT }}
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: pants_init
+        uses: "./.github/templates/pants_init"
+        with:
+          gh_pat: secrets.GH_PAT
+      - name: mypy
+        run: "pants --tag='-arm' check ::"

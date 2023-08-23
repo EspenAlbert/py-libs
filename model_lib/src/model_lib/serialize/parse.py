@@ -21,10 +21,10 @@ from model_lib.errors import (
     UnknownModelError,
 )
 from model_lib.model_base import model_name_to_t
-from zero_3rdparty.file_utils import PathLike
 from zero_3rdparty.object_name import as_name
 
 from .json_serialize import parse as parse_json
+from .toml_serialize import parse_toml_str
 from .yaml_serialize import parse_yaml_str
 
 logger = logging.getLogger(__name__)
@@ -35,19 +35,15 @@ T = TypeVar("T")
 _format_parsers: Dict[FileFormat, Callable[[str], ModelRawT]] = {
     FileFormat.json: parse_json,
     FileFormat.yaml: parse_yaml_str,
+    FileFormat.toml: parse_toml_str,
+    FileFormat.toml_compact: parse_toml_str,
 }
 _file_format_to_raw_format: Dict[str, FileFormat] = {
     ".json": FileFormat.json,
     ".yaml": FileFormat.yaml,
     ".yml": FileFormat.yaml,
+    ".toml": FileFormat.toml,
 }
-
-
-def as_file_format(path: PathLike) -> FileFormat:
-    path = Path(path)
-    if file_format := _file_format_to_raw_format[path.suffix]:
-        return file_format
-    raise NotImplementedError
 
 
 def parse_model(

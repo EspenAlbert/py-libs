@@ -29,8 +29,11 @@ def model_name_to_t(name: str) -> type:
 
 class _Model(BaseModel):
     if IS_PYDANTIC_V2:
-        model_config = ConfigDict(
-            use_enum_values=True, extra=Extra.allow, arbitrary_types_allowed=True
+        model_config = ConfigDict(  # type: ignore
+            use_enum_values=True,
+            extra=Extra.allow,
+            arbitrary_types_allowed=True,
+            populate_by_name=True,
         )
     else:
 
@@ -39,6 +42,7 @@ class _Model(BaseModel):
             extra = Extra.allow
             arbitrary_types_allowed = True
             keep_untouched = (cached_property, Exception)
+            allow_population_by_field_name = True
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)

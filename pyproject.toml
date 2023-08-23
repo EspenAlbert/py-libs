@@ -1,14 +1,6 @@
 [tool.black]
 line-length = 88
 
-[tool.isort]
-line_length = 88
-profile="black"
-color_output = true
-known_protos="protos"
-known_tests="tests*"
-sections = "FUTURE,STDLIB,THIRDPARTY,PROTOS,FIRSTPARTY,LOCALFOLDER,TESTS"
-
 [tool.pytest.ini_options]
 addopts="--tb=short -vv --xdoc --xdoctest-style=google"
 log_cli_level="INFO"
@@ -19,10 +11,6 @@ junit_logging="all"
 [tool.mypy]
 warn_return_any = false
 ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module="test_zero_3rdparty.*,test_model_lib.*"
-ignore_errors = true
 
 [[tool.mypy.overrides]]
 # support for pydantic v1+v2 is hard to satisfy type hints

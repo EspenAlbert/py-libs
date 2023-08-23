@@ -13,10 +13,6 @@ warn_return_any = false
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module="test_zero_3rdparty.*,test_model_lib.*"
-ignore_errors = true
-
-[[tool.mypy.overrides]]
 # support for pydantic v1+v2 is hard to satisfy type hints
 module="model_lib.pydantic_utils,compose_chart_export.chart_file_templates"
 disable_error_code = "import,attr-defined,no-redef,misc,assignment,call-arg"

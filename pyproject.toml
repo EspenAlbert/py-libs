@@ -33,4 +33,4 @@ isort = { known-first-party = ['tests'] }
 "model_lib/src/model_lib/metadata/__init__.py" = ["I001"]
 
 [tool.coverage.run]
-omit = ["*/tests/*", "*/test/**"]
+omit = ["*/tests/**", "*/test/**"]

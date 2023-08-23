@@ -26,4 +26,4 @@ class FileFormat(StrEnum):
     toml_compact = "toml_compact"
 
 
-PayloadParser = Callable[[RegisteredPayloadT, FileFormat], ModelRawT]
+PayloadParser = Callable[[RegisteredPayloadT, Union[FileFormat, str]], ModelRawT]

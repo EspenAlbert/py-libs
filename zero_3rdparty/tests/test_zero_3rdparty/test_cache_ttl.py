@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass
-from time import sleep
+from time import monotonic, sleep
 
 import pytest
 
@@ -30,12 +30,14 @@ def test_cache_ttl(cache_time, expected_max_length):
 
 def call_cached_function(func):
     values: set[int] = set()
+    start = monotonic()
     for i in range(round(TOTAL_RUNTIME / SLEEP_TIME)):
         result = func()
         time = i * SLEEP_TIME
         logger.info(f"result @ {time:.2f}s = {result}")
         values.add(result)
-        sleep(SLEEP_TIME)
+        if monotonic() - start > time:
+            sleep(SLEEP_TIME)
     return values
 
 

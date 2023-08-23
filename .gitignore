@@ -3,6 +3,7 @@ __pycache__/
 **/.pytest_cache
 *.pyc
 .venv/
+.ruff_cache
 # Pants workspace files
 /.pants.d/
 /dist

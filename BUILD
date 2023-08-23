@@ -22,4 +22,3 @@ local_environment(
     compatible_platforms=["linux_arm64"],
     fallback_environment="python_bullseye_arm",
 )
-__defaults__({(python_test, python_tests): dict(skip_mypy=True)})

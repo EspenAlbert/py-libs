@@ -31,3 +31,6 @@ isort = { known-first-party = ['tests'] }
 [tool.ruff.extend-per-file-ignores]
 "model_lib/src/model_lib/__init__.py" = ["I001"]
 "model_lib/src/model_lib/metadata/__init__.py" = ["I001"]
+
+[tool.coverage.run]
+omit = ["*/tests/**", "*/test/**"]

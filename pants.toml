@@ -77,6 +77,7 @@ install_from_resolve = "python-default"
 requirements = [
   "coverage[toml]>=6.5,<8",
 ]
+config = "pyproject.toml"
 
 [test]
 use_coverage = true

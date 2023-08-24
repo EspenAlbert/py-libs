@@ -7,6 +7,7 @@ CLASSIFIERS = (
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Development Status :: 3 - Alpha",
 )
 PROJECT_URLS = (
     ("Source", "https://github.com/EspenAlbert/py-libs/tree/main/"),

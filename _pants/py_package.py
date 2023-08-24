@@ -1,4 +1,19 @@
 VERSION = "0.0.28a2"
+STATIC_EXTRAS = (
+    ("pydantic_v1", ("pydantic>=1.10.2,<=2",)),
+    ("pydantic_v2", ("pydantic>=2.1.1,<=3", "pydantic-settings>=2.0.3")),
+)
+CLASSIFIERS = (
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+)
+PROJECT_URLS = (
+    ("Source", "https://github.com/EspenAlbert/py-libs/tree/main/"),
+    ("Documentation", "https://espenalbert.github.io/py-libs/"),
+)
+
+
 def py_package(
     *,
     description: str,
@@ -6,15 +21,14 @@ def py_package(
     resolve: str = "python-default",
     distribution_name: str = "",
     extras_require: dict = None,
+    explicit_dependencies: list[str] = None,
 ):
     version = env("VERSION", VERSION)
     parent = build_file_dir()
     folder_name = parent.name
     extra_dependencies = extra_dependencies or []
-    all_dependencies = [
-        f":{folder_name}@resolve={resolve}",
-        "!!//3rdparty:pydantic_v2_settings", # settings are optional
-    ] + extra_dependencies
+    resolve_ref = f"@resolve={resolve}" if resolve else ""
+    all_dependencies = [f":{folder_name}{resolve_ref}"] + extra_dependencies
     resources(name="py-typed", sources=["py.typed"])
     python_sources(sources=["*.py"], dependencies=[":py-typed"])
     distribution_name = distribution_name or folder_name.replace("_", "-")
@@ -22,32 +36,21 @@ def py_package(
         distribution_name != folder_name
     ), f"cannot use the same name for python_distribution as the folder @ {parent}"
     extras_require = extras_require or {}
-    extras_require.update({
-        "pydantic_v1": ["pydantic>=1.10.2,<=2"],
-        "pydantic_v2": ["pydantic>=2.1.1,<=3", "pydantic-settings>=2.0.3"],
-    })
+    extras_require.update({k: list(v) for k, v in STATIC_EXTRAS})
     python_distribution(
         name=distribution_name,
-        # orjson is not a hard requirement
-        dependencies=all_dependencies,
+        dependencies=explicit_dependencies or all_dependencies,
         long_description_path=f"{folder_name}/readme.md",
         provides=setup_py(
             name=distribution_name,
             version=version,
             description=description,
             author="Espen Albert",
-            classifiers=[
-                "Programming Language :: Python :: 3.9",
-                "Programming Language :: Python :: 3.10",
-                "Programming Language :: Python :: 3.11",
-            ],
+            classifiers=CLASSIFIERS,
             extras_require=extras_require or {},
             long_description_content_type="text/markdown",
             license="MIT",
-            project_urls={
-                "Source": f"https://github.com/EspenAlbert/py-libs/tree/main/{folder_name}",
-                "Documentation": f'https://espenalbert.github.io/py-libs/{folder_name}',
-            }
+            project_urls={k: f"{v}{folder_name}" for k, v in PROJECT_URLS},
         ),
         wheel=True,
         sdist=False,

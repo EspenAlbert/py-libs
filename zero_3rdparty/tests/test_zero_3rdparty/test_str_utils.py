@@ -1,6 +1,6 @@
 import pytest
 
-from zero_3rdparty.str_utils import NoMatchError, group_dict_or_match_error
+from zero_3rdparty.str_utils import NoMatchError, group_dict_or_match_error, want_bool
 
 log_pattern = r"\[(?P<ts>\S+)" r"\s+" r"(?P<log_level>\w+)" r"\]\s?" r"(?P<message>.*)"
 
@@ -21,3 +21,13 @@ def test_group_dict_or_match_error():
     }
     with pytest.raises(NoMatchError):
         group_dict_or_match_error(log_pattern)("some nonmatching str")
+
+
+@pytest.mark.parametrize("valid_true_bool", ["t ", "True", " TRUE", "yes", "1"])
+def test_want_bool_true(valid_true_bool):
+    assert want_bool(valid_true_bool)
+
+
+@pytest.mark.parametrize("valid_false_bool", ["f ", "false", "no", "", None])
+def test_want_bool_false(valid_false_bool):
+    assert want_bool(valid_false_bool) is False

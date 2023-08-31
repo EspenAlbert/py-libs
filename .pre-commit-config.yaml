@@ -10,6 +10,9 @@ repos:
   rev: v0.0.285
   hooks:
   - id: ruff
+    args:
+    - --fix
+    - --exit-non-zero-on-fix
 
 - repo: local
   hooks:

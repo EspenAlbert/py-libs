@@ -265,12 +265,29 @@ def day_ranges(start: DT, end: DT, delta: timedelta) -> Iterable[tuple[DT, DT]]:
 def week_dt(year: int, week: int) -> datetime:
     """
     >>> week_dt(2023, 1)
-    datetime.datetime(2023, 1, 2, 0, 0)
+    datetime.datetime(2023, 1, 2, 0, 0, tzinfo=datetime.timezone.utc)
     >>> week_dt(2023, 18)
-    datetime.datetime(2023, 5, 1, 0, 0)
+    datetime.datetime(2023, 5, 1, 0, 0, tzinfo=datetime.timezone.utc)
     """
-    jan_1st = datetime(year, 1, 1)
+    jan_1st = datetime(year, 1, 1, tzinfo=timezone.utc)
     start_monday = jan_1st - timedelta(days=jan_1st.weekday())
     if week_nr(start_monday) != 1:
         start_monday += timedelta(weeks=1)
     return start_monday + timedelta(weeks=week - 1)
+
+
+def prev_monday(weeks: int = 0) -> datetime:
+    """
+    >>> prev_monday().weekday()
+    0
+    >>> prev_monday(weeks=1).weekday()
+    0
+    >>> prev_monday() != prev_monday(weeks=1)
+    True
+    >>> prev_monday().strftime("%H:%M:%S")
+    '00:00:00'
+
+    """
+    today = utc_now()
+    monday = today - timedelta(days=today.weekday(), weeks=weeks)
+    return monday.replace(hour=0, minute=0, second=0, microsecond=0)

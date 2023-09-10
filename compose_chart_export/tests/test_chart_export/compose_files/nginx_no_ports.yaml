@@ -1,0 +1,7 @@
+version: "3.8"
+services:
+  nginx:
+    image: nginx
+    labels:
+      chart_name: nginx_no_ports
+      PORTS_EXTRA: "80"

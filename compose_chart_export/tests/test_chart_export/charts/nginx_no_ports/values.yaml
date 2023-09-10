@@ -1,0 +1,8 @@
+app_kubernetes_io_name: ''
+app_kubernetes_io_instance: ''
+podLabels: {}
+podAnnotations: {}
+nodeSelector: {}
+replicas: 1
+nginx_no_ports:
+  image: unset

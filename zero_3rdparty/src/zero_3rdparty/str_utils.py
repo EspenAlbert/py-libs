@@ -43,7 +43,7 @@ def want_bool(s: Union[str, bool, None]) -> bool:
 
 @want_bool.register
 def _want_bool_str(s: str) -> bool:
-    return s.lower() in {"true", "1", "yes"}
+    return s.strip().lower() in {"true", "1", "yes", "t"}
 
 
 @want_bool.register

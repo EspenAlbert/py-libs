@@ -80,6 +80,10 @@ def parse_chart_name(labels: dict[str, str]) -> str:
     return labels.get("chart_name", "")
 
 
+def parse_extra_ports(labels: dict[str, str]) -> list[str]:
+    return [p for p in labels.get("PORTS_EXTRA", "").strip().split(",") if p.isdigit()]
+
+
 class ExtraContainer(BaseModel):
     name: kubernetes_label_regex
     env: dict[str, str]
@@ -178,7 +182,12 @@ def export_from_compose(
                 chart_info["version"] = chart_version
         else:
             template_name, spec = create_spec(
-                chart_name, container_name, chart_version, service_name, info
+                chart_name,
+                container_name,
+                chart_version,
+                service_name,
+                info,
+                prefix_ports,
             )
             export_chart(spec, template_name, chart_path)
         update_values(
@@ -229,6 +238,8 @@ def parse_container_ports(
     compose_labels: dict[str, str], ports: Iterable[tuple[int, int]]
 ) -> list[PrefixPort]:
     prefix_ports = []
+    if extra_ports := parse_extra_ports(compose_labels):
+        ports = list(ports) + [(int(p), int(p)) for p in extra_ports]
     for _, container_port in ports:
         port_protocol = compose_labels.get(
             f"PORT_PROTOCOL_{container_port}", PortProtocol.http
@@ -236,7 +247,8 @@ def parse_container_ports(
         prefix_port = PrefixPort(
             prefix="/", port=container_port, protocol=port_protocol
         )
-        prefix_ports.append(prefix_port)
+        if prefix_port not in prefix_ports:
+            prefix_ports.append(prefix_port)
     return prefix_ports
 
 
@@ -246,12 +258,12 @@ def create_spec(
     chart_version: str,
     service_name: str,
     info: ComposeServiceInfo,
+    prefix_ports: list[PrefixPort],
 ) -> tuple[str, ChartTemplateSpec]:
     compose_labels = info.labels
-    ports = list(info.host_container_ports)
     if name := parse_template_name(compose_labels):
         template_name = cast(ChartTemplate, name)
-    elif ports:
+    elif prefix_ports:
         template_name = ChartTemplate.SERVICE_DEPLOYMENT
     else:
         template_name = ChartTemplate.DEPLOYMENT_ONLY

@@ -1,8 +1,4 @@
 VERSION = "0.0.28a2"
-STATIC_EXTRAS = (
-    ("pydantic_v1", ("pydantic>=1.10.2,<=2",)),
-    ("pydantic_v2", ("pydantic>=2.1.1,<=3", "pydantic-settings>=2.0.3")),
-)
 CLASSIFIERS = (
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -23,6 +19,7 @@ def py_package(
     distribution_name: str = "",
     extras_require: dict = None,
     explicit_dependencies: list[str] = None,
+    is_root_package: bool = False,
 ):
     version = env("VERSION", VERSION)
     parent = build_file_dir()
@@ -37,11 +34,14 @@ def py_package(
         distribution_name != folder_name
     ), f"cannot use the same name for python_distribution as the folder @ {parent}"
     extras_require = extras_require or {}
-    extras_require.update({k: list(v) for k, v in STATIC_EXTRAS})
+    project_urls = dict(PROJECT_URLS)
+    if not is_root_package:
+        project_urls = {k: f"{v}{folder_name}" for k, v in PROJECT_URLS}
+    description_path = "readme.md" if is_root_package else f"{folder_name}/readme.md"
     python_distribution(
         name=distribution_name,
         dependencies=explicit_dependencies or all_dependencies,
-        long_description_path=f"{folder_name}/readme.md",
+        long_description_path=description_path,
         provides=setup_py(
             name=distribution_name,
             version=version,
@@ -51,7 +51,7 @@ def py_package(
             extras_require=extras_require or {},
             long_description_content_type="text/markdown",
             license="MIT",
-            project_urls={k: f"{v}{folder_name}" for k, v in PROJECT_URLS},
+            project_urls=project_urls,
         ),
         wheel=True,
         sdist=False,

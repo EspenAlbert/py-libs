@@ -51,7 +51,7 @@ class ComposeHealthCheck(Entity):
         if isinstance(raw, ComposeHealthCheck):
             return raw
         if raw is None or not raw:
-            return raw
+            return None
         if not isinstance(raw, dict):
             try:
                 raw = dict(raw)

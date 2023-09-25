@@ -52,7 +52,7 @@ def check_updated_compose(file_regression, filename, files):
 
 
 _old_content = """\
-version: '3'
+version: '3.9'
 services:
   docker-example-arm:
     image: docker-example-arm:latest-arm

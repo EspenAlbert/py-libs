@@ -11,6 +11,7 @@ from zero_3rdparty import (
     iter_utils,
     object_name,
     str_utils,
+    timeparse,
 )
 
 
@@ -26,6 +27,7 @@ from zero_3rdparty import (
         iter_utils,
         object_name,
         str_utils,
+        timeparse,
     ],
 )
 def test_zero_3rdparty_doctests(module):

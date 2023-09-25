@@ -28,6 +28,7 @@ def _create_compose_service(
         ports=Collection[PrefixPort](
             [PrefixPort(prefix="/", port=8000, protocol="http")]
         ),
+        healthcheck=FrozenDict(),
     )
 
 

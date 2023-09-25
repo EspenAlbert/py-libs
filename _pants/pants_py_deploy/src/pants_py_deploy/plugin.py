@@ -40,6 +40,7 @@ from pants_py_deploy.fields import (
     ComposeEnabledField,
     ComposeEnvExportField,
     PyDeploySubsystem,
+    HealthcheckField,
 )
 from pants_py_deploy.models import (
     ComposeEnvExport,
@@ -248,6 +249,7 @@ async def resolve_compose_service(
         chart_path=chart_path,
         chart_name=image.get(ComposeChartNameField, default_raw_value="").value,
         compose_env_export=compose_env_export,
+        healthcheck=image[HealthcheckField].value,
     )
 
 

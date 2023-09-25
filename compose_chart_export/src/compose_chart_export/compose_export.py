@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Callable, Iterable, cast
+from typing import Callable, Iterable, Optional, cast
 
 import semver  # type: ignore
 from pydantic import BaseModel
@@ -26,6 +26,7 @@ from compose_chart_export.chart_read import container_template
 from compose_chart_export.ports import PortProtocol, PrefixPort
 from compose_chart_export.settings import ChartTemplate
 from docker_compose_parser.file_models import (
+    ComposeHealthCheck,
     ComposeServiceInfo,
     iter_compose_info,
     read_compose_info,
@@ -146,6 +147,19 @@ def ensure_chart_version_valid(chart_version: str):
     return updated_version
 
 
+def readiness_values(healthcheck: Optional[ComposeHealthCheck]) -> Optional[dict]:
+    if healthcheck is None:
+        return None
+    # https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes
+    return dict(
+        exec=dict(command=healthcheck.command_list),
+        initialDelaySeconds=healthcheck.start_period_seconds,
+        periodSeconds=healthcheck.interval_seconds,
+        timeoutSeconds=healthcheck.timeout_seconds,
+        failureThreshold=healthcheck.retries,
+    )
+
+
 def export_from_compose(
     compose_path: PathLike,
     chart_version: str,
@@ -190,8 +204,13 @@ def export_from_compose(
                 prefix_ports,
             )
             export_chart(spec, template_name, chart_path)
+        ready_probe = readiness_values(info.healthcheck)
         update_values(
-            chart_path, env, container_name=container_name, set_image=image_url
+            chart_path,
+            env,
+            container_name=container_name,
+            set_image=image_url,
+            readiness_values=ready_probe,
         )
         command = info.command
         if not command:
@@ -205,6 +224,7 @@ def export_from_compose(
             command=command,
             rel_path=container_template_path,
             env_vars_field_refs={},
+            readiness_enabled=bool(ready_probe),
         )
         if prefix_ports:
             update_services(chart_path, prefix_ports, container_name=container_name)
@@ -223,6 +243,7 @@ def export_from_compose(
                     command=container.command,
                     rel_path=container_template_path,
                     env_vars_field_refs={},
+                    readiness_enabled=False,
                 )
                 update_values(
                     chart_path,

@@ -4,15 +4,11 @@ podLabels: {}
 podAnnotations: {}
 nodeSelector: {}
 replicas: 1
-serviceAccount:
-  name: docker-example
-  annotations: {}
-  create: true
-docker_example:
+service_deployment_with_healthcheck:
   PORT: '8000'
   env: default
   name: __REQUIRED__
-  image: docker-example-amd-docker:latest-amd
+  image: unset
   readinessProbe:
     exec:
       command:

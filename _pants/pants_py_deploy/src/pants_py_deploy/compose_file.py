@@ -55,6 +55,7 @@ def _as_service_dict(compose_service: ComposeService) -> dict:
         labels={"chart_name": compose_service.chart_inferred_name}
         if compose_service.chart_path
         else {},
+        healthcheck=compose_service.healthcheck,
     )
     return service_info.as_service_dict(
         ignore_falsy=True, include_ports=True, network_name=COMPOSE_NETWORK_NAME
@@ -93,6 +94,7 @@ def as_compose_yaml(
                 new_environment=service_dict.get("environment", {}),
                 network_name=COMPOSE_NETWORK_NAME,
                 ensure_labels=service_dict.get("labels", {}),
+                healthcheck=service_dict.get("healthcheck"),
             )
             existing_full["services"][service_name] = new_dictionary
         else:

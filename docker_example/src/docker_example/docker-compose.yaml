@@ -19,6 +19,12 @@ services:
     - 8000:8000
     networks:
     - pants-default
+    healthcheck:
+      test: curl -f http://localhost:8000/health || exit 1
+      interval: 30s
+      timeout: 30s
+      start_period: 0s
+      retries: 3
   docker-example-arm-docker:
     image: docker-example-arm-docker:latest-arm
     environment:
@@ -29,6 +35,12 @@ services:
     - 8000:8000
     networks:
     - pants-default
+    healthcheck:
+      test: curl -f http://localhost:8000/health || exit 1
+      interval: 30s
+      timeout: 30s
+      start_period: 0s
+      retries: 3
 networks:
   pants-default:
     external: true

@@ -5,6 +5,7 @@ from pants_py_deploy.fields import (
     ComposeChartNameField,
     ComposeEnabledField,
     ComposeEnvExportField,
+    HealthcheckField,
 )
 
 
@@ -15,4 +16,5 @@ def rules():
         DockerImageTarget.register_plugin_field(ComposeChartField),
         DockerImageTarget.register_plugin_field(ComposeChartNameField),
         DockerImageTarget.register_plugin_field(ComposeEnvExportField),
+        DockerImageTarget.register_plugin_field(HealthcheckField),
     ]

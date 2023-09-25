@@ -23,23 +23,21 @@ spec:
       {{- end }}
     spec:
       containers:
-      - name: docker-example
-        image: {{ .Values.docker_example.image | quote }}
+      - name: service-deployment-with-healthcheck
+        image: {{ .Values.service_deployment_with_healthcheck.image | quote }}
         imagePullPolicy: IfNotPresent
         resources: {}
         ports:
         - containerPort: 8000
-          name: http-docker-exa
+          name: http-service-de
         env:
         - name: PORT
-          value: {{ .Values.docker_example.PORT | quote }}
+          value: {{ .Values.service_deployment_with_healthcheck.PORT | quote }}
         - name: env
-          value: {{ .Values.docker_example.env | quote }}
+          value: {{ .Values.service_deployment_with_healthcheck.env | quote }}
         - name: name
-          value: {{ .Values.docker_example.name | quote }}
-        readinessProbe: 
-          {{- toYaml .Values.docker_example.readinessProbe | nindent 10 }}
-      serviceAccountName: {{ template "docker-example.serviceAccountName" . }}
+          value: {{ .Values.service_deployment_with_healthcheck.name | quote }}
+        readinessProbe: {{- toYaml .Values.service_deployment_with_healthcheck.readinessProbe | nindent 10 }}
       nodeSelector:
       {{- with .Values.nodeSelector }}
       {{- toYaml . | nindent 8 }}

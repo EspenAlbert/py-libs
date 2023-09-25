@@ -5,12 +5,41 @@
 ARM_IMAGE = "python:3.10.11-slim-bullseye@sha256:2b7d288b3cd5a884c8764aa39488cd39373e25fc9c7218b3f74e2bd623de9ffe"
 AMD_IMAGE = "python:3.10.11-slim-bullseye@sha256:364bb889cb48b1e0d66b8aa73b1e952f1d072864205f8abc667f0a15d84de040"
 
+"""
+Healthcheck options:
+https://docs.docker.com/engine/reference/builder/#healthcheck
+--interval=DURATION (default: 30s)
+--timeout=DURATION (default: 30s)
+--start-period=DURATION (default: 0s)
+--start-interval=DURATION (default: 5s)
+--retries=N (default: 3)
+
+"""
+default_healthcheck_options = (
+    ("interval", "30s"),
+    ("timeout", "30s"),
+    ("start-period", "0s"),
+    ("start-interval", "5s"),
+    ("retries", "3"),
+)
+
+
+def as_healthcheck_command(healthcheck: dict):
+    port = healthcheck["port"]
+    path = healthcheck["path"]
+    curl_command = f"curl -f http://localhost:{port}/{path} || exit 1"
+    options = " ".join(
+        f"--{name}={healthcheck.get(name, default)}"
+        for name, default in default_healthcheck_options
+    )
+    return f"HEALTHCHECK {options} \\\n  {curl_command}"
+
 
 def dockerfile_pex_instructions(
-    is_arm: bool, pex_requirements_path: str, pex_sources_path: str
+    is_arm: bool, pex_requirements_path: str, pex_sources_path: str, healthcheck: dict
 ) -> list[str]:
     base_image = ARM_IMAGE if is_arm else AMD_IMAGE
-    return [
+    lines = [
         f"FROM {base_image} as deps",
         f"COPY {pex_requirements_path} /binary.pex",
         "RUN PEX_TOOLS=1 PEX_VERBOSE=2 python /binary.pex venv --scope=deps --compile /bin/app",
@@ -22,6 +51,9 @@ def dockerfile_pex_instructions(
         "COPY --from=deps /bin/app /bin/app",
         "COPY --from=srcs /bin/app /bin/app",
     ]
+    if healthcheck:
+        lines.append(as_healthcheck_command(healthcheck))
+    return lines
 
 
 def py_deploy(
@@ -34,7 +66,11 @@ def py_deploy(
     env_amd: str = "linux_amd",
     resolve: str = "python-default",
     env_export: dict = None,
+    healthcheck: dict = None,
 ):
+    healthcheck = healthcheck or {}
+    # pants require str->str dictionary
+    healthcheck = {key: str(value) for key, value in healthcheck.items()}
     use_docker = docker is not None
     use_helm = helm is not None
     parent = build_file_dir()
@@ -88,6 +124,7 @@ def py_deploy(
                     is_arm=is_arm,
                     pex_requirements_path=f"{parent_path}/{pex_deps_filename}",
                     pex_sources_path=f"{parent_path}/{pex_filename}",
+                    healthcheck=healthcheck,
                 ),
                 source=None,
                 compose_enabled=True,
@@ -96,6 +133,7 @@ def py_deploy(
                 else "",
                 compose_chart_name=name,
                 compose_env_export=env_export or {},
+                app_healthcheck=healthcheck,
             )
     if use_helm:
         chart_path = "chart"

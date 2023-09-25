@@ -1,6 +1,11 @@
 from typing import ClassVar
 
-from pants.engine.target import BoolField, DictStringToStringSequenceField, StringField
+from pants.engine.target import (
+    BoolField,
+    DictStringToStringSequenceField,
+    StringField,
+    DictStringToStringField,
+)
 from pants.option.option_types import StrListOption
 from pants.option.subsystem import Subsystem
 from pants.util.frozendict import FrozenDict
@@ -28,6 +33,12 @@ class ComposeEnvExportField(DictStringToStringSequenceField):
     alias = "compose_env_export"
     default: ClassVar[FrozenDict[str, tuple[str]]] = FrozenDict()
     help = "dict(exclude_globs=['some_ignored_prefix*'], include_globs=['*port']), include_globs takes preference over exclude_globs"
+
+
+class HealthcheckField(DictStringToStringField):
+    alias = "app_healthcheck"
+    default: ClassVar[FrozenDict[str, str]] = FrozenDict()
+    help = "dict(port='8000', path='/health', interval='30s') see more options here: https://docs.docker.com/engine/reference/builder/#healthcheck"
 
 
 COMPOSE_NETWORK_NAME = "pants-default"

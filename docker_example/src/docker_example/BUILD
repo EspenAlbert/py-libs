@@ -4,4 +4,5 @@ py_deploy(
     docker={"compose_chart": True},
     helm={},
     env_export=dict(exclude_globs=["EXCLUDED_*"]),
+    healthcheck={"port": 8000, "path": "/health"},
 )

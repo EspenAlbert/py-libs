@@ -19,7 +19,7 @@ default_healthcheck_options = (
     ("interval", "30s"),
     ("timeout", "30s"),
     ("start-period", "0s"),
-    ("start-interval", "5s"),
+    # ("start-interval", "5s"),
     ("retries", "3"),
 )
 
@@ -32,7 +32,7 @@ def as_healthcheck_command(healthcheck: dict):
         f"--{name}={healthcheck.get(name, default)}"
         for name, default in default_healthcheck_options
     )
-    return f"HEALTHCHECK {options} \\\n  {curl_command}"
+    return f"HEALTHCHECK {options} \\\n  CMD {curl_command}"
 
 
 def dockerfile_pex_instructions(

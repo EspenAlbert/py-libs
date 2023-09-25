@@ -2,18 +2,14 @@
 # https://pantsbuild.slack.com/archives/C046T6T9U/p1668559231617069?thread_ts=1668559186.539269&cid=C046T6T9U
 
 
+ARM_IMAGE = "python:3.10.11-slim-bullseye@sha256:2b7d288b3cd5a884c8764aa39488cd39373e25fc9c7218b3f74e2bd623de9ffe"
+AMD_IMAGE = "python:3.10.11-slim-bullseye@sha256:364bb889cb48b1e0d66b8aa73b1e952f1d072864205f8abc667f0a15d84de040"
+
 
 def dockerfile_pex_instructions(
-    version: str, is_arm: bool, pex_requirements_path: str, pex_sources_path: str
+    is_arm: bool, pex_requirements_path: str, pex_sources_path: str
 ) -> list[str]:
-    BASE_IMAGES_ARM_AMD = {
-        "3.10.11": (
-            "python:3.10.11-slim-bullseye@sha256:2b7d288b3cd5a884c8764aa39488cd39373e25fc9c7218b3f74e2bd623de9ffe",
-            "python:3.10.11-slim-bullseye@sha256:364bb889cb48b1e0d66b8aa73b1e952f1d072864205f8abc667f0a15d84de040",
-        )
-    }
-    arm_image, amd_image = BASE_IMAGES_ARM_AMD[version]
-    base_image = arm_image if is_arm else amd_image
+    base_image = ARM_IMAGE if is_arm else AMD_IMAGE
     return [
         f"FROM {base_image} as deps",
         f"COPY {pex_requirements_path} /binary.pex",
@@ -34,11 +30,10 @@ def py_deploy(
     entry_point: str,
     docker: dict = None,
     helm: dict = None,
-    version: str = "3.10.11",
     env_arm: str = "linux_arm",
     env_amd: str = "linux_amd",
     resolve: str = "python-default",
-    env_export: dict=None
+    env_export: dict = None,
 ):
     use_docker = docker is not None
     use_helm = helm is not None
@@ -64,7 +59,7 @@ def py_deploy(
             include_tools=True,
             layout="packed",
             execution_mode="venv",
-            resolve=resolve
+            resolve=resolve,
         )
         pex_binary(
             **dict(
@@ -90,16 +85,17 @@ def py_deploy(
                 dependencies=[],
                 repository=name,
                 instructions=dockerfile_pex_instructions(
-                    version=version,
                     is_arm=is_arm,
                     pex_requirements_path=f"{parent_path}/{pex_deps_filename}",
                     pex_sources_path=f"{parent_path}/{pex_filename}",
                 ),
                 source=None,
                 compose_enabled=True,
-                compose_chart="chart" if docker.get("compose_chart", False) and not is_arm else "",
+                compose_chart="chart"
+                if docker.get("compose_chart", False) and not is_arm
+                else "",
                 compose_chart_name=name,
-                compose_env_export=env_export or {}
+                compose_env_export=env_export or {},
             )
     if use_helm:
         chart_path = "chart"

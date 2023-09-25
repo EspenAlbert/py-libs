@@ -50,7 +50,7 @@ class ComposeHealthCheck(Entity):
     def parse_healthcheck(cls, raw: Any) -> ComposeHealthCheck | None:
         if isinstance(raw, ComposeHealthCheck):
             return raw
-        if raw is None:
+        if raw is None or not raw:
             return raw
         if not isinstance(raw, dict):
             try:
@@ -63,6 +63,8 @@ class ComposeHealthCheck(Entity):
         raw = deepcopy(raw)
         test_value = raw.get("test")
         if not test_value:
+            if "port" not in raw:
+                return None
             port = int(raw.pop("port"))
             path = str(raw.pop("path", "/"))
             raw["test"] = f"curl -f http://localhost:{port}{path} || exit 1"

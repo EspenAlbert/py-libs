@@ -19,7 +19,7 @@ default_healthcheck_options = (
     ("interval", "30s"),
     ("timeout", "30s"),
     ("start-period", "0s"),
-    # ("start-interval", "5s"),
+    ("start-interval", "5s"),
     ("retries", "3"),
 )
 
@@ -40,6 +40,7 @@ def dockerfile_pex_instructions(
 ) -> list[str]:
     base_image = ARM_IMAGE if is_arm else AMD_IMAGE
     lines = [
+        "# syntax=docker/dockerfile:1.6.0",
         f"FROM {base_image} as deps",
         f"COPY {pex_requirements_path} /binary.pex",
         "RUN PEX_TOOLS=1 PEX_VERBOSE=2 python /binary.pex venv --scope=deps --compile /bin/app",

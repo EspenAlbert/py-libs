@@ -9,7 +9,7 @@ from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Union
 from pydantic import Extra, Field
 
 from model_lib import Entity, FileFormat, parse_payload
-from model_lib.pydantic_utils import IS_PYDANTIC_V2
+from model_lib.pydantic_utils import IS_PYDANTIC_V2, model_dump
 from zero_3rdparty.dict_nested import read_nested_or_none
 from zero_3rdparty.dict_utils import merge, sort_keys
 from zero_3rdparty.iter_utils import ignore_falsy as ignore_falsy_method
@@ -25,7 +25,7 @@ class ComposeHealthCheck(Entity):
     timeout: str = "30s"
     start_period: str = "0s"
     # https://github.com/docker/compose/issues/10830
-    # start_interval: str = "5s"
+    start_interval: str = "5s"
     retries: int = 3
 
     @property
@@ -166,10 +166,11 @@ class ComposeServiceInfo(Entity):
         }
         if healthcheck:
             parsed_healthcheck = ComposeHealthCheck.parse_healthcheck(healthcheck)
-            if IS_PYDANTIC_V2:
-                service_dict["healthcheck"] = parsed_healthcheck.model_dump()  # type: ignore
-            else:
-                service_dict["healthcheck"] = parsed_healthcheck.dict()  # type: ignore
+            # https://github.com/docker/compose/issues/10830
+            exclude = {"start_interval"}
+            service_dict["healthcheck"] = model_dump(
+                parsed_healthcheck, exclude=exclude
+            )
         if ignore_falsy:
             return ignore_falsy_method(**service_dict)
         return service_dict
@@ -251,6 +252,7 @@ def export_compose_dict(
     command: Optional[List[str]] = None,
     only_override_existing_env_vars: bool = True,
     network_external: bool = True,
+    compose_file_version="3.9",
 ) -> dict:
     """Valid dictionary for a docker-compose.yaml file."""
     service_dict.pop("depends_on", "")
@@ -273,7 +275,9 @@ def export_compose_dict(
     if add_labels:
         original_labels = service_dict.setdefault("labels", {})
         original_labels.update(add_labels)
-    compose_dict = dict(version="3", services={service_name: service_dict})
+    compose_dict = dict(
+        version=compose_file_version, services={service_name: service_dict}
+    )
     if network_name:
         compose_dict["networks"] = {network_name: dict(external=network_external)}
     return compose_dict

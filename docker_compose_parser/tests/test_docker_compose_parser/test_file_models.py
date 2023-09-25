@@ -12,7 +12,7 @@ def test_parse_es_file():
             interval="30s",
             timeout="30s",
             start_period="0s",
-            # start_interval="5s",
+            start_interval="5s",
             retries=10,
         ),
         "kibana": ComposeHealthCheck(
@@ -20,7 +20,7 @@ def test_parse_es_file():
             interval="30s",
             timeout="30s",
             start_period="0s",
-            # start_interval="5s",
+            start_interval="5s",
             retries=20,
         ),
     }
@@ -35,6 +35,6 @@ def test_parse_healthcheck_from_port_path():
         interval="30s",
         timeout="30s",
         start_period="0s",
-        # start_interval="5s",
+        start_interval="5s",
         retries=2,
     )

@@ -41,6 +41,7 @@ from pants_py_deploy.fields import (
     ComposeEnvExportField,
     PyDeploySubsystem,
     HealthcheckField,
+    TargetPortField,
 )
 from pants_py_deploy.models import (
     ComposeEnvExport,
@@ -237,6 +238,7 @@ async def resolve_compose_service(
         )
     else:
         chart_path = ""
+    target_ports = image[TargetPortField].value
     return ComposeService(
         path=ensure_suffix(spec_path, "/docker-compose.yaml"),
         name=image.address.target_name,
@@ -244,7 +246,9 @@ async def resolve_compose_service(
         env_vars=FrozenDict(
             file_env_vars(all_env_vars, dependencies, compose_env_export)
         ),
-        ports=Collection[PrefixPort](combined_ports(all_env_vars, dependencies)),
+        ports=Collection[PrefixPort](
+            combined_ports(all_env_vars, dependencies, target_ports)
+        ),
         image_tag=image_tag,
         chart_path=chart_path,
         chart_name=image.get(ComposeChartNameField, default_raw_value="").value,

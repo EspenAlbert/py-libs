@@ -1,14 +1,18 @@
-from typing import ClassVar
+from typing import ClassVar, Optional, Iterable
 
+from pants.engine.addresses import Address
 from pants.engine.target import (
     BoolField,
     DictStringToStringSequenceField,
     StringField,
     DictStringToStringField,
+    Field,
 )
 from pants.option.option_types import StrListOption
 from pants.option.subsystem import Subsystem
 from pants.util.frozendict import FrozenDict
+
+from compose_chart_export.ports import PrefixPort
 
 
 class ComposeEnabledField(BoolField):
@@ -39,6 +43,24 @@ class HealthcheckField(DictStringToStringField):
     alias = "app_healthcheck"
     default: ClassVar[FrozenDict[str, str]] = FrozenDict()
     help = "dict(port='8000', path='/health', interval='30s') see more options here: https://docs.docker.com/engine/reference/builder/#healthcheck"
+
+
+class TargetPortField(Field):
+    alias = "app_ports"
+    value: tuple[str, str, str]
+    default = None
+    help = "a sequence of (number, prefix, port_protocol{http|grpc|grpc-web|tcp|tls|udp|http2})"
+
+    @classmethod
+    def compute_value(
+        cls, raw_value: Optional[Iterable[tuple[str, str, str]]], address: Address
+    ) -> tuple[PrefixPort, ...]:
+        if not raw_value:
+            return tuple()
+        return tuple(
+            PrefixPort(prefix=prefix, port=int(port), protocol=protocol)
+            for port, prefix, protocol in raw_value
+        )
 
 
 COMPOSE_NETWORK_NAME = "pants-default"

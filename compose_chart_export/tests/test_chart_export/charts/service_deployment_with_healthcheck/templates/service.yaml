@@ -9,6 +9,6 @@ spec:
   type: ClusterIP
   ports:
   - port: 8000
-    name: http-service-de
+    name: http-8000
   selector:
   {{- include "common.labels.matchLabels" . | nindent 4 }}

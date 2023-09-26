@@ -17,6 +17,7 @@ services:
       name: __REQUIRED__
     ports:
     - 8000:8000
+    - 8001:8001
     networks:
     - pants-default
     healthcheck:
@@ -33,6 +34,7 @@ services:
       name: __REQUIRED__
     ports:
     - 8000:8000
+    - 8001:8001
     networks:
     - pants-default
     healthcheck:

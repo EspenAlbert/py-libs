@@ -120,16 +120,28 @@ def update_containers(
         path.write_text(new)
 
 
+_used_container_names: dict[str, dict[int, str]] = {}
+
+
+def find_container_port_name(container_name: str, port: PrefixPort) -> str:
+    kub_port_name = port.as_kub_port_name(port)
+    container_port_names = _used_container_names.setdefault(container_name, {})
+    if name := container_port_names.get(port.port):
+        return name
+    existing_names = set(container_port_names.values())
+    if kub_port_name not in existing_names:
+        new_name: str = kub_port_name
+    else:
+        new_name = port.find_alternative_name(existing_names)
+    container_port_names[port.port] = new_name
+    return new_name
+
+
 def port_name(
     port_prefix: PrefixPort, container_name: str, port_number_key: str
 ) -> Dict[str, Union[int, str]]:
-    kub_port_name = port_prefix.as_kub_port_name(port_prefix)
-    if kub_port_name.endswith("root"):
-        # ensure unique name when /root is used
-        kub_port_name = PrefixPort.as_kub_port_name_raw(
-            port_prefix.protocol, container_name
-        )
-    return {port_number_key: port_prefix.port, "name": kub_port_name}
+    name = find_container_port_name(container_name, port_prefix)
+    return {port_number_key: port_prefix.port, "name": name}
 
 
 def update_services(chart_dir: Path, ports: Iterable[PrefixPort], container_name: str):

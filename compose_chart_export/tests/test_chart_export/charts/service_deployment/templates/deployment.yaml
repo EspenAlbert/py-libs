@@ -29,7 +29,7 @@ spec:
         resources: {}
         ports:
         - containerPort: 8000
-          name: http-service-de
+          name: http-8000
         env:
         - name: PORT
           value: {{ .Values.service_deployment.PORT | quote }}

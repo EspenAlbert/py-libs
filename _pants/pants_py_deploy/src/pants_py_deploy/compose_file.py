@@ -134,8 +134,13 @@ def file_compose_ports(ports: Iterable[PrefixPort]) -> list[str]:
 
 
 def combined_ports(
-    env_vars: FileEnvVars, dependencies: Iterable[str]
+    env_vars: FileEnvVars,
+    dependencies: Iterable[str],
+    target_ports: Iterable[PrefixPort],
 ) -> Iterable[PrefixPort]:
-    return chain.from_iterable(
-        env_vars.file_port_info.get(port_file, []) for port_file in dependencies
+    dependency_ports = list(
+        chain.from_iterable(
+            env_vars.file_port_info.get(port_file, []) for port_file in dependencies
+        )
     )
+    return dependency_ports + list(target_ports)

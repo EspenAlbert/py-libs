@@ -68,7 +68,10 @@ def py_deploy(
     resolve: str = "python-default",
     env_export: dict = None,
     healthcheck: dict = None,
+    explicit_ports: list[dict] = None
 ):
+    explicit_ports = explicit_ports or []
+    assert all(len(port) == 3 for port in explicit_ports), "ports are tuple with (number, path, port_protocol{http|grpc|grpc-web|tcp|tls|udp|http2}"
     healthcheck = healthcheck or {}
     # pants require str->str dictionary
     healthcheck = {key: str(value) for key, value in healthcheck.items()}
@@ -135,6 +138,7 @@ def py_deploy(
                 compose_chart_name=name,
                 compose_env_export=env_export or {},
                 app_healthcheck=healthcheck,
+                app_ports=explicit_ports,
             )
     if use_helm:
         chart_path = "chart"

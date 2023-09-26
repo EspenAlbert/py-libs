@@ -29,7 +29,7 @@ spec:
         resources: {}
         ports:
         - containerPort: 80
-          name: http-nginx-no-p
+          name: http-80
         env: []
       nodeSelector:
       {{- with .Values.nodeSelector }}

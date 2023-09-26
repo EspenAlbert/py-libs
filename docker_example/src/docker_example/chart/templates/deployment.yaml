@@ -29,7 +29,9 @@ spec:
         resources: {}
         ports:
         - containerPort: 8000
-          name: http-docker-exa
+          name: http-8000
+        - containerPort: 8001
+          name: http-8001
         env:
         - name: PORT
           value: {{ .Values.docker_example.PORT | quote }}

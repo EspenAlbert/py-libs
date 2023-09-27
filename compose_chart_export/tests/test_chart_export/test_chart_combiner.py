@@ -21,7 +21,13 @@ newline2
 lineendextra # noupdate
 lineendextra2 # noupdate
 """
-
+_chart_yaml = """\
+apiVersion: v2
+name: combine-chart-example
+type: application
+version: 0.0.1
+appVersion: 0.0.1
+"""
 _values_yaml_old = """\
 replicas: 3 # should be kept
 docker_example:
@@ -46,10 +52,6 @@ some_extra_value: "my-extra-value" # should be kept
 """
 _values_yaml_new = """\
 replicas: 1
-serviceAccount:
-  name: docker-example
-  annotations: {}
-  create: true
 docker_example:
   PORT: '8000'
   env: default
@@ -94,36 +96,39 @@ docker_example:
     failureThreshold: 10
 existing_secret_secret1: ''
 existing_secret_secret2: ''
-some_extra_value: "my-extra-value"
+some_extra_value: my-extra-value
 """
 
 
 def test_combine(tmp_path):
     old_paths = {
+        "chart.yaml": _chart_yaml,
         "frozen.yaml": _frozen_file,
         "no_update.yaml": _no_update_file,
-        "not_in_new.yaml": "old_content_unchanged",
+        "not_in_new.yaml": "old_content_unchanged\n",
         "templates/fully_replace.yaml": "override_me",
         "values.yaml": _values_yaml_old,
     }
     new_paths = {
+        "chart.yaml": _chart_yaml,
         "frozen.yaml": "I WILL HAVE OLD CONTENT",
         "no_update.yaml": "newline1\nnewline2\n",
-        "templates/fully_replace.yaml": "new_content_only",
+        "templates/fully_replace.yaml": "new_content_only\n",
         "values.yaml": _values_yaml_new,
     }
     expected_content = {
+        "chart.yaml": _chart_yaml,
         "frozen.yaml": _frozen_file,
         "no_update.yaml": _no_update_file_updated,
-        "not_in_new.yaml": "old_content_unchanged",
-        "templates/fully_replace.yaml": "new_content_only",
+        "not_in_new.yaml": "old_content_unchanged\n",
+        "templates/fully_replace.yaml": "new_content_only\n",
         "values.yaml": _combined_values_yaml,
     }
     for rel_path, content in old_paths.items():
-        ensure_parents_write_text(tmp_path / "old", content)
+        ensure_parents_write_text(tmp_path / f"old/{rel_path}", content)
 
     for rel_path, content in new_paths.items():
-        ensure_parents_write_text(tmp_path / "new", content)
+        ensure_parents_write_text(tmp_path / f"new/{rel_path}", content)
     combine(tmp_path / "old", tmp_path / "new")
 
     for path, rel_path in iter_paths_and_relative(

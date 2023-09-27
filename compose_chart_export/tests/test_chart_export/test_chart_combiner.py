@@ -102,7 +102,7 @@ some_extra_value: my-extra-value
 
 def test_combine(tmp_path):
     old_paths = {
-        "chart.yaml": _chart_yaml,
+        "Chart.yaml": _chart_yaml,
         "frozen.yaml": _frozen_file,
         "no_update.yaml": _no_update_file,
         "not_in_new.yaml": "old_content_unchanged\n",
@@ -110,14 +110,14 @@ def test_combine(tmp_path):
         "values.yaml": _values_yaml_old,
     }
     new_paths = {
-        "chart.yaml": _chart_yaml,
+        "Chart.yaml": _chart_yaml,
         "frozen.yaml": "I WILL HAVE OLD CONTENT",
         "no_update.yaml": "newline1\nnewline2\n",
         "templates/fully_replace.yaml": "new_content_only\n",
         "values.yaml": _values_yaml_new,
     }
     expected_content = {
-        "chart.yaml": _chart_yaml,
+        "Chart.yaml": _chart_yaml,
         "frozen.yaml": _frozen_file,
         "no_update.yaml": _no_update_file_updated,
         "not_in_new.yaml": "old_content_unchanged\n",
@@ -129,6 +129,7 @@ def test_combine(tmp_path):
 
     for rel_path, content in new_paths.items():
         ensure_parents_write_text(tmp_path / f"new/{rel_path}", content)
+
     combine(tmp_path / "old", tmp_path / "new")
 
     for path, rel_path in iter_paths_and_relative(

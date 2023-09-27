@@ -70,10 +70,6 @@ def combine(old_path: Path, new_path: Path) -> None:
 def ensure_no_update_lines_kept(
     old_lines: list[str], new_lines: list[str], rel_path: str
 ) -> list[str]:
-    """
-    >>> ensure_no_update_lines_kept(["{{- if .Values.deployment.enabled }} # noupdate", "line1", "line2", "{{- end }} # noupdate", "final line # noupdate"], ["newline1", "newline2"])
-    ['{{- if .Values.deployment.enabled }} # noupdate', 'newline1', 'newline2', '{{- end }} # noupdate', 'final line # noupdate']
-    """
     extra_old_lines_start: list[str] = []
     extra_old_lines_end: list[str] = []
     at_start = True

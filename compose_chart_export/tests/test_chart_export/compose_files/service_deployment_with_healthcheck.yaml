@@ -3,6 +3,7 @@ services:
   docker-example-with-healthcheck:
     labels:
       healthcheck_probes: readiness
+      secret_name: name
     image: docker-example-amd-docker:latest-amd
     healthcheck:
       test: curl -f http://localhost:8000/health || exit 1

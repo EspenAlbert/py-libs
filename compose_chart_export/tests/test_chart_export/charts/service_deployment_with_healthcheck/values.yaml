@@ -20,3 +20,4 @@ service_deployment_with_healthcheck:
     periodSeconds: 30
     timeoutSeconds: 30
     failureThreshold: 3
+existing_secret_name: ''

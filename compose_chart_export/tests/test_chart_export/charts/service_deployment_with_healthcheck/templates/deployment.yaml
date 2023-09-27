@@ -35,8 +35,9 @@ spec:
           value: {{ .Values.service_deployment_with_healthcheck.PORT | quote }}
         - name: env
           value: {{ .Values.service_deployment_with_healthcheck.env | quote }}
-        - name: name
-          value: {{ .Values.service_deployment_with_healthcheck.name | quote }}
+        envFrom:
+        - secretRef:
+            name: {{ eq .Values.existing_secret_name "" | ternary "name" .Values.existing_secret_name | quote }}
         readinessProbe: {{- toYaml .Values.service_deployment_with_healthcheck.readinessProbe | nindent 10 }}
       nodeSelector:
       {{- with .Values.nodeSelector }}

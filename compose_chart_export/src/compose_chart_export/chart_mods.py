@@ -4,7 +4,10 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Dict, Iterable, Mapping, Optional, Set, Union
 
-from compose_chart_export.chart_file_templates import secret_with_env_vars_template
+from compose_chart_export.chart_file_templates import (
+    as_secret_template_name,
+    secret_with_env_vars_template,
+)
 from compose_chart_export.ports import PrefixPort
 from model_lib.serialize.yaml_serialize import edit_helm_template, edit_yaml
 
@@ -12,8 +15,8 @@ service_yaml = "templates/service.yaml"
 values_yaml = "values.yaml"
 
 
-def as_existing_secret_name(secret_name: str) -> str:
-    return f"existing_secret_{secret_name}"
+def as_existing_secret_value_ref(secret_name: str) -> str:
+    return f"existing_secret_{secret_name.replace('-', '_')}"
 
 
 def update_values(
@@ -42,7 +45,7 @@ def update_values(
         if probe_values:
             values.update(probe_values)
         for secret_name in secret_names:
-            all_values[as_existing_secret_name(secret_name)] = ""
+            all_values[as_existing_secret_value_ref(secret_name)] = ""
 
 
 def add_container(
@@ -117,11 +120,11 @@ def update_containers(  # noqa: C901
             env.append(dict(name=name, value=value_template))
         env_from = []
         for secret in secret_names:
-            existing_secret_name = as_existing_secret_name(secret)
-            secret_name_value = (
-                '{{{{ eq .Values.{} "" | ternary "{}" .Values.{} | quote }}}}'.format(
-                    existing_secret_name, secret, existing_secret_name
-                )
+            existing_secret_name = as_existing_secret_value_ref(secret)
+            default_secret_name = f"( {as_secret_template_name(secret)} )"
+            secret_name_value = '{{{{ eq .Values.{secret_ref} "" | ternary {default_secret_name} .Values.{secret_ref} | quote }}}}'.format(
+                secret_ref=existing_secret_name,
+                default_secret_name=default_secret_name,
             )
             env_from.append(dict(secretRef=dict(name=secret_name_value)))
         if env_from:
@@ -191,8 +194,7 @@ def update_services(chart_dir: Path, ports: Iterable[PrefixPort], container_name
 
 
 def secret_with_env_vars(container_name: str, name: str, env_vars: list[str]) -> str:
-    container_name_underscore = container_name.replace("-", "_")
-    existing_secret_name = as_existing_secret_name(name)
+    existing_secret_name = as_existing_secret_value_ref(name)
     return secret_with_env_vars_template(
-        name, env_vars, container_name_underscore, existing_secret_name
+        name, env_vars, container_name, existing_secret_name
     )

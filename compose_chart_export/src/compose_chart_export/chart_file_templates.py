@@ -486,21 +486,30 @@ kind: Secret
 metadata:
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
-  name: {{ printf "%s-$SECRET_NAME" .Release.Name }}
+  name: {{ $SECRET_TEMPLATE_NAME }}
   namespace: {{ .Release.Namespace }}
 """
+
+
+def as_secret_template_name(name: str) -> str:
+    name = name.replace("_", "-")
+    return 'printf "%s-{name}" .Release.Name'.format(name=name)
 
 
 def secret_with_env_vars_template(
     name: str, env_vars: list[str], container_name: str, existing_value_ref: str
 ) -> str:
-    replacements = {"$EXISTING_REF": existing_value_ref, "$SECRET_NAME": name}
+    replacements = {
+        "$EXISTING_REF": existing_value_ref,
+        "$SECRET_TEMPLATE_NAME": as_secret_template_name(name),
+    }
     manifest = _SECRET_OPTIONAL
     for in_, out in replacements.items():
         manifest = manifest.replace(in_, out)
     manifest_data = ["data:"]
+    container_name_underscore = container_name.replace("-", "_")
     manifest_data.extend(
-        f"  {env_var}: {{{{ .Values.{container_name}.{env_var} | b64enc | quote }}}}"
+        f"  {env_var}: {{{{ .Values.{container_name_underscore}.{env_var} | b64enc | quote }}}}"
         for env_var in env_vars
     )
     manifest_data.append("{{- end -}}")

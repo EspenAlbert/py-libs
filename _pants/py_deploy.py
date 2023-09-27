@@ -1,7 +1,7 @@
 # inspired by
 # https://pantsbuild.slack.com/archives/C046T6T9U/p1668559231617069?thread_ts=1668559186.539269&cid=C046T6T9U
 
-
+PYTHON_MAJOR_MINOR = "3.10"
 ARM_IMAGE = "python:3.10.11-slim-bullseye@sha256:2b7d288b3cd5a884c8764aa39488cd39373e25fc9c7218b3f74e2bd623de9ffe"
 AMD_IMAGE = "python:3.10.11-slim-bullseye@sha256:364bb889cb48b1e0d66b8aa73b1e952f1d072864205f8abc667f0a15d84de040"
 
@@ -24,24 +24,57 @@ default_healthcheck_options = (
 )
 
 
-def as_healthcheck_command(healthcheck: dict):
-    port = healthcheck["port"]
-    path = healthcheck["path"]
-    curl_command = f"curl -f http://localhost:{port}/{path} || exit 1"
+def as_healthcheck_command(healthcheck: dict) -> str:
+    """only healthchecks with port and path are supported now"""
+    cmd = healthcheck.get("cmd", healthcheck.get("CMD"))
+    port = healthcheck.get("port")
+    path = healthcheck.get("path", "/")
+    py_module: str = healthcheck.get("py_module")  # type: ignore
+    unknown_message = (
+        f"unknown healthcheck, specify cmd/CMD/port/py_module: {healthcheck}"
+    )
+    assert cmd or port or py_module, unknown_message
+    if not cmd:
+        if port:
+            cmd = f"curl -f http://localhost:{port}/{path} || exit 1"
+        elif py_module:
+            script_path = py_module.replace(".", "/")
+            healthcheck["python_major_minor"] = PYTHON_MAJOR_MINOR
+            cmd = f"/bin/app/lib/python{PYTHON_MAJOR_MINOR}/site-packages/{script_path}.py"
     options = " ".join(
         f"--{name}={healthcheck.get(name, default)}"
         for name, default in default_healthcheck_options
     )
-    return f"HEALTHCHECK {options} \\\n  CMD {curl_command}"
+    return f"HEALTHCHECK {options} \\\n  CMD {cmd}"
 
 
 def dockerfile_pex_instructions(
-    is_arm: bool, pex_requirements_path: str, pex_sources_path: str, healthcheck: dict
+    is_arm: bool,
+    pex_requirements_path: str,
+    pex_sources_path: str,
+    healthcheck: dict,
+    apt_packages: list[str],
 ) -> list[str]:
+    health_command = ""
+    apt_install = ""
+    apt_copy: list[str] = []
+    if healthcheck:
+        health_command = as_healthcheck_command(healthcheck)
+        if "curl" not in apt_packages:
+            apt_packages.append("curl")
+    if apt_packages:
+        apt = " ".join(apt_packages)
+        apt_install = f"RUN apt-get -y update; apt-get -y install {apt}"
+        apt_copy.extend(
+            f"COPY --from=deps /usr/bin/{p} /usr/bin/{p}" for p in apt_packages
+        )
+        lib_dir = "aarch64-linux-gnu" if is_arm else "x86_64-linux-gnu"
+        apt_copy.append(f"COPY --from=deps /usr/lib/{lib_dir} /usr/lib/{lib_dir}")
     base_image = ARM_IMAGE if is_arm else AMD_IMAGE
     lines = [
         "# syntax=docker/dockerfile:1.6.0",
         f"FROM {base_image} as deps",
+        apt_install,
         f"COPY {pex_requirements_path} /binary.pex",
         "RUN PEX_TOOLS=1 PEX_VERBOSE=2 python /binary.pex venv --scope=deps --compile /bin/app",
         f"FROM {base_image} as srcs",
@@ -49,12 +82,12 @@ def dockerfile_pex_instructions(
         "RUN PEX_TOOLS=1 PEX_VERBOSE=2 python /binary.pex venv --scope=srcs --compile /bin/app",
         f"FROM {base_image}",
         'ENTRYPOINT ["/bin/app/pex"]',
+        *apt_copy,
         "COPY --from=deps /bin/app /bin/app",
         "COPY --from=srcs /bin/app /bin/app",
+        health_command,
     ]
-    if healthcheck:
-        lines.append(as_healthcheck_command(healthcheck))
-    return lines
+    return [l for l in lines if l]
 
 
 def py_deploy(
@@ -68,10 +101,14 @@ def py_deploy(
     resolve: str = "python-default",
     env_export: dict = None,
     healthcheck: dict = None,
-    explicit_ports: list[dict] = None
+    explicit_ports: list[dict] = None,
+    apt_packages: list[str] = None,
 ):
+    apt_packages = apt_packages or []
     explicit_ports = explicit_ports or []
-    assert all(len(port) == 3 for port in explicit_ports), "ports are tuple with (number, path, port_protocol{http|grpc|grpc-web|tcp|tls|udp|http2}"
+    assert all(
+        len(port) == 3 for port in explicit_ports
+    ), "ports are tuple with (number, path, port_protocol{http|grpc|grpc-web|tcp|tls|udp|http2}"
     healthcheck = healthcheck or {}
     # pants require str->str dictionary
     healthcheck = {key: str(value) for key, value in healthcheck.items()}
@@ -129,6 +166,7 @@ def py_deploy(
                     pex_requirements_path=f"{parent_path}/{pex_deps_filename}",
                     pex_sources_path=f"{parent_path}/{pex_filename}",
                     healthcheck=healthcheck,
+                    apt_packages=apt_packages,
                 ),
                 source=None,
                 compose_enabled=True,

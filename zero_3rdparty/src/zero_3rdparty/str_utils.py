@@ -9,11 +9,11 @@ from typing import (
     Callable,
     Iterable,
     List,
+    Optional,
     Pattern,
     Set,
     TextIO,
     Union,
-    Optional,
 )
 
 from zero_3rdparty.iter_utils import key_values, select_attrs

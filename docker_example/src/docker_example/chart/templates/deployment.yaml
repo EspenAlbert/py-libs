@@ -39,6 +39,11 @@ spec:
           value: {{ .Values.docker_example.env | quote }}
         - name: name
           value: {{ .Values.docker_example.name | quote }}
+        envFrom:
+        - secretRef:
+            name: {{ eq .Values.existing_secret_secret1 "" | ternary "secret1" .Values.existing_secret_secret1 | quote }}
+        - secretRef:
+            name: {{ eq .Values.existing_secret_secret2 "" | ternary "secret2" .Values.existing_secret_secret2 | quote }}
         readinessProbe: {{- toYaml .Values.docker_example.readinessProbe | nindent 10 }}
         livenessProbe: {{- toYaml .Values.docker_example.livenessProbe | nindent 10 }}
         startupProbe: {{- toYaml .Values.docker_example.startupProbe | nindent 10 }}

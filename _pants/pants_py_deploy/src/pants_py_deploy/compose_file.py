@@ -50,15 +50,16 @@ def _as_service_dict(compose_service: ComposeService) -> dict:
     healthcheck = compose_service.healthcheck
     if healthcheck:
         labels["healthcheck_probes"] = healthcheck.get("probes", "readiness")
+    if secret_env_vars := compose_service.secret_env_vars:
+        for secret_name, env_vars in secret_env_vars.items():
+            labels[f"secret_{secret_name}"] = env_vars
     service_info = ComposeServiceInfo(
         image=compose_service.image_url,
         default_env={**compose_service.env_vars},
         default_ports=file_compose_ports(compose_service.ports),
         default_volumes=[],
         command=[],
-        labels=labels
-        if compose_service.chart_path
-        else {},
+        labels=labels if compose_service.chart_path else {},
         healthcheck=healthcheck,
     )
     return service_info.as_service_dict(

@@ -1,6 +1,8 @@
 version: '3.9'
 services:
   docker-example-with-healthcheck:
+    labels:
+      healthcheck_probes: readiness
     image: docker-example-amd-docker:latest-amd
     healthcheck:
       test: curl -f http://localhost:8000/health || exit 1

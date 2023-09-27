@@ -12,12 +12,9 @@ service_deployment_with_healthcheck:
   readinessProbe:
     exec:
       command:
-      - curl
-      - -f
-      - http://localhost:8000/health
-      - '||'
-      - exit
-      - '1'
+      - sh
+      - -c
+      - curl -f http://localhost:8000/health || exit 1
     initialDelaySeconds: 0
     periodSeconds: 30
     timeoutSeconds: 30

@@ -103,7 +103,9 @@ def py_deploy(
     healthcheck: dict = None,
     explicit_ports: list[dict] = None,
     apt_packages: list[str] = None,
+    secret_env_vars: dict[str, str] = None
 ):
+    secret_env_vars = secret_env_vars or {}
     apt_packages = apt_packages or []
     explicit_ports = explicit_ports or []
     assert all(
@@ -177,6 +179,7 @@ def py_deploy(
                 compose_env_export=env_export or {},
                 app_healthcheck=healthcheck,
                 app_ports=explicit_ports,
+                secret_env_vars=secret_env_vars,
             )
     if use_helm:
         chart_path = "chart"

@@ -2,13 +2,18 @@ from __future__ import annotations
 
 from copy import deepcopy
 from pathlib import Path
-from typing import Dict, Iterable, Mapping, Optional, Union
+from typing import Dict, Iterable, Mapping, Optional, Set, Union
 
+from compose_chart_export.chart_file_templates import secret_with_env_vars_template
 from compose_chart_export.ports import PrefixPort
 from model_lib.serialize.yaml_serialize import edit_helm_template, edit_yaml
 
 service_yaml = "templates/service.yaml"
 values_yaml = "values.yaml"
+
+
+def as_existing_secret_name(secret_name: str) -> str:
+    return f"existing_secret_{secret_name}"
 
 
 def update_values(
@@ -17,7 +22,9 @@ def update_values(
     container_name: str,
     set_image: str = "",
     probe_values: Optional[dict] = None,
+    secret_names: Optional[list[str]] = None,
 ):
+    secret_names = secret_names or []
     with edit_yaml(chart_dir / values_yaml) as all_values:
         values = all_values.setdefault(container_name.replace("-", "_"), {})
         old_image = values.get("image")
@@ -34,6 +41,8 @@ def update_values(
             values["image"] = set_image
         if probe_values:
             values.update(probe_values)
+        for secret_name in secret_names:
+            all_values[as_existing_secret_name(secret_name)] = ""
 
 
 def add_container(
@@ -60,7 +69,7 @@ def add_container(
         containers.append(container_spec)
 
 
-def update_containers(
+def update_containers(  # noqa: C901
     chart_dir: Path,
     env_vars: Mapping[str, str],
     ports: Iterable[PrefixPort],
@@ -71,6 +80,8 @@ def update_containers(
     readiness_enabled: bool,
     liveness_enabled: bool,
     startup_enabled: bool,
+    secret_names: list[str],
+    all_secret_env_vars: Set[str],
 ):
     container_name = container_name.replace("_", "-")
     path = chart_dir / rel_path
@@ -92,6 +103,8 @@ def update_containers(
         env.clear()
         container_name_underscore = container_name.replace("-", "_")
         for name, value in env_vars.items():
+            if name in all_secret_env_vars:
+                continue
             if field_ref := env_vars_field_refs.get(name):
                 env.append(
                     dict(name=name, valueFrom=dict(fieldRef=dict(fieldPath=field_ref)))
@@ -102,6 +115,17 @@ def update_containers(
                 name.replace("-", "_").replace(".", "_"),
             )
             env.append(dict(name=name, value=value_template))
+        env_from = []
+        for secret in secret_names:
+            existing_secret_name = as_existing_secret_name(secret)
+            secret_name_value = (
+                '{{{{ eq .Values.{} "" | ternary "{}" .Values.{} | quote }}}}'.format(
+                    existing_secret_name, secret, existing_secret_name
+                )
+            )
+            env_from.append(dict(secretRef=dict(name=secret_name_value)))
+        if env_from:
+            container["envFrom"] = env_from
         container_ports = container["ports"] = []
         container_ports.extend(
             port_name(port, container_name, port_number_key="containerPort")
@@ -115,7 +139,9 @@ def update_containers(
         for probe_name, is_enabled in probes.items():
             if not is_enabled:
                 continue
-            container[probe_name] = "{{- toYaml .Values.%s.%s | nindent 10 }}" % (
+            container[
+                probe_name
+            ] = "{{{{- toYaml .Values.{}.{} | nindent 10 }}}}".format(
                 container_name_underscore,
                 probe_name,
             )
@@ -162,3 +188,11 @@ def update_services(chart_dir: Path, ports: Iterable[PrefixPort], container_name
                 svc_ports[i] = port_name(new, container_name, "port")
         for port_prefix in not_found.values():
             svc_ports.append(port_name(port_prefix, container_name, "port"))
+
+
+def secret_with_env_vars(container_name: str, name: str, env_vars: list[str]) -> str:
+    container_name_underscore = container_name.replace("-", "_")
+    existing_secret_name = as_existing_secret_name(name)
+    return secret_with_env_vars_template(
+        name, env_vars, container_name_underscore, existing_secret_name
+    )

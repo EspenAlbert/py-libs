@@ -18,6 +18,7 @@ from compose_chart_export.chart_file_templates import (
 )
 from compose_chart_export.chart_mods import (
     add_container,
+    secret_with_env_vars,
     update_containers,
     update_services,
     update_values,
@@ -85,6 +86,21 @@ def parse_extra_ports(labels: dict[str, str]) -> list[str]:
     return [p for p in labels.get("PORTS_EXTRA", "").strip().split(",") if p.isdigit()]
 
 
+def parse_secret_env_vars(
+    labels: dict[str, str]
+) -> tuple[dict[str, list[str]], set[str]]:
+    all_secret_env_vars: set[str] = set()
+    secret_env_vars: dict[str, list[str]] = {}
+    for name, raw_env_vars in labels.items():
+        if not name.startswith("secret_"):
+            continue
+        secret_name = name.removeprefix("secret_").replace("-", "_")
+        env_vars = words_to_list(raw_env_vars, " ", ",")
+        all_secret_env_vars.update(env_vars)
+        secret_env_vars[secret_name] = env_vars
+    return secret_env_vars, all_secret_env_vars
+
+
 def parse_healthcheck_probes(labels: dict[str, str]) -> list[str]:
     """
     >>> parse_healthcheck_probes({})
@@ -96,9 +112,7 @@ def parse_healthcheck_probes(labels: dict[str, str]) -> list[str]:
     >>> parse_healthcheck_probes({"healthcheck_probes": "readiness, liveness"})
     ['readiness', 'liveness']
     """
-    raw_probes = words_to_list(
-        labels.get("healthcheck_probes", ""), " ", ","
-    )
+    raw_probes = words_to_list(labels.get("healthcheck_probes", ""), " ", ",")
     probes = [probe.removesuffix("Probe") for probe in raw_probes]
     valid_probes = {"readiness", "liveness", "startup"}
     invalid_probes = [p for p in probes if p not in valid_probes]
@@ -227,12 +241,15 @@ def export_from_compose(
         if healthcheck := info.healthcheck:
             for probe in parse_healthcheck_probes(compose_labels):
                 probes[f"{probe}Probe"] = probe_values(healthcheck)
+        secret_env_vars, all_secret_env_vars = parse_secret_env_vars(compose_labels)
+        secret_names = list(secret_env_vars)
         update_values(
             chart_path,
             env,
             container_name=container_name,
             set_image=image_url,
             probe_values=probes,
+            secret_names=secret_names,
         )
         command = info.command
         if not command:
@@ -249,6 +266,8 @@ def export_from_compose(
             readiness_enabled="readinessProbe" in probes,
             liveness_enabled="livenessProbe" in probes,
             startup_enabled="startupProbe" in probes,
+            secret_names=secret_names,
+            all_secret_env_vars=all_secret_env_vars,
         )
         if prefix_ports:
             update_services(chart_path, prefix_ports, container_name=container_name)
@@ -270,6 +289,8 @@ def export_from_compose(
                     readiness_enabled=False,
                     liveness_enabled=False,
                     startup_enabled=False,
+                    secret_names=[],
+                    all_secret_env_vars=set(),
                 )
                 update_values(
                     chart_path,
@@ -277,6 +298,11 @@ def export_from_compose(
                     container_name=container.name,
                     set_image="unset",
                 )
+        for secret_name, env_vars in secret_env_vars.items():
+            filename = f"secret_{secret_name}.yaml"
+            secret_content = secret_with_env_vars(container_name, secret_name, env_vars)
+            (chart_path / "templates" / filename).write_text(secret_content)
+
         if on_exported:
             on_exported(chart_path)
 

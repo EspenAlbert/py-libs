@@ -63,6 +63,12 @@ class TargetPortField(Field):
         )
 
 
+class SecretEnvVarsField(DictStringToStringField):
+    alias = "secret_env_vars"
+    default: ClassVar[FrozenDict[str, str]] = FrozenDict()
+    help = "dict(secret_name1='env_var1,env_var2,env_var3')"
+
+
 COMPOSE_NETWORK_NAME = "pants-default"
 
 

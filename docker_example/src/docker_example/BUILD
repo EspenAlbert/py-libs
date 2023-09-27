@@ -10,4 +10,8 @@ py_deploy(
         "probes": "liveness,readiness,startup",
     },
     explicit_ports=[(8001, "/", "http")],
+    secret_env_vars={
+        "secret1": "secret1_env_var1,secret1_env_var2",
+        "secret2": "secret2_env_var3",
+    },
 )

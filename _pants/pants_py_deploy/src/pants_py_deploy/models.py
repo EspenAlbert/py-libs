@@ -91,6 +91,7 @@ class ComposeService:
     ports: Collection[PrefixPort]
     image_tag: str
     healthcheck: FrozenDict[str, str]
+    secret_env_vars: FrozenDict[str, str]
     chart_path: str = ""
     chart_name: str = ""
     compose_env_export: ComposeEnvExport = field(default_factory=ComposeEnvExport)

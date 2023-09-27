@@ -29,6 +29,7 @@ def _create_compose_service(
             [PrefixPort(prefix="/", port=8000, protocol="http")]
         ),
         healthcheck=FrozenDict(),
+        secret_env_vars=FrozenDict(),
     )
 
 

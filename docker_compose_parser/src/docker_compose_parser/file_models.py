@@ -8,8 +8,9 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Union
 
 from pydantic import Extra, Field
+
 from model_lib import Entity, FileFormat, parse_payload
-from model_lib.pydantic_utils import IS_PYDANTIC_V2, model_dump, field_names
+from model_lib.pydantic_utils import IS_PYDANTIC_V2, field_names, model_dump
 from zero_3rdparty.dict_nested import read_nested_or_none
 from zero_3rdparty.dict_utils import merge, sort_keys
 from zero_3rdparty.iter_utils import ignore_falsy as ignore_falsy_method
@@ -33,13 +34,13 @@ def _find_test(healthcheck: dict) -> Optional[str]:
         return None
     if not cmd:
         if port:
-            cmd = f"curl -f http://localhost:{port}/{path} || exit 1"
+            cmd = f"curl -f http://localhost:{port}{path} || exit 1"
         elif py_module:
             script_path = py_module.replace(".", "/")
             py_major_minor = healthcheck["python_major_minor"]
             cmd = f"/bin/app/lib/python{py_major_minor}/site-packages/{script_path}.py"
         else:
-            raise NotImplementedError # should never happen, if condition
+            raise NotImplementedError  # should never happen, if condition
     return cmd
 
 
@@ -99,7 +100,7 @@ class ComposeHealthCheck(Entity):
             "start_interval", None
         )  # https://github.com/docker/compose/issues/10830
         valid_names = set(field_names(cls))
-        return cls(**{k:v for k, v in raw.items() if k in valid_names})
+        return cls(**{k: v for k, v in raw.items() if k in valid_names})
 
 
 class ComposeServiceInfo(Entity):

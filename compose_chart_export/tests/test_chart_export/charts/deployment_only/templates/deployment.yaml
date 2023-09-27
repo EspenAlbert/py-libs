@@ -25,7 +25,7 @@ spec:
       containers:
       - name: deployment-only
         image: {{ .Values.deployment_only.image | quote }}
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
         resources: {}
         ports: []
         env:

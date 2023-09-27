@@ -149,6 +149,7 @@ app_kubernetes_io_instance: ''
 podLabels: {}
 podAnnotations: {}
 nodeSelector: {}
+imagePullPolicy: IfNotPresent
 replicas: 1"""
 
 _RESOURCES_YAML = """\
@@ -322,7 +323,7 @@ def _add_template_spec(template: str, spec: ChartTemplateSpec):
                 container_spec = dict(
                     name=name,
                     image="{{ .Values.%s.image | quote }}" % value_name,
-                    imagePullPolicy="IfNotPresent",
+                    imagePullPolicy="{{ .Values.imagePullPolicy | quote }}",
                     resources="{{- toYaml .Values.resources | nindent 10 }}"
                     if spec.use_resource_limits
                     else {},
@@ -479,6 +480,7 @@ def service_account(spec: ChartTemplateSpec) -> str:
 
 _SECRET_OPTIONAL = """\
 {{- if (eq .Values.$EXISTING_REF "") -}}
+---
 apiVersion: v1
 kind: Secret
 metadata:

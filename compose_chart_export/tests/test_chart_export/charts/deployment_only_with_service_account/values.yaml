@@ -3,6 +3,7 @@ app_kubernetes_io_instance: ''
 podLabels: {}
 podAnnotations: {}
 nodeSelector: {}
+imagePullPolicy: IfNotPresent
 replicas: 1
 serviceAccount:
   name: docker-example

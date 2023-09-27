@@ -3,6 +3,7 @@ app_kubernetes_io_instance: ''
 podLabels: {}
 podAnnotations: {}
 nodeSelector: {}
+imagePullPolicy: IfNotPresent
 replicas: 1
 serviceAccount:
   name: docker-example
@@ -33,9 +34,9 @@ docker_example:
       - -c
       - curl -f http://localhost:8000/health || exit 1
     initialDelaySeconds: 0
-    periodSeconds: 30
+    periodSeconds: 3
     timeoutSeconds: 30
-    failureThreshold: 3
+    failureThreshold: 10
   startupProbe:
     exec:
       command:
@@ -48,3 +49,6 @@ docker_example:
     failureThreshold: 3
 existing_secret_secret1: ''
 existing_secret_secret2: ''
+some_new_value: Hello!
+deployment:
+  enabled: true

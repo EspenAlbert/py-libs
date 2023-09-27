@@ -3,11 +3,12 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Callable, Iterable, cast
+from typing import Callable, Iterable, Optional, cast
 
 import semver  # type: ignore
 from pydantic import BaseModel
 
+from compose_chart_export.chart_combiner import combine
 from compose_chart_export.chart_export import export_chart
 from compose_chart_export.chart_file_templates import (
     ChartTemplateSpec,
@@ -193,13 +194,14 @@ def probe_values(healthcheck: ComposeHealthCheck) -> dict:
     )
 
 
-def export_from_compose(
+def export_from_compose(  # noqa: C901
     compose_path: PathLike,
     chart_version: str,
     chart_name: str = "",
     image_url: str = "unset",
     on_exported: Callable[[Path], None] | None = None,
     use_chart_name_as_container_name: bool = True,
+    old_chart_path: Optional[Path] = None,
 ):
     chart_version = ensure_chart_version_valid(chart_version)
     compose_path = Path(compose_path)
@@ -303,6 +305,8 @@ def export_from_compose(
             secret_content = secret_with_env_vars(container_name, secret_name, env_vars)
             (chart_path / "templates" / filename).write_text(secret_content)
 
+        if old_chart_path:
+            combine(old_chart_path, chart_path)
         if on_exported:
             on_exported(chart_path)
 

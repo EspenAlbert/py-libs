@@ -38,7 +38,7 @@ def _find_test(healthcheck: dict) -> Optional[str]:
         elif py_module:
             script_path = py_module.replace(".", "/")
             py_major_minor = healthcheck["python_major_minor"]
-            cmd = f"/bin/app/lib/python{py_major_minor}/site-packages/{script_path}.py"
+            cmd = f"python /bin/app/lib/python{py_major_minor}/site-packages/{script_path}.py"
         else:
             raise NotImplementedError  # should never happen, if condition
     return cmd

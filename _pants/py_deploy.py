@@ -25,7 +25,7 @@ default_healthcheck_options = (
 
 
 def as_healthcheck_command(healthcheck: dict) -> str:
-    """only healthchecks with port and path are supported now"""
+    """only healthchecks with port/py_module/cmd are supported now"""
     cmd = healthcheck.get("cmd", healthcheck.get("CMD"))
     port = healthcheck.get("port")
     path = healthcheck.get("path", "/")
@@ -40,7 +40,7 @@ def as_healthcheck_command(healthcheck: dict) -> str:
         elif py_module:
             script_path = py_module.replace(".", "/")
             healthcheck["python_major_minor"] = PYTHON_MAJOR_MINOR
-            cmd = f"/bin/app/lib/python{PYTHON_MAJOR_MINOR}/site-packages/{script_path}.py"
+            cmd = f"python /bin/app/lib/python{PYTHON_MAJOR_MINOR}/site-packages/{script_path}.py"
     options = " ".join(
         f"--{name}={healthcheck.get(name, default)}"
         for name, default in default_healthcheck_options

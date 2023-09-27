@@ -13,15 +13,32 @@ docker_example:
   env: default
   name: __REQUIRED__
   image: docker-example-amd-docker:latest-amd
+  livenessProbe:
+    exec:
+      command:
+      - sh
+      - -c
+      - curl -f http://localhost:8000//health || exit 1
+    initialDelaySeconds: 0
+    periodSeconds: 30
+    timeoutSeconds: 30
+    failureThreshold: 3
   readinessProbe:
     exec:
       command:
-      - curl
-      - -f
-      - http://localhost:8000/health
-      - '||'
-      - exit
-      - '1'
+      - sh
+      - -c
+      - curl -f http://localhost:8000//health || exit 1
+    initialDelaySeconds: 0
+    periodSeconds: 30
+    timeoutSeconds: 30
+    failureThreshold: 3
+  startupProbe:
+    exec:
+      command:
+      - sh
+      - -c
+      - curl -f http://localhost:8000//health || exit 1
     initialDelaySeconds: 0
     periodSeconds: 30
     timeoutSeconds: 30

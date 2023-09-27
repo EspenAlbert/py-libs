@@ -11,6 +11,7 @@ services:
     labels:
       chart_name: docker-example
       chart_service_account_name: docker-example
+      healthcheck_probes: liveness,readiness,startup
     environment:
       PORT: '8000'
       env: default
@@ -21,7 +22,7 @@ services:
     networks:
     - pants-default
     healthcheck:
-      test: curl -f http://localhost:8000/health || exit 1
+      test: curl -f http://localhost:8000//health || exit 1
       interval: 30s
       timeout: 30s
       start_period: 0s
@@ -38,7 +39,7 @@ services:
     networks:
     - pants-default
     healthcheck:
-      test: curl -f http://localhost:8000/health || exit 1
+      test: curl -f http://localhost:8000//health || exit 1
       interval: 30s
       timeout: 30s
       start_period: 0s

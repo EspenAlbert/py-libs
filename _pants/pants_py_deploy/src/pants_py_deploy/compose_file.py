@@ -46,16 +46,20 @@ def _as_service_dicts(compose_services: Iterable[ComposeService]) -> dict[str, d
 
 
 def _as_service_dict(compose_service: ComposeService) -> dict:
+    labels = {"chart_name": compose_service.chart_inferred_name}
+    healthcheck = compose_service.healthcheck
+    if healthcheck:
+        labels["healthcheck_probes"] = healthcheck.get("probes", "readiness")
     service_info = ComposeServiceInfo(
         image=compose_service.image_url,
         default_env={**compose_service.env_vars},
         default_ports=file_compose_ports(compose_service.ports),
         default_volumes=[],
         command=[],
-        labels={"chart_name": compose_service.chart_inferred_name}
+        labels=labels
         if compose_service.chart_path
         else {},
-        healthcheck=compose_service.healthcheck,
+        healthcheck=healthcheck,
     )
     return service_info.as_service_dict(
         ignore_falsy=True, include_ports=True, network_name=COMPOSE_NETWORK_NAME

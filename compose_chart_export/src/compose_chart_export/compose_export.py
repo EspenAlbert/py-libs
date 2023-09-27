@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Callable, Iterable, Optional, cast
+from typing import Callable, Iterable, cast
 
 import semver  # type: ignore
 from pydantic import BaseModel
@@ -34,7 +34,7 @@ from docker_compose_parser.file_models import (
 from model_lib import FileFormat, parse_model, parse_payload
 from model_lib.serialize.yaml_serialize import edit_yaml
 from zero_3rdparty.file_utils import PathLike, copy
-from zero_3rdparty.str_utils import want_bool
+from zero_3rdparty.str_utils import want_bool, words_to_list
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +83,27 @@ def parse_chart_name(labels: dict[str, str]) -> str:
 
 def parse_extra_ports(labels: dict[str, str]) -> list[str]:
     return [p for p in labels.get("PORTS_EXTRA", "").strip().split(",") if p.isdigit()]
+
+
+def parse_healthcheck_probes(labels: dict[str, str]) -> list[str]:
+    """
+    >>> parse_healthcheck_probes({})
+    []
+    >>> parse_healthcheck_probes({"healthcheck_probes": "readiness"})
+    ['readiness']
+    >>> parse_healthcheck_probes({"healthcheck_probes": "readiness liveness"})
+    ['readiness', 'liveness']
+    >>> parse_healthcheck_probes({"healthcheck_probes": "readiness, liveness"})
+    ['readiness', 'liveness']
+    """
+    raw_probes = words_to_list(
+        labels.get("healthcheck_probes", ""), " ", ","
+    )
+    probes = [probe.removesuffix("Probe") for probe in raw_probes]
+    valid_probes = {"readiness", "liveness", "startup"}
+    invalid_probes = [p for p in probes if p not in valid_probes]
+    assert not invalid_probes, f"invalid probes specified: {invalid_probes}"
+    return probes
 
 
 class ExtraContainer(BaseModel):
@@ -147,12 +168,10 @@ def ensure_chart_version_valid(chart_version: str):
     return updated_version
 
 
-def readiness_values(healthcheck: Optional[ComposeHealthCheck]) -> Optional[dict]:
-    if healthcheck is None:
-        return None
+def probe_values(healthcheck: ComposeHealthCheck) -> dict:
     # https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes
     return dict(
-        exec=dict(command=healthcheck.command_list),
+        exec=dict(command=healthcheck.command_list_k8s),
         initialDelaySeconds=healthcheck.start_period_seconds,
         periodSeconds=healthcheck.interval_seconds,
         timeoutSeconds=healthcheck.timeout_seconds,
@@ -204,13 +223,16 @@ def export_from_compose(
                 prefix_ports,
             )
             export_chart(spec, template_name, chart_path)
-        ready_probe = readiness_values(info.healthcheck)
+        probes: dict[str, dict] = {}
+        if healthcheck := info.healthcheck:
+            for probe in parse_healthcheck_probes(compose_labels):
+                probes[f"{probe}Probe"] = probe_values(healthcheck)
         update_values(
             chart_path,
             env,
             container_name=container_name,
             set_image=image_url,
-            readiness_values=ready_probe,
+            probe_values=probes,
         )
         command = info.command
         if not command:
@@ -224,7 +246,9 @@ def export_from_compose(
             command=command,
             rel_path=container_template_path,
             env_vars_field_refs={},
-            readiness_enabled=bool(ready_probe),
+            readiness_enabled="readinessProbe" in probes,
+            liveness_enabled="livenessProbe" in probes,
+            startup_enabled="startupProbe" in probes,
         )
         if prefix_ports:
             update_services(chart_path, prefix_ports, container_name=container_name)
@@ -244,6 +268,8 @@ def export_from_compose(
                     rel_path=container_template_path,
                     env_vars_field_refs={},
                     readiness_enabled=False,
+                    liveness_enabled=False,
+                    startup_enabled=False,
                 )
                 update_values(
                     chart_path,

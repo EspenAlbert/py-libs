@@ -16,7 +16,7 @@ def update_values(
     env_vars: dict[str, str],
     container_name: str,
     set_image: str = "",
-    readiness_values: Optional[dict] = None,
+    probe_values: Optional[dict] = None,
 ):
     with edit_yaml(chart_dir / values_yaml) as all_values:
         values = all_values.setdefault(container_name.replace("-", "_"), {})
@@ -32,8 +32,8 @@ def update_values(
             values["image"] = old_image
         if set_image:
             values["image"] = set_image
-        if readiness_values:
-            values["readinessProbe"] = readiness_values
+        if probe_values:
+            values.update(probe_values)
 
 
 def add_container(
@@ -69,6 +69,8 @@ def update_containers(
     rel_path: str,
     env_vars_field_refs: Mapping[str, str],
     readiness_enabled: bool,
+    liveness_enabled: bool,
+    startup_enabled: bool,
 ):
     container_name = container_name.replace("_", "-")
     path = chart_dir / rel_path
@@ -105,19 +107,21 @@ def update_containers(
             port_name(port, container_name, port_number_key="containerPort")
             for port in ports
         )
-        readiness_line = (
-            "{{- toYaml .Values.%s.readinessProbe | nindent 10 }}"
-            % container_name_underscore
-        )
-        if readiness_enabled:
-            container["readinessProbe"] = readiness_line
+        probes = {
+            "readinessProbe": readiness_enabled,
+            "livenessProbe": liveness_enabled,
+            "startupProbe": startup_enabled,
+        }
+        for probe_name, is_enabled in probes.items():
+            if not is_enabled:
+                continue
+            container[probe_name] = "{{- toYaml .Values.%s.%s | nindent 10 }}" % (
+                container_name_underscore,
+                probe_name,
+            )
+
         if command:
             container["command"] = list(command)
-
-    if readiness_enabled:
-        old = path.read_text()
-        new = old.replace(readiness_line, "\n" + 10 * " " + readiness_line)
-        path.write_text(new)
 
 
 _used_container_names: dict[str, dict[int, str]] = {}

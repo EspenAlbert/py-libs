@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from copy import deepcopy
 from dataclasses import dataclass
 from functools import total_ordering
@@ -7,16 +8,39 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Union
 
 from pydantic import Extra, Field
-
 from model_lib import Entity, FileFormat, parse_payload
-from model_lib.pydantic_utils import IS_PYDANTIC_V2, model_dump
+from model_lib.pydantic_utils import IS_PYDANTIC_V2, model_dump, field_names
 from zero_3rdparty.dict_nested import read_nested_or_none
 from zero_3rdparty.dict_utils import merge, sort_keys
 from zero_3rdparty.iter_utils import ignore_falsy as ignore_falsy_method
 from zero_3rdparty.iter_utils import key_equal_value_to_dict
 from zero_3rdparty.timeparse import timeparse
 
+logger = logging.getLogger(__name__)
 NETWORK_NAME_DEFAULT = "compose-default"
+
+
+def _find_test(healthcheck: dict) -> Optional[str]:
+    cmd = healthcheck.get("cmd", healthcheck.get("CMD"))
+    port = healthcheck.get("port")
+    path = healthcheck.get("path", "/")
+    py_module: str = healthcheck.get("py_module")  # type: ignore
+    unknown_message = (
+        f"unknown healthcheck, specify cmd/CMD/port/py_module: {healthcheck}"
+    )
+    if not (cmd or port or py_module, unknown_message):
+        logger.warning(f"unable to find a test for healthcheck: {healthcheck}")
+        return None
+    if not cmd:
+        if port:
+            cmd = f"curl -f http://localhost:{port}/{path} || exit 1"
+        elif py_module:
+            script_path = py_module.replace(".", "/")
+            py_major_minor = healthcheck["python_major_minor"]
+            cmd = f"/bin/app/lib/python{py_major_minor}/site-packages/{script_path}.py"
+        else:
+            raise NotImplementedError # should never happen, if condition
+    return cmd
 
 
 class ComposeHealthCheck(Entity):
@@ -33,6 +57,11 @@ class ComposeHealthCheck(Entity):
         if isinstance(self.test, list):
             return [part for part in self.test if part not in ("CMD", "CMD-SHELL")]
         return self.test.split(" ")
+
+    @property
+    def command_list_k8s(self) -> list[str]:
+        command_list = self.command_list
+        return ["sh", "-c", " ".join(command_list)]
 
     @property
     def interval_seconds(self) -> int:
@@ -59,21 +88,18 @@ class ComposeHealthCheck(Entity):
                 raise ValueError(
                     f"cannot parse healthcheck from {raw!r}, need dict"
                 ) from e
-        # keep in sync with py_deploy
         raw = deepcopy(raw)
-        test_value = raw.get("test")
-        if not test_value:
-            if "port" not in raw:
-                return None
-            port = int(raw.pop("port"))
-            path = str(raw.pop("path", "/"))
-            raw["test"] = f"curl -f http://localhost:{port}{path} || exit 1"
+        test_value = raw.get("test") or _find_test(raw)
+        if test_value is None:
+            return None
+        raw["test"] = test_value
         raw["retries"] = int(raw.get("retries", 3))
         raw = {key.replace("-", "_"): value for key, value in raw.items()}
         raw.pop(
             "start_interval", None
         )  # https://github.com/docker/compose/issues/10830
-        return cls(**raw)
+        valid_names = set(field_names(cls))
+        return cls(**{k:v for k, v in raw.items() if k in valid_names})
 
 
 class ComposeServiceInfo(Entity):

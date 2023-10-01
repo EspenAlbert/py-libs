@@ -1,0 +1,7 @@
+apiVersion: v2
+name: service_deployment_with_healthcheck
+description: A Helm chart for service_deployment_with_healthcheck
+
+type: application
+version: 0.0.1
+appVersion: 0.0.1

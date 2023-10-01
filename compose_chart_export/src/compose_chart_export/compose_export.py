@@ -3,11 +3,12 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Callable, Iterable, cast
+from typing import Callable, Iterable, Optional, cast
 
 import semver  # type: ignore
 from pydantic import BaseModel
 
+from compose_chart_export.chart_combiner import combine
 from compose_chart_export.chart_export import export_chart
 from compose_chart_export.chart_file_templates import (
     ChartTemplateSpec,
@@ -18,6 +19,7 @@ from compose_chart_export.chart_file_templates import (
 )
 from compose_chart_export.chart_mods import (
     add_container,
+    secret_with_env_vars,
     update_containers,
     update_services,
     update_values,
@@ -26,6 +28,7 @@ from compose_chart_export.chart_read import container_template
 from compose_chart_export.ports import PortProtocol, PrefixPort
 from compose_chart_export.settings import ChartTemplate
 from docker_compose_parser.file_models import (
+    ComposeHealthCheck,
     ComposeServiceInfo,
     iter_compose_info,
     read_compose_info,
@@ -33,7 +36,7 @@ from docker_compose_parser.file_models import (
 from model_lib import FileFormat, parse_model, parse_payload
 from model_lib.serialize.yaml_serialize import edit_yaml
 from zero_3rdparty.file_utils import PathLike, copy
-from zero_3rdparty.str_utils import want_bool
+from zero_3rdparty.str_utils import want_bool, words_to_list
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +85,40 @@ def parse_chart_name(labels: dict[str, str]) -> str:
 
 def parse_extra_ports(labels: dict[str, str]) -> list[str]:
     return [p for p in labels.get("PORTS_EXTRA", "").strip().split(",") if p.isdigit()]
+
+
+def parse_secret_env_vars(
+    labels: dict[str, str]
+) -> tuple[dict[str, list[str]], set[str]]:
+    all_secret_env_vars: set[str] = set()
+    secret_env_vars: dict[str, list[str]] = {}
+    for name, raw_env_vars in labels.items():
+        if not name.startswith("secret_"):
+            continue
+        secret_name = name.removeprefix("secret_").replace("-", "_")
+        env_vars = words_to_list(raw_env_vars, " ", ",")
+        all_secret_env_vars.update(env_vars)
+        secret_env_vars[secret_name] = env_vars
+    return secret_env_vars, all_secret_env_vars
+
+
+def parse_healthcheck_probes(labels: dict[str, str]) -> list[str]:
+    """
+    >>> parse_healthcheck_probes({})
+    []
+    >>> parse_healthcheck_probes({"healthcheck_probes": "readiness"})
+    ['readiness']
+    >>> parse_healthcheck_probes({"healthcheck_probes": "readiness liveness"})
+    ['readiness', 'liveness']
+    >>> parse_healthcheck_probes({"healthcheck_probes": "readiness, liveness"})
+    ['readiness', 'liveness']
+    """
+    raw_probes = words_to_list(labels.get("healthcheck_probes", ""), " ", ",")
+    probes = [probe.removesuffix("Probe") for probe in raw_probes]
+    valid_probes = {"readiness", "liveness", "startup"}
+    invalid_probes = [p for p in probes if p not in valid_probes]
+    assert not invalid_probes, f"invalid probes specified: {invalid_probes}"
+    return probes
 
 
 class ExtraContainer(BaseModel):
@@ -146,13 +183,25 @@ def ensure_chart_version_valid(chart_version: str):
     return updated_version
 
 
-def export_from_compose(
+def probe_values(healthcheck: ComposeHealthCheck) -> dict:
+    # https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes
+    return dict(
+        exec=dict(command=healthcheck.command_list_k8s),
+        initialDelaySeconds=healthcheck.start_period_seconds,
+        periodSeconds=healthcheck.interval_seconds,
+        timeoutSeconds=healthcheck.timeout_seconds,
+        failureThreshold=healthcheck.retries,
+    )
+
+
+def export_from_compose(  # noqa: C901
     compose_path: PathLike,
     chart_version: str,
     chart_name: str = "",
     image_url: str = "unset",
     on_exported: Callable[[Path], None] | None = None,
     use_chart_name_as_container_name: bool = True,
+    old_chart_path: Optional[Path] = None,
 ):
     chart_version = ensure_chart_version_valid(chart_version)
     compose_path = Path(compose_path)
@@ -190,8 +239,19 @@ def export_from_compose(
                 prefix_ports,
             )
             export_chart(spec, template_name, chart_path)
+        probes: dict[str, dict] = {}
+        if healthcheck := info.healthcheck:
+            for probe in parse_healthcheck_probes(compose_labels):
+                probes[f"{probe}Probe"] = probe_values(healthcheck)
+        secret_env_vars, all_secret_env_vars = parse_secret_env_vars(compose_labels)
+        secret_names = list(secret_env_vars)
         update_values(
-            chart_path, env, container_name=container_name, set_image=image_url
+            chart_path,
+            env,
+            container_name=container_name,
+            set_image=image_url,
+            probe_values=probes,
+            secret_names=secret_names,
         )
         command = info.command
         if not command:
@@ -205,6 +265,11 @@ def export_from_compose(
             command=command,
             rel_path=container_template_path,
             env_vars_field_refs={},
+            readiness_enabled="readinessProbe" in probes,
+            liveness_enabled="livenessProbe" in probes,
+            startup_enabled="startupProbe" in probes,
+            secret_names=secret_names,
+            all_secret_env_vars=all_secret_env_vars,
         )
         if prefix_ports:
             update_services(chart_path, prefix_ports, container_name=container_name)
@@ -223,6 +288,11 @@ def export_from_compose(
                     command=container.command,
                     rel_path=container_template_path,
                     env_vars_field_refs={},
+                    readiness_enabled=False,
+                    liveness_enabled=False,
+                    startup_enabled=False,
+                    secret_names=[],
+                    all_secret_env_vars=set(),
                 )
                 update_values(
                     chart_path,
@@ -230,6 +300,13 @@ def export_from_compose(
                     container_name=container.name,
                     set_image="unset",
                 )
+        for secret_name, env_vars in secret_env_vars.items():
+            filename = f"secret_{secret_name}.yaml"
+            secret_content = secret_with_env_vars(container_name, secret_name, env_vars)
+            (chart_path / "templates" / filename).write_text(secret_content)
+
+        if old_chart_path:
+            combine(old_chart_path, chart_path)
         if on_exported:
             on_exported(chart_path)
 

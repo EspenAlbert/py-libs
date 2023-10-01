@@ -40,6 +40,9 @@ from pants_py_deploy.fields import (
     ComposeEnabledField,
     ComposeEnvExportField,
     PyDeploySubsystem,
+    HealthcheckField,
+    TargetPortField,
+    SecretEnvVarsField,
 )
 from pants_py_deploy.models import (
     ComposeEnvExport,
@@ -52,7 +55,7 @@ from pants_py_deploy.models import (
     FileEnvVars,
     HelmChartsExported,
 )
-from zero_3rdparty.file_utils import iter_paths_and_relative
+from zero_3rdparty.file_utils import ensure_parents_write_text, iter_paths_and_relative
 from zero_3rdparty.str_utils import ensure_suffix
 
 
@@ -121,6 +124,10 @@ async def export_helm_chart(request: ComposeExportChartRequest) -> ComposeExport
             )
         chart_digest = DigestContents(file_contents)
 
+    old_chart_digest = await Get(
+        DigestContents,
+        PathGlobs([f"{str(chart_path)}/*", f"{str(chart_path)}/templates/*"]),
+    )
     service = request.service
     with TemporaryDirectory() as tmpdir:
         digest = await Get(DigestContents, PathGlobs([service.path]))
@@ -128,6 +135,12 @@ async def export_helm_chart(request: ComposeExportChartRequest) -> ComposeExport
             compose_yaml = as_compose_yaml([service], digest[0])
         else:
             compose_yaml = as_new_compose_yaml([service])
+        old_chart_path = Path(tmpdir) / "old_chart"
+        for digest_content in old_chart_digest:
+            rel_path = PurePath(digest_content.path).relative_to(chart_path)
+            ensure_parents_write_text(
+                old_chart_path / rel_path, digest_content.content.decode("utf-8")
+            )
         docker_compose_path = Path(tmpdir) / "docker-compose.yaml"
         docker_compose_path.write_text(compose_yaml)
         export_from_compose(
@@ -136,6 +149,7 @@ async def export_helm_chart(request: ComposeExportChartRequest) -> ComposeExport
             chart_name=service.chart_inferred_name,
             image_url=service.image_url,
             on_exported=store_digest,
+            old_chart_path=old_chart_path,
         )
     assert chart_digest
     return ComposeExportChart(chart_path=chart_yaml_path, files=chart_digest)
@@ -236,6 +250,7 @@ async def resolve_compose_service(
         )
     else:
         chart_path = ""
+    target_ports = image[TargetPortField].value
     return ComposeService(
         path=ensure_suffix(spec_path, "/docker-compose.yaml"),
         name=image.address.target_name,
@@ -243,11 +258,15 @@ async def resolve_compose_service(
         env_vars=FrozenDict(
             file_env_vars(all_env_vars, dependencies, compose_env_export)
         ),
-        ports=Collection[PrefixPort](combined_ports(all_env_vars, dependencies)),
+        ports=Collection[PrefixPort](
+            combined_ports(all_env_vars, dependencies, target_ports)
+        ),
         image_tag=image_tag,
         chart_path=chart_path,
         chart_name=image.get(ComposeChartNameField, default_raw_value="").value,
         compose_env_export=compose_env_export,
+        healthcheck=image[HealthcheckField].value,
+        secret_env_vars=image[SecretEnvVarsField].value,
     )
 
 

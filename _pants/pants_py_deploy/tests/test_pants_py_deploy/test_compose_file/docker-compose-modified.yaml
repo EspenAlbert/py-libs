@@ -1,4 +1,4 @@
-version: '3'
+version: '3.9'
 services:
   docker-example-arm:
     image: docker-example-arm:latest-arm

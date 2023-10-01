@@ -1,0 +1,24 @@
+version: '3.9'
+services:
+  docker-example-with-healthcheck:
+    labels:
+      healthcheck_probes: readiness
+      secret_name: name
+    image: docker-example-amd-docker:latest-amd
+    healthcheck:
+      test: curl -f http://localhost:8000/health || exit 1
+      interval: 30s
+      timeout: 30s
+      start_period: 0s
+      retries: 3
+    environment:
+      PORT: '8000'
+      env: default
+      name: __REQUIRED__
+    ports:
+    - 8000:8000
+    networks:
+    - pants-default
+networks:
+  pants-default:
+    external: true

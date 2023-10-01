@@ -3,13 +3,50 @@ import re
 import reprlib
 import sys
 from functools import singledispatch
-from typing import Any, AnyStr, Callable, Iterable, List, Pattern, Set, TextIO, Union
+from typing import (
+    Any,
+    AnyStr,
+    Callable,
+    Iterable,
+    List,
+    Optional,
+    Pattern,
+    Set,
+    TextIO,
+    Union,
+)
 
 from zero_3rdparty.iter_utils import key_values, select_attrs
 
 
-def words_to_list(s: str, split_char: str = " ") -> List[str]:
-    return list(s.split(split_char))
+def words_to_list(
+    s: str,
+    split_char: str = " ",
+    alternative_split_char: Optional[str] = None,
+    skip_strip: bool = False,
+) -> List[str]:
+    """
+    >>> words_to_list("a b c")
+    ['a', 'b', 'c']
+    >>> words_to_list('a b,c')
+    ['a', 'b,c']
+    >>> words_to_list('a b,c', alternative_split_char=',')
+    ['a', 'b', 'c']
+    >>> words_to_list('a  b    c')
+    ['a', 'b', 'c']
+    >>> words_to_list("a  b    c", skip_strip=True)
+    ['a', '', 'b', '', '', '', 'c']
+    """
+    s = (
+        s
+        if alternative_split_char is None
+        else s.replace(alternative_split_char, split_char)
+    )
+    return [
+        part if skip_strip else part.strip()
+        for part in s.split(split_char)
+        if skip_strip or part.strip()
+    ]
 
 
 def words_to_set(s: str, split_char: str = " ") -> Set[str]:

@@ -9,6 +9,6 @@ spec:
   type: ClusterIP
   ports:
   - port: 80
-    name: http-nginx-no-p
+    name: http-80
   selector:
   {{- include "common.labels.matchLabels" . | nindent 4 }}

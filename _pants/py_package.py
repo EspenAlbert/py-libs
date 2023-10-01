@@ -1,4 +1,4 @@
-VERSION = "0.0.28a2"
+VERSION = "0.0.29a5"
 CLASSIFIERS = (
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",

@@ -11,24 +11,47 @@ services:
     labels:
       chart_name: docker-example
       chart_service_account_name: docker-example
+      healthcheck_probes: liveness,readiness,startup
+      secret_secret1: secret1_env_var1,secret1_env_var2
+      secret_secret2: secret2_env_var3
     environment:
       PORT: '8000'
       env: default
       name: __REQUIRED__
+      secret1_env_var1: DEFAULT1
+      secret1_env_var2: DEFAULT2
+      secret2_env_var3: DEFAULT3
     ports:
     - 8000:8000
+    - 8001:8001
     networks:
     - pants-default
+    healthcheck:
+      test: curl -f http://localhost:8000/health || exit 1
+      interval: 30s
+      timeout: 30s
+      start_period: 0s
+      retries: 3
   docker-example-arm-docker:
     image: docker-example-arm-docker:latest-arm
     environment:
       PORT: '8000'
       env: default
       name: __REQUIRED__
+      secret1_env_var1: DEFAULT1
+      secret1_env_var2: DEFAULT2
+      secret2_env_var3: DEFAULT3
     ports:
     - 8000:8000
+    - 8001:8001
     networks:
     - pants-default
+    healthcheck:
+      test: curl -f http://localhost:8000/health || exit 1
+      interval: 30s
+      timeout: 30s
+      start_period: 0s
+      retries: 3
 networks:
   pants-default:
     external: true

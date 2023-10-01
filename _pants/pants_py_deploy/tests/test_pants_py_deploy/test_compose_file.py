@@ -28,6 +28,8 @@ def _create_compose_service(
         ports=Collection[PrefixPort](
             [PrefixPort(prefix="/", port=8000, protocol="http")]
         ),
+        healthcheck=FrozenDict(),
+        secret_env_vars=FrozenDict(),
     )
 
 
@@ -51,7 +53,7 @@ def check_updated_compose(file_regression, filename, files):
 
 
 _old_content = """\
-version: '3'
+version: '3.9'
 services:
   docker-example-arm:
     image: docker-example-arm:latest-arm

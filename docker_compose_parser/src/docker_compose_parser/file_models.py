@@ -1,20 +1,106 @@
 from __future__ import annotations
 
+import logging
+from copy import deepcopy
 from dataclasses import dataclass
 from functools import total_ordering
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, NamedTuple, Optional
+from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Union
 
 from pydantic import Extra, Field
 
 from model_lib import Entity, FileFormat, parse_payload
-from model_lib.pydantic_utils import IS_PYDANTIC_V2
+from model_lib.pydantic_utils import IS_PYDANTIC_V2, field_names, model_dump
 from zero_3rdparty.dict_nested import read_nested_or_none
 from zero_3rdparty.dict_utils import merge, sort_keys
 from zero_3rdparty.iter_utils import ignore_falsy as ignore_falsy_method
 from zero_3rdparty.iter_utils import key_equal_value_to_dict
+from zero_3rdparty.timeparse import timeparse
 
+logger = logging.getLogger(__name__)
 NETWORK_NAME_DEFAULT = "compose-default"
+
+
+def _find_test(healthcheck: dict) -> Optional[str]:
+    cmd = healthcheck.get("cmd", healthcheck.get("CMD"))
+    port = healthcheck.get("port")
+    path = healthcheck.get("path", "/")
+    py_module: str = healthcheck.get("py_module")  # type: ignore
+    unknown_message = (
+        f"unknown healthcheck, specify cmd/CMD/port/py_module: {healthcheck}"
+    )
+    if not (cmd or port or py_module, unknown_message):
+        logger.warning(f"unable to find a test for healthcheck: {healthcheck}")
+        return None
+    if not cmd:
+        if port:
+            cmd = f"curl -f http://localhost:{port}{path} || exit 1"
+        elif py_module:
+            script_path = py_module.replace(".", "/")
+            py_major_minor = healthcheck["python_major_minor"]
+            cmd = f"python /bin/app/lib/python{py_major_minor}/site-packages/{script_path}.py"
+        else:
+            raise NotImplementedError  # should never happen, if condition
+    return cmd
+
+
+class ComposeHealthCheck(Entity):
+    test: Union[str, list[str]]
+    interval: str = "30s"
+    timeout: str = "30s"
+    start_period: str = "0s"
+    # https://github.com/docker/compose/issues/10830
+    start_interval: str = "5s"
+    retries: int = 3
+
+    @property
+    def command_list(self) -> list[str]:
+        if isinstance(self.test, list):
+            return [part for part in self.test if part not in ("CMD", "CMD-SHELL")]
+        return self.test.split(" ")
+
+    @property
+    def command_list_k8s(self) -> list[str]:
+        command_list = self.command_list
+        return ["sh", "-c", " ".join(command_list)]
+
+    @property
+    def interval_seconds(self) -> int:
+        return timeparse(self.interval)
+
+    @property
+    def timeout_seconds(self) -> int:
+        return timeparse(self.timeout)
+
+    @property
+    def start_period_seconds(self) -> int:
+        return timeparse(self.start_period)
+
+    @classmethod
+    def parse_healthcheck(cls, raw: Any) -> ComposeHealthCheck | None:
+        if isinstance(raw, ComposeHealthCheck):
+            return raw
+        if raw is None or not raw:
+            return None
+        if not isinstance(raw, dict):
+            try:
+                raw = dict(raw)
+            except Exception as e:
+                raise ValueError(
+                    f"cannot parse healthcheck from {raw!r}, need dict"
+                ) from e
+        raw = deepcopy(raw)
+        test_value = raw.get("test") or _find_test(raw)
+        if test_value is None:
+            return None
+        raw["test"] = test_value
+        raw["retries"] = int(raw.get("retries", 3))
+        raw = {key.replace("-", "_"): value for key, value in raw.items()}
+        raw.pop(
+            "start_interval", None
+        )  # https://github.com/docker/compose/issues/10830
+        valid_names = set(field_names(cls))
+        return cls(**{k: v for k, v in raw.items() if k in valid_names})
 
 
 class ComposeServiceInfo(Entity):
@@ -32,6 +118,7 @@ class ComposeServiceInfo(Entity):
     default_ports: List[str] = Field(alias="ports", default_factory=list)
     default_volumes: list[str] = Field(alias="volumes", default_factory=list)
     command: List[str] = Field(default_factory=list)
+    healthcheck: Optional[ComposeHealthCheck] = None
 
     if IS_PYDANTIC_V2:
         from pydantic import field_validator  # type: ignore
@@ -49,6 +136,10 @@ class ComposeServiceInfo(Entity):
             # pydantic v2 will not "convert" values to strings
             return {k: str(v) for k, v in value.items()}
 
+        @field_validator("healthcheck", mode="before")
+        def parse_healthcheck(cls, value: dict):
+            return ComposeHealthCheck.parse_healthcheck(value)
+
     else:
         from pydantic import validator  # type: ignore
 
@@ -63,6 +154,10 @@ class ComposeServiceInfo(Entity):
             if isinstance(value, list):
                 return key_equal_value_to_dict(value)
             return value
+
+        @validator("healthcheck", pre=True)
+        def parse_healthcheck(cls, value: dict):
+            return ComposeHealthCheck.parse_healthcheck(value)
 
     @property
     def host_container_ports(self) -> Iterable[tuple[int, int]]:
@@ -79,7 +174,9 @@ class ComposeServiceInfo(Entity):
         new_environment: dict | None = None,
         network_name: str = "",
         ensure_labels: dict[str, str] | None = None,
+        healthcheck: dict | None = None,
     ) -> dict:
+        healthcheck = healthcheck or self.healthcheck  # type: ignore
         image = image or self.image
         assert image, "image unspecified"
         existing_labels = sort_keys(self.labels)
@@ -94,6 +191,13 @@ class ComposeServiceInfo(Entity):
             "volumes": self.default_volumes,
             "networks": [network_name] if network_name else [],
         }
+        if healthcheck:
+            parsed_healthcheck = ComposeHealthCheck.parse_healthcheck(healthcheck)
+            # https://github.com/docker/compose/issues/10830
+            exclude = {"start_interval"}
+            service_dict["healthcheck"] = model_dump(
+                parsed_healthcheck, exclude=exclude
+            )
         if ignore_falsy:
             return ignore_falsy_method(**service_dict)
         return service_dict
@@ -153,6 +257,7 @@ def read_compose_info(compose_path: Path, service_name: str) -> ComposeServiceIn
     ports = read_nested_or_none(parsed, f"services.{service_name}.ports") or []
     command = read_nested_or_none(parsed, f"services.{service_name}.command") or []
     volumes = read_nested_or_none(parsed, f"services.{service_name}.volumes") or []
+    healthcheck = read_nested_or_none(parsed, f"services.{service_name}.healthcheck")
     return ComposeServiceInfo(
         image=image,  # type: ignore
         labels=labels,  # type: ignore
@@ -160,6 +265,7 @@ def read_compose_info(compose_path: Path, service_name: str) -> ComposeServiceIn
         default_ports=ports,  # type: ignore
         command=command,  # type: ignore
         default_volumes=volumes,  # type: ignore
+        healthcheck=healthcheck,  # type: ignore
     )
 
 
@@ -173,6 +279,7 @@ def export_compose_dict(
     command: Optional[List[str]] = None,
     only_override_existing_env_vars: bool = True,
     network_external: bool = True,
+    compose_file_version="3.9",
 ) -> dict:
     """Valid dictionary for a docker-compose.yaml file."""
     service_dict.pop("depends_on", "")
@@ -195,7 +302,9 @@ def export_compose_dict(
     if add_labels:
         original_labels = service_dict.setdefault("labels", {})
         original_labels.update(add_labels)
-    compose_dict = dict(version="3", services={service_name: service_dict})
+    compose_dict = dict(
+        version=compose_file_version, services={service_name: service_dict}
+    )
     if network_name:
         compose_dict["networks"] = {network_name: dict(external=network_external)}
     return compose_dict

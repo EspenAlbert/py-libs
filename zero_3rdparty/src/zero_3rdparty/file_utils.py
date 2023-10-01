@@ -129,7 +129,9 @@ def iter_paths(base_dir: Path, *globs: str, rglob=True) -> Iterable[Path]:
 
 
 def iter_paths_and_relative(
-    base_dir: Path, *globs: str, rglob=True
+    base_dir: Path, *globs: str, rglob=True, only_files: bool = False
 ) -> Iterable[tuple[Path, str]]:
     for path in iter_paths(base_dir, *globs, rglob=rglob):
+        if only_files and not path.is_file():
+            continue
         yield path, str(path.relative_to(base_dir))

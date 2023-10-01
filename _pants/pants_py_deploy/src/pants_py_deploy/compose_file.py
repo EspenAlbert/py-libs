@@ -46,15 +46,21 @@ def _as_service_dicts(compose_services: Iterable[ComposeService]) -> dict[str, d
 
 
 def _as_service_dict(compose_service: ComposeService) -> dict:
+    labels = {"chart_name": compose_service.chart_inferred_name}
+    healthcheck = compose_service.healthcheck
+    if healthcheck:
+        labels["healthcheck_probes"] = healthcheck.get("probes", "readiness")
+    if secret_env_vars := compose_service.secret_env_vars:
+        for secret_name, env_vars in secret_env_vars.items():
+            labels[f"secret_{secret_name}"] = env_vars
     service_info = ComposeServiceInfo(
         image=compose_service.image_url,
         default_env={**compose_service.env_vars},
         default_ports=file_compose_ports(compose_service.ports),
         default_volumes=[],
         command=[],
-        labels={"chart_name": compose_service.chart_inferred_name}
-        if compose_service.chart_path
-        else {},
+        labels=labels if compose_service.chart_path else {},
+        healthcheck=healthcheck,
     )
     return service_info.as_service_dict(
         ignore_falsy=True, include_ports=True, network_name=COMPOSE_NETWORK_NAME
@@ -93,6 +99,7 @@ def as_compose_yaml(
                 new_environment=service_dict.get("environment", {}),
                 network_name=COMPOSE_NETWORK_NAME,
                 ensure_labels=service_dict.get("labels", {}),
+                healthcheck=service_dict.get("healthcheck"),
             )
             existing_full["services"][service_name] = new_dictionary
         else:
@@ -132,8 +139,13 @@ def file_compose_ports(ports: Iterable[PrefixPort]) -> list[str]:
 
 
 def combined_ports(
-    env_vars: FileEnvVars, dependencies: Iterable[str]
+    env_vars: FileEnvVars,
+    dependencies: Iterable[str],
+    target_ports: Iterable[PrefixPort],
 ) -> Iterable[PrefixPort]:
-    return chain.from_iterable(
-        env_vars.file_port_info.get(port_file, []) for port_file in dependencies
+    dependency_ports = list(
+        chain.from_iterable(
+            env_vars.file_port_info.get(port_file, []) for port_file in dependencies
+        )
     )
+    return dependency_ports + list(target_ports)

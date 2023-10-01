@@ -149,6 +149,7 @@ app_kubernetes_io_instance: ''
 podLabels: {}
 podAnnotations: {}
 nodeSelector: {}
+imagePullPolicy: IfNotPresent
 replicas: 1"""
 
 _RESOURCES_YAML = """\
@@ -322,7 +323,7 @@ def _add_template_spec(template: str, spec: ChartTemplateSpec):
                 container_spec = dict(
                     name=name,
                     image="{{ .Values.%s.image | quote }}" % value_name,
-                    imagePullPolicy="IfNotPresent",
+                    imagePullPolicy="{{ .Values.imagePullPolicy | quote }}",
                     resources="{{- toYaml .Values.resources | nindent 10 }}"
                     if spec.use_resource_limits
                     else {},
@@ -475,3 +476,41 @@ def service_account(spec: ChartTemplateSpec) -> str:
     if spec.use_service_account:
         return _SERVICE_ACCOUNT
     return ""
+
+
+_SECRET_OPTIONAL = """\
+{{- if (eq .Values.$EXISTING_REF "") -}}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+  name: {{ $SECRET_TEMPLATE_NAME }}
+  namespace: {{ .Release.Namespace }}
+"""
+
+
+def as_secret_template_name(name: str) -> str:
+    name = name.replace("_", "-")
+    return 'printf "%s-{name}" .Release.Name'.format(name=name)
+
+
+def secret_with_env_vars_template(
+    name: str, env_vars: list[str], container_name: str, existing_value_ref: str
+) -> str:
+    replacements = {
+        "$EXISTING_REF": existing_value_ref,
+        "$SECRET_TEMPLATE_NAME": as_secret_template_name(name),
+    }
+    manifest = _SECRET_OPTIONAL
+    for in_, out in replacements.items():
+        manifest = manifest.replace(in_, out)
+    manifest_data = ["data:"]
+    container_name_underscore = container_name.replace("-", "_")
+    manifest_data.extend(
+        f"  {env_var}: {{{{ .Values.{container_name_underscore}.{env_var} | b64enc | quote }}}}"
+        for env_var in env_vars
+    )
+    manifest_data.append("{{- end -}}")
+    return manifest + "\n".join(manifest_data)

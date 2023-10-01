@@ -23,16 +23,22 @@ spec:
       {{- end }}
     spec:
       containers:
-      - name: deployment-only
-        image: {{ .Values.deployment_only.image | quote }}
+      - name: service-deployment-with-healthcheck
+        image: {{ .Values.service_deployment_with_healthcheck.image | quote }}
         imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
         resources: {}
-        ports: []
+        ports:
+        - containerPort: 8000
+          name: http-8000
         env:
+        - name: PORT
+          value: {{ .Values.service_deployment_with_healthcheck.PORT | quote }}
         - name: env
-          value: {{ .Values.deployment_only.env | quote }}
-        - name: name
-          value: {{ .Values.deployment_only.name | quote }}
+          value: {{ .Values.service_deployment_with_healthcheck.env | quote }}
+        envFrom:
+        - secretRef:
+            name: {{ eq .Values.existing_secret_name "" | ternary ( printf "%s-name" .Release.Name ) .Values.existing_secret_name | quote }}
+        readinessProbe: {{- toYaml .Values.service_deployment_with_healthcheck.readinessProbe | nindent 10 }}
       nodeSelector:
       {{- with .Values.nodeSelector }}
       {{- toYaml . | nindent 8 }}

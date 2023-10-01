@@ -3,6 +3,7 @@ app_kubernetes_io_instance: ''
 podLabels: {}
 podAnnotations: {}
 nodeSelector: {}
+imagePullPolicy: IfNotPresent
 replicas: 1
 serviceAccount:
   name: docker-example
@@ -12,4 +13,42 @@ docker_example:
   PORT: '8000'
   env: default
   name: __REQUIRED__
+  secret1_env_var1: DEFAULT1
+  secret1_env_var2: DEFAULT2
+  secret2_env_var3: DEFAULT3
   image: docker-example-amd-docker:latest-amd
+  livenessProbe:
+    exec:
+      command:
+      - sh
+      - -c
+      - curl -f http://localhost:8000/health || exit 1
+    initialDelaySeconds: 0
+    periodSeconds: 30
+    timeoutSeconds: 30
+    failureThreshold: 3
+  readinessProbe:
+    exec:
+      command:
+      - sh
+      - -c
+      - curl -f http://localhost:8000/health || exit 1
+    initialDelaySeconds: 0
+    periodSeconds: 3
+    timeoutSeconds: 30
+    failureThreshold: 10
+  startupProbe:
+    exec:
+      command:
+      - sh
+      - -c
+      - curl -f http://localhost:8000/health || exit 1
+    initialDelaySeconds: 0
+    periodSeconds: 30
+    timeoutSeconds: 30
+    failureThreshold: 3
+existing_secret_secret1: ''
+existing_secret_secret2: ''
+some_new_value: Hello!
+deployment:
+  enabled: true

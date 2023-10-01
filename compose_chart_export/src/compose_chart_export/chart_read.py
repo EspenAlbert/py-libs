@@ -28,6 +28,10 @@ def read_chart_version(path: Path) -> str:
     return parse_payload(path / "Chart.yaml")["version"]  # type: ignore
 
 
+def read_chart_name(path: Path) -> str:
+    return parse_payload(path / "Chart.yaml")["name"]  # type: ignore
+
+
 def read_app_version(path: Path) -> str:
     return parse_payload(path / "Chart.yaml")["appVersion"]  # type: ignore
 

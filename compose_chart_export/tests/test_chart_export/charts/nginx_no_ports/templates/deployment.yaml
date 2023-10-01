@@ -25,11 +25,11 @@ spec:
       containers:
       - name: nginx-no-ports
         image: {{ .Values.nginx_no_ports.image | quote }}
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
         resources: {}
         ports:
         - containerPort: 80
-          name: http-nginx-no-p
+          name: http-80
         env: []
       nodeSelector:
       {{- with .Values.nodeSelector }}

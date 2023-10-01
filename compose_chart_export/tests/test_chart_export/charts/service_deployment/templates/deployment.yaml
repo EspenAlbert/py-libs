@@ -25,11 +25,11 @@ spec:
       containers:
       - name: service-deployment
         image: {{ .Values.service_deployment.image | quote }}
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
         resources: {}
         ports:
         - containerPort: 8000
-          name: http-service-de
+          name: http-8000
         env:
         - name: PORT
           value: {{ .Values.service_deployment.PORT | quote }}

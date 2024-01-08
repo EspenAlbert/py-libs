@@ -230,9 +230,21 @@ def _parse_timedelta_int(td: int):
 
 
 class _timedelta(timedelta):
+    if IS_PYDANTIC_V2:
+
+        @classmethod
+        def __get_validators__(cls):
+            yield cls.parse_timedelta
+
+    else:
+
+        @classmethod
+        def __get_validators__(cls):
+            yield parse_timedelta
+
     @classmethod
-    def __get_validators__(cls):
-        yield parse_timedelta
+    def parse_timedelta(cls, value: Any, *_):
+        return parse_timedelta(value)
 
 
 timedelta_dumpable = Union[_timedelta, timedelta]

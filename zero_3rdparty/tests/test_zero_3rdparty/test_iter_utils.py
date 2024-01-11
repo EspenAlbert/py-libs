@@ -1,4 +1,5 @@
-from zero_3rdparty.iter_utils import public_values, unique_instance_iter, want_list
+from zero_3rdparty.iter_utils import public_values, unique_instance_iter, want_list, \
+    iter_slices
 
 
 class NonSortedClassVars:
@@ -50,3 +51,15 @@ def test_want_list_from_generator_func():
 
 def test_want_list_from_tuple():
     assert want_list((1, 2, 3)) == [1, 2, 3]
+
+
+def test_iter_slices():
+    full_list = list(range(1, 11))
+    slices = []
+    for slice in iter_slices(full_list, max=2):
+        slices.append(slice)
+    assert slices == [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]]
+    slices.clear()
+    for slice in iter_slices(full_list, max=3):
+        slices.append(slice)
+    assert slices == [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10]]

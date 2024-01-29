@@ -122,10 +122,26 @@ def is_image_file(path: os.PathLike) -> bool:
     return Path(path).suffix.endswith(IMG_EXTENSIONS)
 
 
-def iter_paths(base_dir: Path, *globs: str, rglob=True) -> Iterable[Path]:
+def iter_paths(
+    base_dir: Path,
+    *globs: str,
+    rglob=True,
+    exclude_folder_names: list[str] | None = None,
+) -> Iterable[Path]:
     search_func = base_dir.rglob if rglob else base_dir.glob
     for glob in globs:
-        yield from search_func(glob)
+        if exclude_folder_names:
+            for path in search_func(glob):
+                rel_path = str(path.relative_to(base_dir))
+                if any(
+                    f"/{folder_name}/" in rel_path
+                    or rel_path.startswith(f"{folder_name}/")
+                    for folder_name in exclude_folder_names
+                ):
+                    continue
+                yield path
+        else:
+            yield from search_func(glob)
 
 
 def iter_paths_and_relative(

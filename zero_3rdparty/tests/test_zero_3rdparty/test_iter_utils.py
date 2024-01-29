@@ -1,5 +1,9 @@
-from zero_3rdparty.iter_utils import public_values, unique_instance_iter, want_list, \
-    iter_slices
+from zero_3rdparty.iter_utils import (
+    iter_slices,
+    public_values,
+    unique_instance_iter,
+    want_list,
+)
 
 
 class NonSortedClassVars:

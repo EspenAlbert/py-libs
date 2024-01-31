@@ -68,7 +68,7 @@ def as_ms_precision_utc(dt: datetime) -> datetime:
     return dt.replace(microsecond=int(new_microseconds), tzinfo=timezone.utc)
 
 
-def utc_now_ms_precision():
+def utc_now_ms_precision() -> datetime:
     return as_ms_precision_utc(utc_now())
 
 

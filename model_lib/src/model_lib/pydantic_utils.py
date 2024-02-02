@@ -184,7 +184,7 @@ else:
     utc_datetime = Union[_utc_datetime, datetime]
 
 if IS_PYDANTIC_V2:
-    utc_datetime_ms = Annotated[datetime, AfterValidator(as_ms_precision_utc)]
+    utc_datetime_ms: TypeAlias = Annotated[datetime, AfterValidator(as_ms_precision_utc)]
 else:
 
     class _utc_datetime_ms(datetime):
@@ -196,7 +196,7 @@ else:
     # necessary otherwise pycharm complains when passing a datetime and not utc_datetime
     #: handy for mongo which only supports ms anyway.
     #: WARNING: do not use with default_factory
-    utc_datetime_ms = Union[_utc_datetime_ms, datetime]
+    utc_datetime_ms: TypeAlias = Union[_utc_datetime_ms, datetime]
 StrBytesIntFloat: TypeAlias = Union[str, bytes, int, float]
 
 

@@ -7,9 +7,11 @@ from logging import Logger
 from pathlib import Path
 from typing import Iterable
 
+from typing_extensions import TypeAlias
+
 from zero_3rdparty.run_env import running_in_container_environment
 
-PathLike = os.PathLike
+PathLike: TypeAlias = os.PathLike
 logger = logging.getLogger(__name__)
 
 
@@ -151,3 +153,24 @@ def iter_paths_and_relative(
         if only_files and not path.is_file():
             continue
         yield path, str(path.relative_to(base_dir))
+
+
+def update_between_markers(
+    path: PathLike, content: str, start_marker: str, end_marker: str
+):
+    content = f"{start_marker}\n{content}\n{end_marker}\n"
+    path = Path(path)
+    if not path.exists():
+        ensure_parents_write_text(path, content)
+        return
+    old_text = path.read_text()
+    start, end = old_text.find(start_marker), old_text.find(end_marker)
+    if start == -1:
+        raise ValueError(f"couldn't find start marker {start_marker}")
+    if end == -1:
+        raise ValueError(f"couldn't find end marker {end_marker}")
+    if end < start:
+        raise ValueError(f"end marker {end_marker} before start marker {start_marker}")
+    end = end + len(end_marker) + 1  # line break
+    content = old_text[:start] + content + old_text[end:]
+    path.write_text(content)

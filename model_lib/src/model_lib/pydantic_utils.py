@@ -184,7 +184,9 @@ else:
     utc_datetime = Union[_utc_datetime, datetime]
 
 if IS_PYDANTIC_V2:
-    utc_datetime_ms: TypeAlias = Annotated[datetime, AfterValidator(as_ms_precision_utc)]
+    utc_datetime_ms: TypeAlias = Annotated[
+        datetime, AfterValidator(as_ms_precision_utc)
+    ]
 else:
 
     class _utc_datetime_ms(datetime):

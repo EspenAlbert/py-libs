@@ -166,7 +166,7 @@ if IS_PYDANTIC_V2:
             return value.replace(tzinfo=timezone.utc)
         return value
 
-    utc_datetime = Annotated[datetime, AfterValidator(ensure_timezone)]
+    utc_datetime: TypeAlias = Annotated[datetime, AfterValidator(ensure_timezone)]
 else:
 
     class _utc_datetime(datetime):
@@ -181,7 +181,7 @@ else:
                 return value.replace(tzinfo=timezone.utc)
             return value
 
-    utc_datetime = Union[_utc_datetime, datetime]
+    utc_datetime: TypeAlias = Union[_utc_datetime, datetime]
 
 if IS_PYDANTIC_V2:
     utc_datetime_ms: TypeAlias = Annotated[

@@ -43,7 +43,12 @@ def pop_nested(container: DictList, simple_path: str, default: T = _MISSING) -> 
         return default
 
 
-def iter_nested_keys(container: MutableMapping, root_path: str = "") -> Iterable[str]:
+def iter_nested_keys(
+    container: MutableMapping | list,
+    root_path: str = "",
+    *,
+    include_list_indexes: bool = False,
+) -> Iterable[str]:
     """
     >>> list(iter_nested_keys(dict(a=dict(b="c"))))
     ['a', 'a.b']
@@ -52,23 +57,42 @@ def iter_nested_keys(container: MutableMapping, root_path: str = "") -> Iterable
     >>> list(iter_nested_keys(dict(a=dict(b="c", c=["1", "2"]), d="2")))
     ['a', 'a.b', 'a.c', 'd']
     """
+    if include_list_indexes and isinstance(container, list):
+        for i, child in enumerate(container):
+            child_root_path = f"{root_path}.[{i}]"
+            yield child_root_path
+            if isinstance(child, (dict, list)):
+                yield from iter_nested_keys(
+                    child, child_root_path, include_list_indexes=include_list_indexes
+                )
+        return
+    assert isinstance(container, dict), "list only allowed if include_list_indexes=True"
     for key, child in container.items():
         child_root_path = f"{root_path}.{key}" if root_path else key
         if isinstance(key, str):
             yield child_root_path
         if isinstance(child, dict):
-            yield from iter_nested_keys(child, child_root_path)
+            yield from iter_nested_keys(
+                child, child_root_path, include_list_indexes=include_list_indexes
+            )
+        if include_list_indexes and isinstance(child, list):
+            yield from iter_nested_keys(
+                child, child_root_path, include_list_indexes=include_list_indexes
+            )
 
 
 def iter_nested_key_values(
-    container: MutableMapping, type_filter: type[T] = _MISSING
+    container: MutableMapping,
+    type_filter: type[T] = _MISSING,
+    *,
+    include_list_indexes: bool = False,
 ) -> Iterable[tuple[str, T]]:
     """
     >>> container_example = dict(a="ok", b=dict(c="nested"))
     >>> list(iter_nested_key_values(container_example, str))
     [('a', 'ok'), ('b.c', 'nested')]
     """
-    for key in iter_nested_keys(container):
+    for key in iter_nested_keys(container, include_list_indexes=include_list_indexes):
         value = read_nested(container, key)
         if type_filter is _MISSING or isinstance(value, type_filter):
             yield key, value

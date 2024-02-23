@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import cached_property
 from typing import Generic, Iterable, List, Sequence, Type, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Extra
+from pydantic import BaseModel, ConfigDict
 
 from model_lib.errors import ClsNameAlreadyExist, UnknownModelError
 from model_lib.pydantic_utils import IS_PYDANTIC_V2, model_dump
@@ -31,7 +31,7 @@ class _Model(BaseModel):
     if IS_PYDANTIC_V2:
         model_config = ConfigDict(  # type: ignore
             use_enum_values=True,
-            extra=Extra.allow,
+            extra="allow",  # type: ignore
             arbitrary_types_allowed=True,
             populate_by_name=True,
         )
@@ -39,7 +39,7 @@ class _Model(BaseModel):
 
         class Config:
             use_enum_values = True
-            extra = Extra.allow
+            extra = "allow"
             arbitrary_types_allowed = True
             keep_untouched = (cached_property, Exception)
             allow_population_by_field_name = True

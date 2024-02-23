@@ -68,7 +68,7 @@ def as_ms_precision_utc(dt: datetime) -> datetime:
     return dt.replace(microsecond=int(new_microseconds), tzinfo=timezone.utc)
 
 
-def utc_now_ms_precision():
+def utc_now_ms_precision() -> datetime:
     return as_ms_precision_utc(utc_now())
 
 
@@ -109,11 +109,43 @@ def parse_kub_time(raw: str) -> datetime:
     return datetime.fromisoformat(raw.replace("T", " ").replace("Z", "+00:00"))
 
 
-def dump_as_kub_time(dt: datetime) -> str:
+@singledispatch
+def want_dt(dt: object) -> datetime:
+    raise NotImplementedError
+
+
+@want_dt.register
+def _from_date(dt: date):
+    return datetime(year=dt.year, month=dt.month, day=dt.day, tzinfo=timezone.utc)
+
+
+@want_dt.register
+def _from_datetime(dt: datetime):
+    return dt
+
+
+@want_dt.register
+def _from_int(dt: int):
+    return datetime.fromtimestamp(dt, tz=timezone.utc)
+
+
+@want_dt.register
+def _from_str(dt: str):
+    return datetime.fromisoformat(dt)
+
+
+def dump_as_kub_time(dt: datetime | date | int | str) -> str:
     """
     >>> dump_as_kub_time(datetime(2020, 8, 29, 7, 35, 12, tzinfo=timezone.utc))
     '2020-08-29T07:35:12Z'
+    >>> dump_as_kub_time(date(2020, 8, 29))
+    '2020-08-29T00:00:00Z'
+    >>> dump_as_kub_time(1703480465)
+    '2023-12-25T05:01:05Z'
+    >>> dump_as_kub_time("2023-12-25T05:01:10+00:00")
+    '2023-12-25T05:01:10Z'
     """
+    dt = want_dt(dt)
     return dt.isoformat(sep="T").replace("+00:00", "Z")
 
 

@@ -1,7 +1,10 @@
 from pathlib import Path
 from time import sleep, time
 
+import pytest
+
 from zero_3rdparty.file_utils import (
+    MarkerNotFoundError,
     abspath_current_dir,
     abspath_dir,
     clean_dir,
@@ -11,6 +14,7 @@ from zero_3rdparty.file_utils import (
     iter_paths,
     iter_paths_and_relative,
     join_if_not_absolute,
+    update_between_markers,
 )
 
 
@@ -29,6 +33,21 @@ def test_iter_paths(tmp_path):
         (tmp_path / name).write_text(f"test-{name}")
     found = list(iter_paths(tmp_path, "*.yaml", "*.yml", "*.ini"))
     assert len(found) == 4
+
+
+def test_iter_paths_with_exclude(tmp_path):
+    rel_paths = [
+        "1.yaml",
+        ".terraform/2.yaml",
+        "modules/.terraform/3.yaml",
+        "terraform/4.yaml",
+    ]
+    for path in rel_paths:
+        ensure_parents_write_text(tmp_path / path, f"path: {path}")
+    assert sorted(
+        path.name
+        for path in iter_paths(tmp_path, "*.yaml", exclude_folder_names=[".terraform"])
+    ) == ["1.yaml", "4.yaml"]
 
 
 def test_iter_paths_and_relative(tmp_path, subtests):
@@ -69,3 +88,68 @@ def test_iter_paths_and_relative(tmp_path, subtests):
     with subtests.test("clean_dir"):
         clean_dir(tmp_path)
         assert len(list(iter_paths(tmp_path, "*.ini"))) == 0
+
+
+def test_update_between_markers(tmp_path, subtests):
+    start_marker = "# start"
+    end_marker = "# end"
+    path: Path = tmp_path / "file.txt"
+
+    def read_lines() -> list[str]:
+        return path.read_text().splitlines()
+
+    with subtests.test("update non existing file"):
+        update_between_markers(path, "1st content", start_marker, end_marker)
+        assert read_lines() == [start_marker, "1st content", end_marker]
+    with subtests.test("not touching existing content before"):
+        path.write_text(f"original\n{start_marker}\nold\n{end_marker}\n")
+        update_between_markers(path, "2nd content", start_marker, end_marker)
+        assert read_lines() == [
+            "original",
+            start_marker,
+            "2nd content",
+            end_marker,
+        ]
+    with subtests.test("not touching existing content after"):
+        path.write_text(f"some-start\n{start_marker}\nold\n{end_marker}\nsome-end")
+        update_between_markers(path, "3rd content", start_marker, end_marker)
+        assert read_lines() == [
+            "some-start",
+            start_marker,
+            "3rd content",
+            end_marker,
+            "some-end",
+        ]
+    with subtests.test("markers missing raises error"):
+        path.write_text("some-start-no-marker")
+        with pytest.raises(MarkerNotFoundError, match=start_marker):
+            update_between_markers(path, "error", start_marker, end_marker)
+        path.write_text(f"some-start-no-marker\n{start_marker}\ncontent")
+        with pytest.raises(MarkerNotFoundError, match=end_marker):
+            update_between_markers(path, "error", start_marker, end_marker)
+        path.write_text(f"some-start-no-marker\n{end_marker}\ncontent\n{start_marker}")
+        with pytest.raises(ValueError, match=f"end marker {end_marker} before start"):
+            update_between_markers(path, "error", start_marker, end_marker)
+    with subtests.test("append_if_not_found"):
+        path.write_text("original text")
+        update_between_markers(
+            path, "4th content", start_marker, end_marker, append_if_not_found=True
+        )
+        assert read_lines() == [
+            "original text",
+            "",
+            start_marker,
+            "4th content",
+            "",
+            end_marker,
+        ]
+    with subtests.test("leave file unchanged"):
+        update_between_markers(path, "4th content", start_marker, end_marker)
+        assert read_lines() == [
+            "original text",
+            "",
+            start_marker,
+            "4th content",
+            "",
+            end_marker,
+        ]

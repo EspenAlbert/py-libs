@@ -7,6 +7,7 @@ from typing import Any, Callable, Optional, TypeVar
 from typing_extensions import TypeAlias
 
 from model_lib.model_dump import dump as model_dump
+from model_lib.pydantic_utils import model_json
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
@@ -40,6 +41,33 @@ def orjson_dumps_parse() -> dump_parse:
     return None
 
 
+def pydantic_dumps_parse() -> dump_parse:
+    with suppress(ModuleNotFoundError):
+        import json
+
+        import pydantic
+
+        def dump_pydantic(instance: T) -> str:
+            if isinstance(instance, pydantic.BaseModel):
+                return model_json(instance)
+            return json.dumps(instance, indent=None, separators=(",", ":"))
+
+        def pretty_dump_stdlib(instance: T) -> str:
+            if isinstance(instance, pydantic.BaseModel):
+                return model_json(instance, indent=2)
+            return json.dumps(
+                instance,
+                indent=2,
+                sort_keys=True,
+                ensure_ascii=False,
+                default=model_dump,
+            )
+
+        logger.warning("using pydantic json dumping, orjson is a bit more flexible")
+        return dump_pydantic, pretty_dump_stdlib, json.loads
+    return None
+
+
 def stdlib_dumps_parse() -> dump_parse:
     import json
 
@@ -54,7 +82,7 @@ def stdlib_dumps_parse() -> dump_parse:
     return dump_stdlib, pretty_dump_stdlib, json.loads
 
 
-for func in [orjson_dumps_parse, stdlib_dumps_parse]:
+for func in [orjson_dumps_parse, pydantic_dumps_parse, stdlib_dumps_parse]:
     if exist := func():
         dump, pretty_dump, parse = exist
         break

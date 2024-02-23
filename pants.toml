@@ -1,5 +1,5 @@
 [GLOBAL]
-pants_version = "2.17.0rc3"
+pants_version = "2.18.2rc0"
 print_stacktrace = true
 level = "warn"
 build_file_prelude_globs = ["_pants/*.py"]
@@ -8,7 +8,7 @@ build_file_prelude_globs = ["_pants/*.py"]
 pythonpath = ["%(buildroot)s/_pants/pants_py_deploy/src", "%(buildroot)s/compose_chart_export/src", "%(buildroot)s/docker_compose_parser/src", "%(buildroot)s/model_lib/src", "%(buildroot)s/zero_3rdparty/src"]
 plugins = [
   "pydevd-pycharm==231.8109.197",
-  "PyYAML==6.0.1",
+  "PyYAML>=6.0",
   "pydantic==1.10.2",
   "orjson==3.6.5",
   "semver==2.13.0"

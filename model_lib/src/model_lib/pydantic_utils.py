@@ -166,7 +166,7 @@ if IS_PYDANTIC_V2:
             return value.replace(tzinfo=timezone.utc)
         return value
 
-    utc_datetime = Annotated[datetime, AfterValidator(ensure_timezone)]
+    utc_datetime: TypeAlias = Annotated[datetime, AfterValidator(ensure_timezone)]
 else:
 
     class _utc_datetime(datetime):
@@ -181,10 +181,12 @@ else:
                 return value.replace(tzinfo=timezone.utc)
             return value
 
-    utc_datetime = Union[_utc_datetime, datetime]
+    utc_datetime: TypeAlias = Union[_utc_datetime, datetime]
 
 if IS_PYDANTIC_V2:
-    utc_datetime_ms = Annotated[datetime, AfterValidator(as_ms_precision_utc)]
+    utc_datetime_ms: TypeAlias = Annotated[
+        datetime, AfterValidator(as_ms_precision_utc)
+    ]
 else:
 
     class _utc_datetime_ms(datetime):
@@ -196,7 +198,7 @@ else:
     # necessary otherwise pycharm complains when passing a datetime and not utc_datetime
     #: handy for mongo which only supports ms anyway.
     #: WARNING: do not use with default_factory
-    utc_datetime_ms = Union[_utc_datetime_ms, datetime]
+    utc_datetime_ms: TypeAlias = Union[_utc_datetime_ms, datetime]
 StrBytesIntFloat: TypeAlias = Union[str, bytes, int, float]
 
 
@@ -230,9 +232,21 @@ def _parse_timedelta_int(td: int):
 
 
 class _timedelta(timedelta):
+    if IS_PYDANTIC_V2:
+
+        @classmethod
+        def __get_validators__(cls):
+            yield cls.parse_timedelta
+
+    else:
+
+        @classmethod
+        def __get_validators__(cls):
+            yield parse_timedelta
+
     @classmethod
-    def __get_validators__(cls):
-        yield parse_timedelta
+    def parse_timedelta(cls, value: Any, *_):
+        return parse_timedelta(value)
 
 
 timedelta_dumpable = Union[_timedelta, timedelta]

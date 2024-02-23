@@ -3,6 +3,7 @@ from copy import deepcopy
 import pytest
 
 from zero_3rdparty.dict_nested import (
+    iter_nested_key_values,
     pop_nested,
     read_nested,
     read_nested_or_none,
@@ -86,3 +87,21 @@ def test_pop_nested():
     with pytest.raises(KeyError):
         pop_nested(active_d, "metadata.name")
     assert pop_nested(active_d, "metadata.name", "default") == "default"
+
+
+def test_iter_nested_in_list_in_child():
+    d = {"a": [{"b": [{"id": 1}, {"id": "2"}, 3]}, {"c": "d"}]}
+    strings = list(iter_nested_key_values(d, str, include_list_indexes=True))
+    assert strings == [
+        ("a.[0].b.[1].id", "2"),
+        ("a.[1].c", "d"),
+    ]
+    for path, s in strings:
+        assert read_nested(d, path) == s
+    ints = list(iter_nested_key_values(d, int, include_list_indexes=True))
+    assert ints == [
+        ("a.[0].b.[0].id", 1),
+        ("a.[0].b.[2]", 3),
+    ]
+    for path, i in ints:
+        assert read_nested(d, path) == i

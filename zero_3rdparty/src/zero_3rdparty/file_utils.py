@@ -7,9 +7,11 @@ from logging import Logger
 from pathlib import Path
 from typing import Iterable
 
+from typing_extensions import TypeAlias
+
 from zero_3rdparty.run_env import running_in_container_environment
 
-PathLike = os.PathLike
+PathLike: TypeAlias = os.PathLike
 logger = logging.getLogger(__name__)
 
 
@@ -122,10 +124,26 @@ def is_image_file(path: os.PathLike) -> bool:
     return Path(path).suffix.endswith(IMG_EXTENSIONS)
 
 
-def iter_paths(base_dir: Path, *globs: str, rglob=True) -> Iterable[Path]:
+def iter_paths(
+    base_dir: Path,
+    *globs: str,
+    rglob=True,
+    exclude_folder_names: list[str] | None = None,
+) -> Iterable[Path]:
     search_func = base_dir.rglob if rglob else base_dir.glob
     for glob in globs:
-        yield from search_func(glob)
+        if exclude_folder_names:
+            for path in search_func(glob):
+                rel_path = str(path.relative_to(base_dir))
+                if any(
+                    f"/{folder_name}/" in rel_path
+                    or rel_path.startswith(f"{folder_name}/")
+                    for folder_name in exclude_folder_names
+                ):
+                    continue
+                yield path
+        else:
+            yield from search_func(glob)
 
 
 def iter_paths_and_relative(
@@ -135,3 +153,49 @@ def iter_paths_and_relative(
         if only_files and not path.is_file():
             continue
         yield path, str(path.relative_to(base_dir))
+
+
+def update_between_markers(
+    path: PathLike,
+    content: str,
+    start_marker: str,
+    end_marker: str,
+    *,
+    append_if_not_found: bool = False,
+):
+    path = Path(path)
+    if not path.exists():
+        ensure_parents_write_text(path, f"{start_marker}\n{content}\n{end_marker}\n")
+        return
+
+    old_text = path.read_text()
+    if append_if_not_found:
+        try:
+            old_content = read_between_markers(old_text, start_marker, end_marker)
+        except MarkerNotFoundError:
+            path.write_text(
+                old_text + f"\n\n{start_marker}\n{content}\n\n{end_marker}\n"
+            )
+            return
+    else:
+        old_content = read_between_markers(old_text, start_marker, end_marker)
+    content = old_text.replace(old_content, content)
+    path.write_text(content)
+
+
+class MarkerNotFoundError(ValueError):
+    def __init__(self, marker_name: str) -> None:
+        self.marker_name = marker_name
+
+
+def read_between_markers(text: str, start_marker: str, end_marker: str) -> str:
+    start, end = text.find(start_marker), text.find(end_marker)
+    if start == -1:
+        raise MarkerNotFoundError(start_marker)
+    if end == -1:
+        raise MarkerNotFoundError(end_marker)
+    if end < start:
+        raise ValueError(f"end marker {end_marker} before start marker {start_marker}")
+    between_markers = text[start + len(start_marker) : end].strip("\n")
+    assert text.count(between_markers) == 1, "content between markers exists elsewhere!"
+    return between_markers

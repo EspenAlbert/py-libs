@@ -31,7 +31,7 @@ class _Model(BaseModel):
     if IS_PYDANTIC_V2:
         model_config = ConfigDict(  # type: ignore
             use_enum_values=True,
-            extra="allow",
+            extra="allow",  # type: ignore
             arbitrary_types_allowed=True,
             populate_by_name=True,
         )

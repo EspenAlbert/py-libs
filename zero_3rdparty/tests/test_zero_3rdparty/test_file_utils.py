@@ -4,6 +4,7 @@ from time import sleep, time
 import pytest
 
 from zero_3rdparty.file_utils import (
+    MarkerNotFoundError,
     abspath_current_dir,
     abspath_dir,
     clean_dir,
@@ -86,7 +87,7 @@ def test_update_between_markers(tmp_path, subtests):
         update_between_markers(path, "1st content", start_marker, end_marker)
         assert read_lines() == [start_marker, "1st content", end_marker]
     with subtests.test("not touching existing content before"):
-        path.write_text(f"original\n{start_marker}old\n{end_marker}\n")
+        path.write_text(f"original\n{start_marker}\nold\n{end_marker}\n")
         update_between_markers(path, "2nd content", start_marker, end_marker)
         assert read_lines() == [
             "original",
@@ -95,7 +96,7 @@ def test_update_between_markers(tmp_path, subtests):
             end_marker,
         ]
     with subtests.test("not touching existing content after"):
-        path.write_text(f"some-start\n{start_marker}old\n{end_marker}\nsome-end")
+        path.write_text(f"some-start\n{start_marker}\nold\n{end_marker}\nsome-end")
         update_between_markers(path, "3rd content", start_marker, end_marker)
         assert read_lines() == [
             "some-start",
@@ -106,11 +107,34 @@ def test_update_between_markers(tmp_path, subtests):
         ]
     with subtests.test("markers missing raises error"):
         path.write_text("some-start-no-marker")
-        with pytest.raises(ValueError, match="couldn't find start marker"):
+        with pytest.raises(MarkerNotFoundError, match=start_marker):
             update_between_markers(path, "error", start_marker, end_marker)
         path.write_text(f"some-start-no-marker\n{start_marker}\ncontent")
-        with pytest.raises(ValueError, match="couldn't find end marker"):
+        with pytest.raises(MarkerNotFoundError, match=end_marker):
             update_between_markers(path, "error", start_marker, end_marker)
         path.write_text(f"some-start-no-marker\n{end_marker}\ncontent\n{start_marker}")
         with pytest.raises(ValueError, match=f"end marker {end_marker} before start"):
             update_between_markers(path, "error", start_marker, end_marker)
+    with subtests.test("append_if_not_found"):
+        path.write_text("original text")
+        update_between_markers(
+            path, "4th content", start_marker, end_marker, append_if_not_found=True
+        )
+        assert read_lines() == [
+            "original text",
+            "",
+            start_marker,
+            "4th content",
+            "",
+            end_marker,
+        ]
+    with subtests.test("leave file unchanged"):
+        update_between_markers(path, "4th content", start_marker, end_marker)
+        assert read_lines() == [
+            "original text",
+            "",
+            start_marker,
+            "4th content",
+            "",
+            end_marker,
+        ]

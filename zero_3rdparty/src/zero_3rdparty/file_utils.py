@@ -156,21 +156,46 @@ def iter_paths_and_relative(
 
 
 def update_between_markers(
-    path: PathLike, content: str, start_marker: str, end_marker: str
+    path: PathLike,
+    content: str,
+    start_marker: str,
+    end_marker: str,
+    *,
+    append_if_not_found: bool = False,
 ):
-    content = f"{start_marker}\n{content}\n{end_marker}\n"
     path = Path(path)
     if not path.exists():
-        ensure_parents_write_text(path, content)
+        ensure_parents_write_text(path, f"{start_marker}\n{content}\n{end_marker}\n")
         return
+
     old_text = path.read_text()
-    start, end = old_text.find(start_marker), old_text.find(end_marker)
+    if append_if_not_found:
+        try:
+            old_content = read_between_markers(old_text, start_marker, end_marker)
+        except MarkerNotFoundError:
+            path.write_text(
+                old_text + f"\n\n{start_marker}\n{content}\n\n{end_marker}\n"
+            )
+            return
+    else:
+        old_content = read_between_markers(old_text, start_marker, end_marker)
+    content = old_text.replace(old_content, content)
+    path.write_text(content)
+
+
+class MarkerNotFoundError(ValueError):
+    def __init__(self, marker_name: str) -> None:
+        self.marker_name = marker_name
+
+
+def read_between_markers(text: str, start_marker: str, end_marker: str) -> str:
+    start, end = text.find(start_marker), text.find(end_marker)
     if start == -1:
-        raise ValueError(f"couldn't find start marker {start_marker}")
+        raise MarkerNotFoundError(start_marker)
     if end == -1:
-        raise ValueError(f"couldn't find end marker {end_marker}")
+        raise MarkerNotFoundError(end_marker)
     if end < start:
         raise ValueError(f"end marker {end_marker} before start marker {start_marker}")
-    end = end + len(end_marker) + 1  # line break
-    content = old_text[:start] + content + old_text[end:]
-    path.write_text(content)
+    between_markers = text[start + len(start_marker) : end].strip("\n")
+    assert text.count(between_markers) == 1, "content between markers exists elsewhere!"
+    return between_markers

@@ -35,6 +35,21 @@ def test_iter_paths(tmp_path):
     assert len(found) == 4
 
 
+def test_iter_paths_with_exclude(tmp_path):
+    rel_paths = [
+        "1.yaml",
+        ".terraform/2.yaml",
+        "modules/.terraform/3.yaml",
+        "terraform/4.yaml",
+    ]
+    for path in rel_paths:
+        ensure_parents_write_text(tmp_path / path, f"path: {path}")
+    assert sorted(
+        path.name
+        for path in iter_paths(tmp_path, "*.yaml", exclude_folder_names=[".terraform"])
+    ) == ["1.yaml", "4.yaml"]
+
+
 def test_iter_paths_and_relative(tmp_path, subtests):
     filenames = [
         "1.yaml",

@@ -13,7 +13,7 @@
         - Automatic registering for dumping to the various formats
         - Support different serializers for yaml/json/pretty_json/toml
         - use_enum_values
-        - see [model_base](src/model_lib/model_base.py) for details
+        - see [model_base](model_lib/model_base.py) for details
 - Use `dump(model|payload, format) -> str`
   - if using an `Event|Entity` it should "just-work"
   - Alternatively, support custom dumping with `register_dumper(instance_type: Type[T],dump_call: DumpCall)` (see example below)

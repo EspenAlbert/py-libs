@@ -2,20 +2,17 @@
 name = "py-libs"
 version = "1.0.0+rc1"
 requires-python = ">=3.10"
-# dependencies = ["model-lib", "zero-3rdparty"]
-dependencies = [
-    "zero-3rdparty",
-]
+dependencies = ["model-lib", "zero-3rdparty"]
 
 [tool.uv]
 package = false
 
 [tool.uv.sources]
-# model-lib = { workspace = true }
+model-lib = { workspace = true }
 zero-3rdparty = { workspace = true }
 
 [tool.uv.workspace]
-members = ["zero-3rdparty"]
+members = ["model-lib", "zero-3rdparty"]
 exclude=['model_lib', 'docker_example', 'compose_chart_export', 'docker_compose_parser']
 
 # [build-system]
@@ -23,7 +20,7 @@ exclude=['model_lib', 'docker_example', 'compose_chart_export', 'docker_compose_
 # build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
-testpaths = ["zero-3rdparty/zero_3rdparty"]
+testpaths = ["model-lib/model_lib", "zero-3rdparty/zero_3rdparty"]
 
 [dependency-groups]
 dev = [

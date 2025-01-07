@@ -11,10 +11,8 @@ build-backend = "hatchling.build"
 include = [
   "zero_3rdparty/*.py",
 ]
-# exclude = [
-#   "*.json",
-#   "pkg/_compat.py",
-# ]
-
-#  [tool.hatch.build.targets.wheel]
-#  packages = ["src/zero_3rdparty"]
+exclude = [
+  "*_test.py",
+  "conftest.py",
+  "test_*.json",
+]

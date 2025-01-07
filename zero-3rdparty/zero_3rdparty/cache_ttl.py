@@ -5,9 +5,8 @@ from collections.abc import Hashable
 from functools import wraps
 from inspect import signature
 from time import monotonic
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, TypeVar, ParamSpec
 
-from typing_extensions import ParamSpec
 
 T = TypeVar("T")
 P = ParamSpec("P")

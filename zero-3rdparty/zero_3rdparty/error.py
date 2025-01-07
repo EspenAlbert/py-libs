@@ -47,9 +47,8 @@ from asyncio import TimeoutError as AsyncTimeoutError
 from concurrent.futures import TimeoutError as ConcTimeoutError
 from functools import partial, singledispatch
 from types import TracebackType
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias
 
-from typing_extensions import TypeAlias
 
 from zero_3rdparty.enum_utils import StrEnum
 

@@ -1,36 +1,38 @@
-[tool.black]
-line-length = 88
+[project]
+name = "py-libs"
+version = "1.0.0+rc1"
+requires-python = ">=3.10"
+# dependencies = ["model-lib", "zero-3rdparty"]
+dependencies = [
+    "zero-3rdparty",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+# model-lib = { workspace = true }
+zero-3rdparty = { workspace = true }
+
+[tool.uv.workspace]
+members = ["zero-3rdparty"]
+exclude=['model_lib', 'docker_example', 'compose_chart_export', 'docker_compose_parser']
+
+# [build-system]
+# requires = ["hatchling"]
+# build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
-addopts="--tb=short -vv --xdoc --xdoctest-style=google"
-log_cli_level="INFO"
-log_cli=true
-log_cli_format="%(asctime)s.%(msecs)03d %(levelname)-6s %(threadName)-10s '%(message)-s' %(name)10s.%(funcName)-22s"
-junit_logging="all"
+testpaths = ["zero-3rdparty/zero_3rdparty"]
 
-[tool.mypy]
-warn_return_any = false
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-# support for pydantic v1+v2 is hard to satisfy type hints
-module="model_lib.pydantic_utils,compose_chart_export.chart_file_templates"
-disable_error_code = "import,attr-defined,no-redef,misc,assignment,call-arg"
-
-
-[tool.ruff]
-line-length = 88
-target-version="py39"
-show-fixes=true
-exclude=["_pants/*.py"]
-extend-ignore=[ "E501", "UP006", "UP007", "UP035"]
-flake8-quotes = {inline-quotes = 'double', multiline-quotes = 'double'}
-extend-select = ['Q', 'RUF100', 'C90', 'UP', 'I', 'T']
-isort = { known-first-party = ['tests'] }
-
-[tool.ruff.extend-per-file-ignores]
-"model_lib/src/model_lib/__init__.py" = ["I001"]
-"model_lib/src/model_lib/metadata/__init__.py" = ["I001"]
-
-[tool.coverage.run]
-omit = ["*/tests/**", "*/test/**", "_pants/**"]
+[dependency-groups]
+dev = [
+    "attrs>=24.3.0",
+    "pytest>=8.3.4",
+    "pytest-asyncio==0.15.1",
+    "pytest-cov==3.0.0",
+    "pytest-regressions==2.0.1",
+    "pytest-freezegun==0.4.2",
+    "pytest-subtests==0.5.0",
+    "xdoctest==0.15.4",
+]

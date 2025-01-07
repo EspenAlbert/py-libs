@@ -13,11 +13,11 @@ class MyClass:
 
 
 def test_name_on_class():
-    assert "test_zero_3rdparty.test_object_name.MyClass" == as_name(MyClass)
+    assert "zero_3rdparty.object_name_test.MyClass" == as_name(MyClass)
 
 
 def test_name_on_instance():
-    assert "test_zero_3rdparty.test_object_name.MyClass" == as_name(MyClass())
+    assert "zero_3rdparty.object_name_test.MyClass" == as_name(MyClass())
 
 
 def func():
@@ -25,7 +25,7 @@ def func():
 
 
 def test_name_on_func():
-    assert as_name(func) == "test_zero_3rdparty.test_object_name.func"
+    assert as_name(func) == "zero_3rdparty.object_name_test.func"
 
 
 async def async_func():
@@ -33,12 +33,12 @@ async def async_func():
 
 
 def test_name_on_async_func():
-    assert as_name(async_func) == "test_zero_3rdparty.test_object_name.async_func"
+    assert as_name(async_func) == "zero_3rdparty.object_name_test.async_func"
     assert short_name(async_func) == "async_func"
 
 
 def test_name_on_async_coroutine():
-    assert as_name(async_func()) == "test_zero_3rdparty.test_object_name.async_func"
+    assert as_name(async_func()) == "zero_3rdparty.object_name_test.async_func"
 
 
 def test_func_arg_names_from_normal_func():
@@ -76,7 +76,7 @@ def test_call_signature():
     assert call_signature(
         call_me, "1st arg", dict(second_arg=True, another_arg="3rd")
     ) == (
-        "test_zero_3rdparty.test_object_name.test_call_signature.<locals>.call_me(1st "
+        "zero_3rdparty.object_name_test.test_call_signature.<locals>.call_me(1st "
         "arg, second_arg=True,another_arg=3rd)"
     )
 

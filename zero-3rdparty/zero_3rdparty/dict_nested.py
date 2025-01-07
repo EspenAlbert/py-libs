@@ -5,12 +5,12 @@ from contextlib import suppress
 from functools import singledispatch
 from typing import (
     Any,
+    TypeAlias,
     TypeVar,
     Union,
     overload,
 )
 
-from typing_extensions import TypeAlias
 
 DictList: TypeAlias = Union[list, Mapping[str, object]]
 T = TypeVar("T")

@@ -5,9 +5,8 @@ import os
 import shutil
 from logging import Logger
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, TypeAlias
 
-from typing_extensions import TypeAlias
 
 from zero_3rdparty.run_env import running_in_container_environment
 

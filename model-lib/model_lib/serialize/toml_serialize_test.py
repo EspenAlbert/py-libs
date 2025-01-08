@@ -113,11 +113,11 @@ def test_add_line_breaks():
     assert add_line_breaks(_example) == _example_with_linebreaks
 
 
-def test_toml_compact():
+def test_toml_compact(file_regression):
     payload = parse_payload(_example, FileFormat.toml_compact)
-    assert dump(payload, FileFormat.toml_compact) == _example
+    file_regression.check(dump(payload, FileFormat.toml_compact), extension=".toml")
 
 
-def test_toml_normal():
+def test_toml_normal(file_regression):
     payload = parse_payload(_example, FileFormat.toml_compact)
-    assert dump(payload, FileFormat.toml) == _example_with_linebreaks
+    file_regression.check(dump(payload, FileFormat.toml), extension=".toml")

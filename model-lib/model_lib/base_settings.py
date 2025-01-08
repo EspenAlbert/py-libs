@@ -8,7 +8,6 @@ from typing import Any, Generic, TypeVar
 
 from pydantic import Field
 from pydantic.fields import FieldInfo
-
 from zero_3rdparty.run_env import running_in_container_environment
 
 logger = logging.getLogger(__name__)
@@ -17,9 +16,9 @@ logger = logging.getLogger(__name__)
 def env_value_as_str(value: Any) -> str | None:
     if value is None:
         return None
-    if isinstance(value, (Path, bool, float, int)):
+    if isinstance(value, Path | bool | float | int):
         value = str(value)
-    if isinstance(value, (list, dict)):
+    if isinstance(value, list|dict):
         value = json.dumps(value)
     assert isinstance(value, str), f"env value must be str, was {value!r}"
     return value
@@ -33,7 +32,7 @@ def container_or_default(container_default: T, cls_default: T) -> FieldInfo:
         default_factory=DockerOrClsDefDefault(
             docker_default=container_default, cls_default=cls_default
         )
-    )
+    ) # type: ignore
 
 
 @dataclass

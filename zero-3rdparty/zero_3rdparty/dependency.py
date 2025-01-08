@@ -6,7 +6,7 @@ import logging
 from collections import defaultdict
 from contextlib import suppress
 from dataclasses import dataclass
-from typing import Any, Callable, Generic, TypeVar, TypeAlias, Union, cast
+from typing import Any, Callable, Generic, TypeAlias, TypeVar, Union, cast
 
 from zero_3rdparty.error import BaseError
 from zero_3rdparty.iter_utils import first_or_none, public_dict

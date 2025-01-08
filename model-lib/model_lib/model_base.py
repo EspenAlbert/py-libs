@@ -4,11 +4,11 @@ from functools import cached_property
 from typing import Generic, Iterable, List, Sequence, Type, TypeVar
 
 from pydantic import BaseModel, ConfigDict
+from zero_3rdparty.object_name import as_name
+from zero_3rdparty.str_utils import want_bool
 
 from model_lib.errors import ClsNameAlreadyExist, UnknownModelError
 from model_lib.pydantic_utils import IS_PYDANTIC_V2, model_dump
-from zero_3rdparty.object_name import as_name
-from zero_3rdparty.str_utils import want_bool
 
 T = TypeVar("T")
 ModelT = TypeVar("ModelT", bound=BaseModel)
@@ -28,21 +28,12 @@ def model_name_to_t(name: str) -> type:
 
 
 class _Model(BaseModel):
-    if IS_PYDANTIC_V2:
-        model_config = ConfigDict(  # type: ignore
-            use_enum_values=True,
-            extra="allow",  # type: ignore
-            arbitrary_types_allowed=True,
-            populate_by_name=True,
-        )
-    else:
-
-        class Config:
-            use_enum_values = True
-            extra = "allow"
-            arbitrary_types_allowed = True
-            keep_untouched = (cached_property, Exception)
-            allow_population_by_field_name = True
+    model_config = dict(
+        use_enum_values=True,
+        extra="allow",  # type: ignore
+        arbitrary_types_allowed=True,
+        populate_by_name=True,
+    )
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -55,43 +46,19 @@ class _Model(BaseModel):
             raise ClsNameAlreadyExist(as_name(cls), as_name(old_cls))
         _model_name_to_type[cls_name] = cls
 
-    if IS_PYDANTIC_V2:
-
-        def __eq__(self, other):
-            """cached properties are stored on the instance and shouldn't be
-            included in comparison."""
-            if not isinstance(other, BaseModel):
-                return False
-            return model_dump(self) == model_dump(other)
-
-    else:
-
-        def __eq__(self, other):
-            if not isinstance(other, BaseModel):
-                return False
-            fields = self.__fields__
-            return model_dump(self, include=fields.keys()) == model_dump(
-                other, include=fields.keys()
-            )
+    def __eq__(self, other):
+        """cached properties are stored on the instance and shouldn't be
+        included in comparison."""
+        if not isinstance(other, BaseModel):
+            return False
+        return model_dump(self) == model_dump(other)
 
 
 class Event(_Model):
-    if IS_PYDANTIC_V2:
-        model_config = ConfigDict(frozen=True, validate_assignment=True)
-    else:
-
-        class Config:
-            allow_mutation = False
-
+    model_config = dict(frozen=True, validate_assignment=True)
 
 class Entity(_Model):
-    if IS_PYDANTIC_V2:
-        model_config = ConfigDict(frozen=False, validate_assignment=False)
-    else:
-
-        class Config:
-            allow_mutation = True
-
+    model_config = dict(frozen=False, validate_assignment=False)
 
 class TypeEvent:
     @classmethod

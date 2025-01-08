@@ -8,9 +8,9 @@ from typing import Any, Callable
 from uuid import uuid4
 
 from typing_extensions import TypeAlias
+from zero_3rdparty.object_name import as_name
 
 from model_lib.metadata import EventMetadata, current_metadata
-from zero_3rdparty.object_name import as_name
 
 logger = logging.getLogger(__name__)
 MetadataDumper = Callable[[dict], Any]

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-from functools import singledispatch
+from datetime import UTC, datetime
 from typing import Any, List, Type, TypeVar, Union
 
 import pydantic
@@ -28,9 +27,9 @@ else:
     from pydantic import parse_obj_as
     from pydantic.datetime_parse import parse_datetime
 
-from model_lib.model_dump import register_dumper  # noqa: E402
 from zero_3rdparty.datetime_utils import as_ms_precision_utc, ensure_tz  # noqa: E402
 from zero_3rdparty.iter_utils import first  # noqa: E402
+
 
 
 def env_var_name(
@@ -163,7 +162,7 @@ if IS_PYDANTIC_V2:
 
     def ensure_timezone(value: datetime):
         if not value.tzinfo:
-            return value.replace(tzinfo=timezone.utc)
+            return value.replace(tzinfo=UTC)
         return value
 
     utc_datetime: TypeAlias = Annotated[datetime, AfterValidator(ensure_timezone)]
@@ -178,7 +177,7 @@ else:
         @classmethod
         def ensure_utc(cls, value: datetime):
             if not value.tzinfo:
-                return value.replace(tzinfo=timezone.utc)
+                return value.replace(tzinfo=UTC)
             return value
 
     utc_datetime: TypeAlias = Union[_utc_datetime, datetime]
@@ -209,51 +208,3 @@ def parse_dt_utc(value: Union[datetime, StrBytesIntFloat]):
 
 def field_names(model_type: Type[BaseModel] | BaseModel) -> List[str]:
     return list(model_fields(model_type))
-
-
-@singledispatch
-def parse_timedelta(td: object):
-    raise NotImplementedError
-
-
-@parse_timedelta.register
-def _parse_timedelta_td(td: timedelta):
-    return td
-
-
-@parse_timedelta.register
-def _parse_timedelta_float(td: float):
-    return timedelta(seconds=td)
-
-
-@parse_timedelta.register
-def _parse_timedelta_int(td: int):
-    return timedelta(seconds=td)
-
-
-class _timedelta(timedelta):
-    if IS_PYDANTIC_V2:
-
-        @classmethod
-        def __get_validators__(cls):
-            yield cls.parse_timedelta
-
-    else:
-
-        @classmethod
-        def __get_validators__(cls):
-            yield parse_timedelta
-
-    @classmethod
-    def parse_timedelta(cls, value: Any, *_):
-        return parse_timedelta(value)
-
-
-timedelta_dumpable = Union[_timedelta, timedelta]
-
-
-def as_total_seconds(td: timedelta):
-    return td.total_seconds()
-
-
-register_dumper(timedelta, as_total_seconds)

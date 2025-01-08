@@ -1,21 +1,23 @@
 [project]
 name = "model-lib"
 version = "1.0.0+rc1"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
-    # "zero-3rdparty",
-    "pydantic>=2.10.4",
+  "pydantic~=2.10.4",
+  "pydantic-settings~=2.7.1",
+  "pyyaml>=6.0.2",
+  "zero-3rdparty",
 ]
 
+[project.optional-dependencies]
+toml = ["pydantic~=2.10.4", "pydantic-settings~=2.7.1", "tomli-w~=1.1.0", "zero-3rdparty"]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.sdist]
-include = [
-  "model_lib/*.py",
-]
+include = ["model_lib/*.py"]
 exclude = [
   "*_test.py",
   "conftest.py",

@@ -1,8 +1,8 @@
 from datetime import datetime
-from typing import Union
+from typing import Annotated, Union
 
 from freezegun import freeze_time
-from pydantic import Field
+from pydantic import Field, PlainSerializer
 
 from model_lib import (
     Entity,
@@ -62,7 +62,7 @@ def test_show_dumping():
         birthday = Birthday(date=datetime.utcnow())
         # can dump non-primitives e.g., datetime
         assert dump(birthday, "json") == '{"date":"2020-01-01T00:00:00"}'
-    person = Person(name="espen", age=99)
+    person = Person(age=99, name="espen")
     assert dump(person, "yaml") == "name: espen\nage: 99\n"
     assert dump(person, "pretty_json") == _pretty_person
 
@@ -101,9 +101,7 @@ class CustomDumping:
 def custom_dump(custom: CustomDumping):
     return dict(full_name=f"{custom.first_name} {custom.last_name}")
 
-
 register_dumper(CustomDumping, custom_dump)
-
 
 class CustomKafkaPayload:
     def __init__(self, body: str, topic: str):

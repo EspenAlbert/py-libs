@@ -11,7 +11,7 @@ from concurrent.futures import Future as _ConcFuture
 from concurrent.futures import TimeoutError as _ConcTimeoutError
 from contextlib import suppress
 from functools import wraps
-from typing import Any, Callable, TypeVar, TypeAlias, Union
+from typing import Any, Callable, TypeAlias, TypeVar, Union
 
 logger = logging.getLogger(__name__)
 ResultT = TypeVar("ResultT")

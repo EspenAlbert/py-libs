@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Type, TypeVar
 
-from model_lib.constants import FileFormat, PayloadT
 from zero_3rdparty.error import BaseError
+
+from model_lib.constants import FileFormat, PayloadT
 
 T = TypeVar("T")
 

@@ -7,7 +7,6 @@ from logging import Logger
 from pathlib import Path
 from typing import Iterable, TypeAlias
 
-
 from zero_3rdparty.run_env import running_in_container_environment
 
 PathLike: TypeAlias = os.PathLike

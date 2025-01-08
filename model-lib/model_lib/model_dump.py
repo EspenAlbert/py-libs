@@ -3,7 +3,7 @@ from __future__ import annotations
 from asyncio import CancelledError as AsyncCancelledError
 from collections import ChainMap, Counter, defaultdict, deque
 from contextlib import suppress
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from enum import Enum
 from functools import singledispatch
@@ -105,3 +105,4 @@ register_dumper(Enum, lambda e: e.value)
 register_dumper(type, lambda t: t.__name__)
 register_dumper(Exception, repr)
 register_dumper(AsyncCancelledError, repr)
+register_dumper(timedelta, lambda td: td.total_seconds())

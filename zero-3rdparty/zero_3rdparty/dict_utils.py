@@ -169,12 +169,12 @@ def sort_keys(some_dict: dict[KT, VT]) -> dict[KT, VT]:
 
 def select_values(some_container: dict | list, allowed_values: tuple[type, ...]):
     def ok_value(value: Any):
-        if isinstance(value, (dict, list)):
+        if isinstance(value, dict | list):
             return bool(value)
         return isinstance(value, allowed_values)
 
     def unpack(value: Any):
-        return unpack_list_or_dict(value) if isinstance(value, (dict, list)) else value
+        return unpack_list_or_dict(value) if isinstance(value, dict | list) else value
 
     def unpack_list_or_dict(some_dict_or_list: dict | list):
         if isinstance(some_dict_or_list, dict):

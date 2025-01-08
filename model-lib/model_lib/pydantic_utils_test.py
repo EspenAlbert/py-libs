@@ -1,13 +1,13 @@
-from datetime import timedelta, timezone
+from datetime import UTC, timedelta
 
 import pydantic
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_serializer
+from pydantic_settings import BaseSettings
+from zero_3rdparty.iter_utils import ignore_falsy
 
 from model_lib import Event
 from model_lib.constants import FileFormat
 from model_lib.pydantic_utils import (
-    IS_PYDANTIC_V2,
-    BaseSettings,
     cls_defaults,
     cls_defaults_required_as,
     cls_local_defaults_required_as,
@@ -17,12 +17,10 @@ from model_lib.pydantic_utils import (
     has_path,
     parse_dt,
     parse_object_as,
-    timedelta_dumpable,
     utc_datetime,
     utc_datetime_ms,
 )
 from model_lib.serialize import dump, parse_model
-from zero_3rdparty.iter_utils import ignore_falsy
 
 
 class _ExampleModel(BaseModel):
@@ -36,7 +34,7 @@ def test_parse_object_as():
 
 def test_timedelta_dumpable():
     class _MyModelTimedelta(Event):
-        td: timedelta_dumpable
+        td: timedelta
 
     model = _MyModelTimedelta(td=timedelta(hours=1, weeks=1))
     dumped = dump(model, FileFormat.yaml)
@@ -44,41 +42,27 @@ def test_timedelta_dumpable():
     assert model == model2
 
 
-if IS_PYDANTIC_V2:
-    from pydantic import model_serializer
+class _ExampleDumpModel(BaseModel):
+    name: str
+    items: list[str] = Field(default_factory=list)
 
-    class _ExampleDumpModel(BaseModel):
-        name: str
-        items: list[str] = Field(default_factory=list)
+    @model_serializer(mode="wrap")
+    def ignore_falsy(
+        self,
+        nxt: pydantic.SerializerFunctionWrapHandler,
+    ):
+        serialized = nxt(self)
+        return ignore_falsy(**serialized)
 
-        @model_serializer(mode="wrap")
-        def ignore_falsy(
-            self,
-            nxt: pydantic.SerializerFunctionWrapHandler,
-            _: pydantic.FieldSerializationInfo,
-        ):
-            serialized = nxt(self)
-            return ignore_falsy(**serialized)
-
-    def test_model_serializer():
-        model = _ExampleDumpModel(name="no_items")
-        assert model.model_dump() == {"name": "no_items"}
+def test_model_serializer():
+    model = _ExampleDumpModel(name="no_items")
+    assert model.model_dump() == {"name": "no_items"}
 
 
 class MySettings(BaseSettings):
-    if IS_PYDANTIC_V2:
-        model_config = dict(env_prefix="my_", case_sensitive=True)
-    else:
-
-        class Config:
-            env_prefix = "my_"
-            case_sensitive = False
-
+    model_config = {"env_prefix": "my_", "case_sensitive":True}
     var1: str
-    if IS_PYDANTIC_V2:
-        var_specific: str = Field(validation_alias="OTHER_NAME")
-    else:
-        var_specific: str = Field(env="OTHER_NAME")
+    var_specific: str = Field(validation_alias="OTHER_NAME")
 
 
 def test_env_var_name():
@@ -144,14 +128,14 @@ def test_has_path():
 class _TimeModel(Event):
     utc: utc_datetime
     utc_ms: utc_datetime_ms
-    timedelta: timedelta_dumpable = 0
+    td: timedelta = Field(default_factory=lambda: timedelta(seconds=0))
 
 
 def test_utc_datetime():
     dt_no_timezone = parse_dt("2023-08-16T16:42:14")
     assert dt_no_timezone.tzinfo is None
     model = _TimeModel(utc=dt_no_timezone, utc_ms=dt_no_timezone)
-    assert model.utc.tzinfo == timezone.utc
+    assert model.utc.tzinfo == UTC
 
 
 def test_utc_datetime_ms():
@@ -163,8 +147,8 @@ def test_utc_datetime_ms():
 
 def test_dumping_time_model():
     dt = parse_dt("2023-08-16T16:42:14.123456")
-    model = _TimeModel(utc=dt, utc_ms=dt, timedelta=30)
-    assert model.timedelta == timedelta(seconds=30)
-    expected_json = '{"utc":"2023-08-16T16:42:14.123456+00:00","utc_ms":"2023-08-16T16:42:14.123000+00:00","timedelta":30.0}'
+    model = _TimeModel(utc=dt, utc_ms=dt, td=30)
+    assert model.td == timedelta(seconds=30)
+    expected_json = '{"utc":"2023-08-16T16:42:14.123456Z","utc_ms":"2023-08-16T16:42:14.123000Z","td":"PT30S"}'
     assert dump(model, "json") == expected_json
     assert parse_model(expected_json, _TimeModel) == model

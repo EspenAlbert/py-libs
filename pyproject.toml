@@ -2,7 +2,7 @@
 name = "py-libs"
 version = "1.0.0+rc1"
 requires-python = ">=3.10"
-dependencies = ["model-lib", "zero-3rdparty"]
+dependencies = ["model-lib[toml]", "zero-3rdparty"]
 
 [tool.uv]
 package = false
@@ -15,12 +15,24 @@ zero-3rdparty = { workspace = true }
 members = ["model-lib", "zero-3rdparty"]
 exclude=['model_lib', 'docker_example', 'compose_chart_export', 'docker_compose_parser']
 
-# [build-system]
-# requires = ["hatchling"]
-# build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 testpaths = ["model-lib/model_lib", "zero-3rdparty/zero_3rdparty"]
+
+[tool.ruff]
+line-length = 88
+target-version="py311"
+show-fixes=true
+exclude=["_pants", "compose_chart_export", "docker_compose_parser", "docker_example"]
+extend-ignore=[ "E501", "UP006", "UP007", "UP035"]
+flake8-quotes = {inline-quotes = 'double', multiline-quotes = 'double'}
+extend-select = ['Q', 'RUF100', 'C90', 'UP', 'I', 'T']
+isort = { known-first-party = ['tests'] }
+
+[tool.ruff.extend-per-file-ignores]
+"model-lib/model_lib/__init__.py" = ["I001"]
+"model-lib/model_lib/metadata/__init__.py" = ["I001"]
+
 
 [dependency-groups]
 dev = [

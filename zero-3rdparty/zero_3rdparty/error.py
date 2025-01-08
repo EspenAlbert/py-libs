@@ -49,7 +49,6 @@ from functools import partial, singledispatch
 from types import TracebackType
 from typing import TYPE_CHECKING, TypeAlias
 
-
 from zero_3rdparty.enum_utils import StrEnum
 
 logger = logging.getLogger(__name__)

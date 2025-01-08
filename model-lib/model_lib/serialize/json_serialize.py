@@ -49,12 +49,12 @@ def pydantic_dumps_parse() -> dump_parse:
 
         def dump_pydantic(instance: T) -> str:
             if isinstance(instance, pydantic.BaseModel):
-                return model_json(instance)
-            return json.dumps(instance, indent=None, separators=(",", ":"))
+                return instance.model_dump_json()
+            return json.dumps(instance, indent=None, separators=(",", ":"), default=model_dump)
 
         def pretty_dump_stdlib(instance: T) -> str:
             if isinstance(instance, pydantic.BaseModel):
-                return model_json(instance, indent=2)
+                instance = instance.model_dump() # type: ignore # pydantic doesn't support sort_keys by default
             return json.dumps(
                 instance,
                 indent=2,
@@ -63,7 +63,7 @@ def pydantic_dumps_parse() -> dump_parse:
                 default=model_dump,
             )
 
-        logger.warning("using pydantic json dumping, orjson is a bit more flexible")
+        logger.info("using pydantic json dumping, orjson is a bit more flexible")
         return dump_pydantic, pretty_dump_stdlib, json.loads
     return None
 
@@ -82,9 +82,10 @@ def stdlib_dumps_parse() -> dump_parse:
     return dump_stdlib, pretty_dump_stdlib, json.loads
 
 
-for func in [orjson_dumps_parse, pydantic_dumps_parse, stdlib_dumps_parse]:
+for func in [pydantic_dumps_parse, orjson_dumps_parse, stdlib_dumps_parse]:
     if exist := func():
         dump, pretty_dump, parse = exist
         break
 else:
-    raise Exception("Should never happen, stdlib always available!")
+    err_msg = "Should never happen, stdlib always available!"
+    raise Exception(err_msg)

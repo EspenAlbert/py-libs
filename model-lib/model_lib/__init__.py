@@ -20,7 +20,7 @@ from model_lib.base_settings import (
     container_or_default,
     port_info,
 )
-from model_lib.dump_functions import dump_ignore_falsy
+from model_lib.dump_functions import IgnoreFalsy
 from model_lib.pydantic_utils import (
     copy_and_validate,
     utc_datetime,
@@ -34,6 +34,7 @@ __all__ = (  # noqa F405
     "Entity",
     "Event",
     "FileFormat",
+    "IgnoreFalsy",
     "ModelT",
     "SeqModel",
     "TypeEvent",
@@ -47,7 +48,6 @@ __all__ = (  # noqa F405
     "dump",
     "dump_as_list",
     "dump_as_dict",
-    "dump_ignore_falsy",
     "env_var_name",
     "env_var_names",
     "field_names",

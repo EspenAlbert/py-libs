@@ -337,7 +337,7 @@ def ignore_falsy_recurse(allowed_falsy: Optional[set[Any]] = None, **kwargs) -> 
     return {
         key: _unpack(value, allowed_falsy)  # type: ignore
         for key, value in kwargs.items()
-        if value or (not isinstance(value, (dict, list)) and value in allowed_falsy)
+        if value or (not isinstance(value, dict | list) and value in allowed_falsy)
     }
 
 

@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from functools import cached_property
 from typing import Generic, Iterable, List, Sequence, Type, TypeVar
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 from zero_3rdparty.object_name import as_name
 from zero_3rdparty.str_utils import want_bool
 

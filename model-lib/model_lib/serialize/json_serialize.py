@@ -7,7 +7,6 @@ from typing import Any, Callable, Optional, TypeVar
 from typing_extensions import TypeAlias
 
 from model_lib.model_dump import dump as model_dump
-from model_lib.pydantic_utils import model_json
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")

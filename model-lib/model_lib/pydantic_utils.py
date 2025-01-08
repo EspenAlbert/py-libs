@@ -31,7 +31,6 @@ from zero_3rdparty.datetime_utils import as_ms_precision_utc, ensure_tz  # noqa:
 from zero_3rdparty.iter_utils import first  # noqa: E402
 
 
-
 def env_var_name(
     settings: Union[BaseSettings, Type[BaseSettings]], field_name: str
 ) -> str:

@@ -1,8 +1,8 @@
 from datetime import datetime
-from typing import Annotated, Union
+from typing import Union
 
 from freezegun import freeze_time
-from pydantic import Field, PlainSerializer
+from pydantic import Field
 
 from model_lib import (
     Entity,

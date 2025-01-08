@@ -52,14 +52,14 @@ if not toml.loads_ready:
 
             toml.loads = tomllib.loads
 if not toml.loads_ready:
-    logger.warning("no library for reading toml files: pip install tomlkit | tomli ")
+    logger.info("no library for reading toml files: pip install tomlkit | tomli ")
 if not toml.dumps_ready:
     try:
         import tomli_w
 
         toml.dumps = tomli_w.dumps
     except ModuleNotFoundError:
-        logger.warning("tomlkit or tomli-w not installed, dumping toml will not work")
+        logger.info("tomlkit or tomli-w not installed, dumping toml will not work")
 
 
 _dumps = toml.dumps

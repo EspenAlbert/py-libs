@@ -1,0 +1,3 @@
+[GLOBAL]
+backend_packages = ["pants.backend.awslambda.python", "pants.backend.build_files.fmt.black", "pants.backend.codegen.protobuf.python", "pants.backend.docker", "pants.backend.experimental.helm", "pants.backend.experimental.python", "pants.backend.experimental.python.lint.ruff", "pants.backend.python", "pants.backend.python.lint.black", "pants.backend.python.mixed_interpreter_constraints", "pants.backend.python.typecheck.mypy"]
+build_file_prelude_globs = ["_pants/*.py"]

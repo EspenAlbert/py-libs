@@ -116,3 +116,8 @@ def test_add_line_breaks():
 def test_toml_compact():
     payload = parse_payload(_example, FileFormat.toml_compact)
     assert dump(payload, FileFormat.toml_compact) == _example
+
+
+def test_toml_normal():
+    payload = parse_payload(_example, FileFormat.toml_compact)
+    assert dump(payload, FileFormat.toml) == _example_with_linebreaks

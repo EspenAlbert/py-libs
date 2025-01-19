@@ -1,6 +1,10 @@
 build:
   uv build --package zero-3rdparty
   uv build --package model-lib
+fix:
+  uv run ruff check --fix .
+fmt:
+  uv run ruff format .
 lint:
   uv run ruff check .
 type:

@@ -11,7 +11,7 @@ from typing import Generic, TypeVar
 
 logger = logging.getLogger(__name__)
 
-QueueType = TypeVar("QueueType")
+QueueT = TypeVar("QueueT")
 
 _empty = object()
 
@@ -26,7 +26,7 @@ def _raise_queue_is_closed(item: object, *, queue: ClosableQueue, **kwargs):
     Queue.put(queue, item, **kwargs)
 
 
-class ClosableQueue(Queue[QueueType], Generic[QueueType]):
+class ClosableQueue(Queue[QueueT], Generic[QueueT]):
     SENTINEL = object()
     __QUEUES: list[ClosableQueue] = []
 
@@ -51,7 +51,7 @@ class ClosableQueue(Queue[QueueType], Generic[QueueType]):
         with suppress(QueueIsClosed):
             self.close()
 
-    def __iter__(self) -> Iterable[QueueType]:
+    def __iter__(self) -> Iterable[QueueT]:
         try:
             while True:
                 item = super().get(block=True)
@@ -70,15 +70,15 @@ class ClosableQueue(Queue[QueueType], Generic[QueueType]):
 
     def pop(self, default=_empty):
         try:
-            next = self.get_nowait()
+            out = self.get_nowait()
         except Empty:
             return default
         else:
-            if next is self.SENTINEL:
+            if out is self.SENTINEL:
                 self.put(self.SENTINEL)  # ensure next iterator will finish immediately
-            return next
+            return out
 
-    def iter_non_blocking(self) -> Iterable[QueueType]:
+    def iter_non_blocking(self) -> Iterable[QueueT]:
         next_or_sentinel = partial(self.pop, self.SENTINEL)
         return iter(next_or_sentinel, self.SENTINEL)
 
@@ -89,14 +89,7 @@ class ClosableQueue(Queue[QueueType], Generic[QueueType]):
             for q in list(cls.__QUEUES):  # avoid modification during iteration
                 q.close()
 
-    def get_nowait(self) -> QueueType:
-        item = super().get_nowait()
-        if item is self.SENTINEL:
-            self.queue.append(item)
-            raise QueueIsClosed
-        return item
-
-    def get(self, block: bool = True, timeout: float | None = None) -> QueueType:
+    def get(self, block: bool = True, timeout: float | None = None) -> QueueT:
         item = super().get(block, timeout)
         if item is self.SENTINEL:
             self.queue.append(self.SENTINEL)

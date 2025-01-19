@@ -92,3 +92,52 @@ def test_many_consumers_all_should_finish():
         wait(futures.keys(), timeout=1)
     winner_i = {i for f, i in futures.items() if f.result()}
     assert len(winner_i) == 1
+
+
+def test_pop():
+    queue = ClosableQueue()
+    assert queue.pop() is not None
+    assert queue.pop(None) is None
+    assert queue.pop("default") == "default"
+    queue.put(1)
+    assert queue.pop() == 1
+    queue.put(1)
+    queue.put(2)
+    assert queue.pop() == 1
+    assert queue.pop() == 2
+    assert queue.pop(None) is None
+    queue.close()
+    with pytest.raises(QueueIsClosed):
+        queue.pop(None)
+    with pytest.raises(QueueIsClosed):
+        queue.pop(None)
+
+
+def test_get_no_wait_empty_queue_should_raise_exception():
+    queue = ClosableQueue()
+    queue.close()
+    with pytest.raises(QueueIsClosed):
+        queue.get_nowait()
+    with pytest.raises(QueueIsClosed):
+        queue.get_nowait()
+
+
+def test_iter_non_blocking():
+    queue = ClosableQueue()
+    assert list(queue.iter_non_blocking()) == []
+    queue.put(1)
+    assert list(queue.iter_non_blocking()) == [1]
+    queue.put(2)
+    queue.put(3)
+    assert list(queue.iter_non_blocking()) == [2, 3]
+    queue.close()
+    with pytest.raises(QueueIsClosed):
+        assert list(queue.iter_non_blocking()) == []
+
+def test_close_all():
+    q1, q2 = ClosableQueue(), ClosableQueue()
+    ClosableQueue.close_all()
+    with pytest.raises(QueueIsClosed):
+        q1.put(1)
+    with pytest.raises(QueueIsClosed):
+        q2.put(1)

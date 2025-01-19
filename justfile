@@ -12,8 +12,12 @@ type:
 test:
   uv run pytest
 cov:
-  uv run pytest --cov --cov-report=html
+  export RUN_SLOW=false && uv run pytest --cov --cov-report=html
+cov-full:
+  export RUN_SLOW=true && uv run pytest --cov --cov-report=html
 open-cov: cov
+  open htmlcov/index.html
+open-cov-full: cov-full
   open htmlcov/index.html
 pre-release:
   uv venv -p python3.11 .venv-ci

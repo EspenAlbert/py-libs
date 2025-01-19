@@ -5,6 +5,8 @@ __pycache__/
 .venv/
 .venv-ci/
 .ruff_cache
+.coverage
+
 # Pants workspace files
 /.pants.d/
 /dist

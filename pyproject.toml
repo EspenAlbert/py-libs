@@ -19,6 +19,9 @@ exclude=['model_lib', 'docker_example', 'compose_chart_export', 'docker_compose_
 [tool.pytest.ini_options]
 testpaths = ["model-lib/model_lib", "zero-3rdparty/zero_3rdparty"]
 
+[tool.coverage.report]
+omit = ["*_test.py"]
+
 [tool.ruff]
 line-length = 88
 target-version="py311"

@@ -15,24 +15,29 @@ zero-3rdparty = { workspace = true }
 members = ["model-lib", "zero-3rdparty"]
 exclude=['model_lib', 'docker_example', 'compose_chart_export', 'docker_compose_parser']
 
-
 [tool.pytest.ini_options]
 testpaths = ["model-lib/model_lib", "zero-3rdparty/zero_3rdparty"]
 
 [tool.coverage.report]
 omit = ["*_test.py"]
 
+[tool.pyright]
+include = ["model-lib", "zero-3rdparty"]
+venvPath = ".venv"
+
 [tool.ruff]
 line-length = 88
 target-version="py311"
 show-fixes=true
 exclude=["_pants", "compose_chart_export", "docker_compose_parser", "docker_example"]
+
+[tool.ruff.lint]
 extend-ignore=[ "E501", "UP006", "UP007", "UP035"]
-flake8-quotes = {inline-quotes = 'double', multiline-quotes = 'double'}
 extend-select = ['Q', 'RUF100', 'C90', 'UP', 'I', 'T']
+flake8-quotes = {inline-quotes = 'double', multiline-quotes = 'double'}
 isort = { known-first-party = ['tests'] }
 
-[tool.ruff.extend-per-file-ignores]
+[tool.ruff.lint.extend-per-file-ignores]
 "model-lib/model_lib/__init__.py" = ["I001"]
 "model-lib/model_lib/metadata/__init__.py" = ["I001"]
 
@@ -47,4 +52,5 @@ dev = [
     "pytest-freezegun==0.4.2",
     "pytest-subtests==0.5.0",
     "xdoctest==0.15.4",
+    "pyright>=1.1.392.post0",
 ]

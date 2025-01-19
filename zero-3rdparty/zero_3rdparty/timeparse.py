@@ -35,7 +35,7 @@ def OPTSEP(x):
 
 
 TIMEFORMATS = [
-    r"{WEEKS}\s*{DAYS}\s*{HOURS}\s*{MINS}\s*{SECS}".format(
+    r"{WEEKS}\s*{DAYS}\s*{HOURS}\s*{MINS}\s*{SECS}".format(  # noqa: UP032
         # YEARS=OPTSEP(YEARS),
         # MONTHS=OPTSEP(MONTHS),
         WEEKS=OPTSEP(WEEKS),

@@ -1,14 +1,22 @@
 import logging
+import os
 from dataclasses import dataclass
 from time import monotonic, sleep
 
 import pytest
 
 from zero_3rdparty.cache_ttl import cache_ttl, clear_cache
+from zero_3rdparty.str_utils import want_bool
 
 logger = logging.getLogger(__name__)
 SLEEP_TIME = 0.01
 TOTAL_RUNTIME = 0.30
+
+
+@pytest.fixture(autouse=True, scope="module")
+def skip_if_not_RUN_SLOW():
+    if not want_bool(os.environ.get("RUN_SLOW")):
+        pytest.skip("Skipping tests unless RUN_SLOW=true")
 
 
 @pytest.mark.parametrize(

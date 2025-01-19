@@ -50,18 +50,32 @@ def words_to_list(
 
 
 def words_to_set(s: str, split_char: str = " ") -> Set[str]:
+    """
+    >>> sorted(words_to_set("word1 word2 word3"))
+    ['word1', 'word2', 'word3']
+    """
     return set(s.split(split_char))
 
 
 def want_str(s: AnyStr, encoding: str = "utf-8") -> str:
-    """Convert bytes to string."""
+    """
+    >>> want_str(b"hello")
+    'hello'
+    >>> want_str("hello")
+    'hello'
+    """
     if isinstance(s, bytes):
         return s.decode(encoding=encoding)
     return s
 
 
 def want_bytes(s: AnyStr, encoding: str = "utf-8") -> bytes:
-    """Convert string to bytes."""
+    """Convert string to bytes.
+    >>> want_bytes(b"hello")
+    b'hello'
+    >>> want_bytes("hello")
+    b'hello'
+    """
     if isinstance(s, str):
         return s.encode(encoding=encoding)
     return s

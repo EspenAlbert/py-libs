@@ -101,7 +101,9 @@ class CustomDumping:
 def custom_dump(custom: CustomDumping):
     return dict(full_name=f"{custom.first_name} {custom.last_name}")
 
+
 register_dumper(CustomDumping, custom_dump)
+
 
 class CustomKafkaPayload:
     def __init__(self, body: str, topic: str):

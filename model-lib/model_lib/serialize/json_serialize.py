@@ -49,11 +49,13 @@ def pydantic_dumps_parse() -> dump_parse:
         def dump_pydantic(instance: T) -> str:
             if isinstance(instance, pydantic.BaseModel):
                 return instance.model_dump_json()
-            return json.dumps(instance, indent=None, separators=(",", ":"), default=model_dump)
+            return json.dumps(
+                instance, indent=None, separators=(",", ":"), default=model_dump
+            )
 
         def pretty_dump_stdlib(instance: T) -> str:
             if isinstance(instance, pydantic.BaseModel):
-                instance = instance.model_dump() # type: ignore # pydantic doesn't support sort_keys by default
+                instance = instance.model_dump()  # type: ignore # pydantic doesn't support sort_keys by default
             return json.dumps(
                 instance,
                 indent=2,

@@ -18,7 +18,7 @@ def env_value_as_str(value: Any) -> str | None:
         return None
     if isinstance(value, Path | bool | float | int):
         value = str(value)
-    if isinstance(value, list|dict):
+    if isinstance(value, list | dict):
         value = json.dumps(value)
     assert isinstance(value, str), f"env value must be str, was {value!r}"
     return value
@@ -32,7 +32,7 @@ def container_or_default(container_default: T, cls_default: T) -> FieldInfo:
         default_factory=DockerOrClsDefDefault(
             docker_default=container_default, cls_default=cls_default
         )
-    ) # type: ignore
+    )  # type: ignore
 
 
 @dataclass

@@ -1,4 +1,5 @@
 """isort:skip_file."""
+
 from model_lib.serialize.base_64 import (
     decode_base64,
     encode_base64,

@@ -11,6 +11,7 @@ from model_lib.pydantic_utils import model_json
 
 BaseAsList = RootModel[list[str]]
 
+
 class RootAsChild(Entity):
     pets: BaseAsList
     owner: str
@@ -18,6 +19,7 @@ class RootAsChild(Entity):
     @cached_property
     def owner_prop(self):
         return f"{self.owner}-prop"
+
 
 def test_compare_dump_behavior_with_pydantic():
     model = RootAsChild(pets=BaseAsList(["p1", "p2"]), owner="bob")
@@ -30,11 +32,9 @@ def test_compare_dump_behavior_with_pydantic():
     assert model_json(child) == '{"pets":["p1","p2"],"owner":"bob"}'
 
 
-
 class _MyModel(IgnoreFalsy):
     name: str
     my_list: list[str] = Field(default_factory=list)
-
 
 
 class _MyParentModel(Entity):

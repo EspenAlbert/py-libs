@@ -30,7 +30,7 @@ def _wrap_func(func, seconds):
         nonlocal expire_result
         expire_result = (0, _sentinel)
 
-    inner.clear = clear # type: ignore
+    inner.clear = clear  # type: ignore
     return inner
 
 
@@ -48,7 +48,7 @@ def _wrap_method(
         expire, call_result = expire_times[key]
         if now_seconds < expire and call_result is not _sentinel:
             return call_result
-        call_result = meth(self, *args, **kwargs) # type: ignore
+        call_result = meth(self, *args, **kwargs)  # type: ignore
         expire_times[key] = now_seconds + seconds, call_result
         return call_result
 
@@ -68,12 +68,12 @@ def cache_ttl(seconds: float | int) -> Callable[[Callable[P, T]], Callable[P, T]
         1. Only caches a 'single value'
         2. Expects it to be a method if 'self' is in parameters
     '"""
-    assert isinstance(seconds, float| int), "ttl seconds must be int/float"
+    assert isinstance(seconds, float | int), "ttl seconds must be int/float"
 
     def decorator(func: Callable[P, T]) -> Callable[P, T]:
         if "self" in signature(func).parameters:
             return _wrap_method(seconds, id, func)
-        return _wrap_func(func, seconds) # type: ignore
+        return _wrap_func(func, seconds)  # type: ignore
 
     return decorator
 

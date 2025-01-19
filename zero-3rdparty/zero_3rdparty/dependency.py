@@ -1,5 +1,6 @@
 """Heavily inspired by https://github.com/ivan-korobkov/python-inject But
 choosing to simplify by providing a smaller set of methods."""
+
 from __future__ import annotations
 
 import logging

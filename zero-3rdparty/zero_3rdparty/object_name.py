@@ -1,4 +1,5 @@
 """FILE FROM mode.utils.objects but modified."""
+
 from __future__ import annotations
 
 import logging

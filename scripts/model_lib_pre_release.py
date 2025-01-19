@@ -5,6 +5,7 @@ name: hello
 age: 1337
 """
 
+
 class MyEntity(model_lib.Entity):
     name: str
     age: int

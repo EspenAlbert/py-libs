@@ -134,6 +134,7 @@ def test_iter_non_blocking():
     with pytest.raises(QueueIsClosed):
         assert list(queue.iter_non_blocking()) == []
 
+
 def test_close_all():
     q1, q2 = ClosableQueue(), ClosableQueue()
     ClosableQueue.close_all()

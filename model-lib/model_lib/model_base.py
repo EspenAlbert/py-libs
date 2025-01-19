@@ -56,8 +56,10 @@ class _Model(BaseModel):
 class Event(_Model):
     model_config = dict(frozen=True, validate_assignment=True)
 
+
 class Entity(_Model):
     model_config = dict(frozen=False, validate_assignment=False)
+
 
 class TypeEvent:
     @classmethod

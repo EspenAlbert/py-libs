@@ -3,6 +3,7 @@ if a function is decorated or not.
 Can be used to skip decorating by using mark_as_decorator
 And in the decorator itself use the is_decorator? return func else decorate(func)
 """
+
 from typing import TypeVar
 
 from zero_3rdparty.object_name import as_name

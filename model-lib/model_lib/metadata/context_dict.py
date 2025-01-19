@@ -4,6 +4,7 @@
 - metadata during event processing
 - storing unhandled errors
 """
+
 from __future__ import annotations
 
 from asyncio import Task, create_task
@@ -31,8 +32,7 @@ class ParentChildCopy(Protocol):
         child: LocalDict,
         is_new_thread: bool,
         func_name: str,
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 @dataclass

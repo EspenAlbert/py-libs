@@ -29,13 +29,13 @@ def read_nested_or_none(container: DictList, simple_path: str) -> object | None:
 
 def read_nested(container: DictList, simple_path: str) -> Any:
     last_container, final_accessor = _follow_path(container, simple_path)
-    return last_container[final_accessor] # type: ignore
+    return last_container[final_accessor]  # type: ignore
 
 
 def pop_nested(container: DictList, simple_path: str, default: T = _MISSING) -> T:
     last_container, final_accessor = _follow_path(container, simple_path)
     try:
-        return last_container.pop(final_accessor) # type: ignore
+        return last_container.pop(final_accessor)  # type: ignore
     except (IndexError, KeyError) as e:
         if default is _MISSING:
             raise e
@@ -60,7 +60,7 @@ def iter_nested_keys(
         for i, child in enumerate(container):
             child_root_path = f"{root_path}.[{i}]"
             yield child_root_path
-            if isinstance(child, dict|list):
+            if isinstance(child, dict | list):
                 yield from iter_nested_keys(
                     child, child_root_path, include_list_indexes=include_list_indexes
                 )
@@ -103,15 +103,13 @@ def update(
     simple_path: str,
     new_value: object,
     ensure_parents: bool = True,
-) -> dict[str, object]:
-    ...
+) -> dict[str, object]: ...
 
 
 @overload
 def update(
     container: list, simple_path: str, new_value: object, ensure_parents: bool = True
-) -> list:
-    ...
+) -> list: ...
 
 
 def update(
@@ -248,12 +246,12 @@ def _insert_or_update(current: object, final_accessor: str, new_value: object):
     raise NotImplementedError()
 
 
-@_insert_or_update.register # type: ignore
+@_insert_or_update.register  # type: ignore
 def _insert_or_update_dict(current: dict, final_accessor: str, new_value: object):
     current[final_accessor] = new_value
 
 
-@_insert_or_update.register(list) # type: ignore
+@_insert_or_update.register(list)  # type: ignore
 def _insert_or_update_list(current: list, final_accessor: int, new_value: object):
     if len(current) <= final_accessor:
         current.append(new_value)

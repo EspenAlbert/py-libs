@@ -39,6 +39,7 @@ To define errors subclass the BaseError class and specify:
 1. code (expected/crashes)
 2. optionally a msg_template
 """
+
 from __future__ import annotations
 
 import logging

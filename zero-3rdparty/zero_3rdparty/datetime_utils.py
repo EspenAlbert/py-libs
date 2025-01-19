@@ -1,5 +1,6 @@
 """https://docs.python.org/3/library/datetime.html#strftime-and-strptime-
 format-codes."""
+
 from __future__ import annotations
 
 from collections.abc import Iterable

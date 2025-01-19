@@ -6,9 +6,8 @@ SRC = Path(__file__).parent
 DOCS_DIR = SRC / "docs"
 IGNORED_MD_DIRECTORIES = [".pytest_cache", "test", "dist"]
 
-FILENAME_RENAME = {
-    "readme.md": "index.md"
-}
+FILENAME_RENAME = {"readme.md": "index.md"}
+
 
 def ignore_md_path(rel_path: str) -> bool:
     return any(f"{d}/" in rel_path for d in IGNORED_MD_DIRECTORIES)
@@ -18,6 +17,7 @@ def add_dest_paths(src_path: Path, md_dest_path: Path) -> Iterable[Path]:
     if new_name := FILENAME_RENAME.get(md_dest_path.name):
         yield md_dest_path.parent / new_name
     yield md_dest_path
+
 
 def move_md_files():
     for md_src_path in SRC.rglob("*.md"):

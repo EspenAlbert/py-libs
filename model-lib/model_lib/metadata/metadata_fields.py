@@ -1,4 +1,5 @@
 """Example of metadata to use when dumping."""
+
 from typing import Any, Iterable
 
 

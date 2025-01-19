@@ -1,4 +1,5 @@
 """isort:skip_file."""
+
 from model_lib.metadata.metadata_fields import EventMetadata, iter_tags
 from model_lib.metadata.metadata import (
     current_metadata,

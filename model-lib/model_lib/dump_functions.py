@@ -14,7 +14,6 @@ def base_model_dumper(model: BaseModel):
     return {key: value for key, value in model if key in fields}
 
 
-
 class IgnoreFalsy(BaseModel):
     @model_serializer(mode="wrap")
     def _ignore_falsy(
@@ -22,10 +21,9 @@ class IgnoreFalsy(BaseModel):
         nxt: pydantic.SerializerFunctionWrapHandler,
     ):
         serialized = nxt(self)
-        no_falsy = ignore_falsy(**serialized) # type: ignore
+        no_falsy = ignore_falsy(**serialized)  # type: ignore
         return self.dump_dict_modifier(no_falsy)
 
-    
     def dump_dict_modifier(self, payload: dict) -> dict:
         return payload
 

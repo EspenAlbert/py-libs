@@ -54,13 +54,14 @@ class _ExampleDumpModel(BaseModel):
         serialized = nxt(self)
         return ignore_falsy(**serialized)
 
+
 def test_model_serializer():
     model = _ExampleDumpModel(name="no_items")
     assert model.model_dump() == {"name": "no_items"}
 
 
 class MySettings(BaseSettings):
-    model_config = {"env_prefix": "my_", "case_sensitive":True}
+    model_config = {"env_prefix": "my_", "case_sensitive": True}
     var1: str
     var_specific: str = Field(validation_alias="OTHER_NAME")
 

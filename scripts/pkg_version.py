@@ -1,8 +1,9 @@
 from __future__ import annotations
-from contextlib import suppress
-from dataclasses import dataclass
+
 import re
 import sys
+from contextlib import suppress
+from dataclasses import dataclass
 from pathlib import Path
 
 REPO_PATH = Path(__file__).parents[1]

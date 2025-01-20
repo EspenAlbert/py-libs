@@ -19,7 +19,7 @@ def model_lib_basic():
     assert parsed_model == MyEntity(name="hello", age=1337)
     for dump_fmt in ["json", "yml", "toml"]:
         assert model_lib.dump(parsed_model, dump_fmt)
-    print("check_yaml_basic passed ✅")  # noqa: T201
+    print("check_yaml_basic passed ✅")
 
 
 if __name__ == "__main__":

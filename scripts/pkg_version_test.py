@@ -1,5 +1,5 @@
-import pytest
 import pkg_version
+import pytest
 
 
 @pytest.mark.parametrize("version", ["1.0.0", "1.0.0+rc1", "1.0.0+a1", "1.0.0+b1"])

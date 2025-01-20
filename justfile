@@ -9,16 +9,13 @@ lint:
   uv run ruff check .
 type:
   uv run pyright
-test:
-  uv run pytest
-test-py310:
-  uv run --python 3.10 pytest
-test-py311:
-  uv run --python 3.11 pytest
-test-py312:
-  uv run --python 3.12 pytest
-test-py313:
-  uv run --python 3.13 pytest
+test version='3.10':
+  uv run --python {{version}} pytest
+test-all:
+  just test 3.10
+  just test 3.11
+  just test 3.12
+  just test 3.13
 cov:
   export RUN_SLOW=false && uv run pytest --cov --cov-report=html
 cov-full:

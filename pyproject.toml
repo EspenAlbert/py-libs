@@ -2,7 +2,10 @@
 name = "py-libs"
 version = "1.0.0+rc1"
 requires-python = ">=3.10"
-dependencies = ["model-lib[toml]", "zero-3rdparty"]
+dependencies = [
+    "model-lib[toml]",
+    "zero-3rdparty",
+]
 
 [tool.uv]
 package = false
@@ -49,8 +52,8 @@ dev = [
     "pytest-asyncio==0.15.1",
     "pytest-cov==3.0.0",
     "pytest-regressions==2.0.1",
-    "pytest-freezegun==0.4.2",
     "pytest-subtests==0.5.0",
     "xdoctest==0.15.4",
     "pyright>=1.1.392.post0",
+    "pytest-freezer>=0.4.9",
 ]

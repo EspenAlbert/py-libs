@@ -7,9 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 REPO_PATH = Path(__file__).parents[1]
-
+MODEL_LIB = "model-lib"
 _pkg_names = {
-    "m": "model-lib",
+    "m": MODEL_LIB,
     "z": "zero-3rdparty",
 }
 
@@ -33,7 +33,7 @@ def find_pkg(pkg_name: str) -> str:
 
 
 _version_regex = re.compile(
-    r"^(VERSION|version)\s+=\s+\"(?P<version>\d+\.\d+\.\d+\+?[\w\d]*)\"$", re.M
+    r"^(VERSION|version)\s+:?=\s+\"(?P<version>\d+\.\d+\.\d+\+?[\w\d]*)\"$", re.M
 )
 
 
@@ -64,7 +64,10 @@ def sub_version(pkg_name: str, old_version: str, new_version: str) -> None:
     def replacer(match: re.Match) -> str:
         return match.group(0).replace(old_version, new_version)
 
-    for path in [init_file(pkg_name), pyproject_file(pkg_name)]:
+    files = [init_file(pkg_name), pyproject_file(pkg_name)]
+    if pkg_name == MODEL_LIB:
+        files.append(REPO_PATH / "justfile")
+    for path in files:
         if not path.exists():
             raise FileNotFoundError(f"Could not find file: {path} for {pkg_name}")
         new_text = re.sub(_version_regex, replacer, path.read_text(), 1)

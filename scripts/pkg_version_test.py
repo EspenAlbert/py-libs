@@ -5,6 +5,8 @@ import pytest
 @pytest.mark.parametrize("version", ["1.0.0", "1.0.0+rc1", "1.0.0+a1", "1.0.0+b1"])
 def test_pkg_version(version):
     assert pkg_version.extract_version(version, f'VERSION = "{version}"') == version
+    assert pkg_version.extract_version(version, f'VERSION := "{version}"') == version
+    assert pkg_version.extract_version(version, f'version := "{version}"') == version
     assert pkg_version.PkgVersion.parse(version)
 
 

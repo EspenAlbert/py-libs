@@ -88,8 +88,22 @@ def want_bool(s: Union[str, bool, None]) -> bool:
     False
     >>> want_bool("True")
     True
+    >>> want_bool(True)
+    True
+    >>> want_bool(1)
+    True
+    >>> want_bool(0)
+    False
+    >>> want_bool(22)
+    Traceback (most recent call last):
+    ...
+    ValueError: int value=22 not 0 or 1
+    >>> want_bool(object())
+    Traceback (most recent call last):
+    ...
+    NotImplementedError: object
     """
-    raise NotImplementedError
+    raise NotImplementedError(type(s).__name__)
 
 
 @want_bool.register
@@ -100,6 +114,14 @@ def _want_bool_str(s: str) -> bool:
 @want_bool.register
 def _want_bool_bool(s: bool) -> bool:
     return s
+
+@want_bool.register
+def _want_bool_int(s: int) -> bool:
+    if s == 0:
+        return False
+    if s == 1:
+        return True
+    raise ValueError(f"int value={s} not 0 or 1")
 
 
 @want_bool.register

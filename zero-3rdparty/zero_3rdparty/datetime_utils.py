@@ -4,7 +4,7 @@ format-codes."""
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import UTC, date, datetime, timedelta
+from datetime import timezone, date, datetime, timedelta
 from functools import singledispatch
 from typing import TypeVar
 
@@ -18,8 +18,8 @@ def get_date_as_rfc3339_without_time(date: datetime | None = None) -> str:
     :return:
     """
     if date is None:
-        date = datetime.now(tz=UTC)
-    return date.astimezone(UTC).isoformat()[:10]
+        date = datetime.now(tz=timezone.utc)
+    return date.astimezone(timezone.utc).isoformat()[:10]
 
 
 @singledispatch
@@ -40,24 +40,24 @@ def dump_date_as_rfc3339(
 def _dump_date_as_rfc3339_date(date: datetime, strip_microseconds: bool = False) -> str:
     if strip_microseconds:
         date = date.replace(microsecond=0)
-    return date.astimezone(UTC).isoformat()
+    return date.astimezone(timezone.utc).isoformat()
 
 
 @dump_date_as_rfc3339.register
 def _dump_date_as_rfc3339_none(
     date: None = None, strip_microseconds: bool = False
 ) -> str:
-    return _dump_date_as_rfc3339_date(datetime.now(tz=UTC), strip_microseconds)
+    return _dump_date_as_rfc3339_date(datetime.now(tz=timezone.utc), strip_microseconds)
 
 
 @dump_date_as_rfc3339.register
 def _dump_date_as_rfc3339_float(date: float, strip_microseconds: bool = False) -> str:
-    dt = datetime.fromtimestamp(date, tz=UTC)
+    dt = datetime.fromtimestamp(date, tz=timezone.utc)
     return _dump_date_as_rfc3339_date(dt, strip_microseconds)
 
 
 def utc_now():
-    return datetime.now(tz=UTC)
+    return datetime.now(tz=timezone.utc)
 
 
 def week_nr(dt: datetime) -> int:
@@ -67,7 +67,7 @@ def week_nr(dt: datetime) -> int:
 def as_ms_precision_utc(dt: datetime) -> datetime:
     old_microseconds = dt.microsecond
     new_microseconds = str(old_microseconds)[:3] + "000"
-    return dt.replace(microsecond=int(new_microseconds), tzinfo=UTC)
+    return dt.replace(microsecond=int(new_microseconds), tzinfo=timezone.utc)
 
 
 def utc_now_ms_precision() -> datetime:
@@ -87,13 +87,13 @@ def seconds_between_safe(start: datetime, end: datetime) -> float:
     >>> seconds_between_safe(datetime(2020, 1, 1, 1), datetime(2020, 1, 1, 2, tzinfo=timezone.utc))
     3600.0
     """
-    start = start if start.tzinfo else start.replace(tzinfo=UTC)
-    end = end if end.tzinfo else end.replace(tzinfo=UTC)
+    start = start if start.tzinfo else start.replace(tzinfo=timezone.utc)
+    end = end if end.tzinfo else end.replace(tzinfo=timezone.utc)
     return (end - start).total_seconds()
 
 
 def ensure_tz(dt: datetime) -> datetime:
-    return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
 def parse_kub_time(raw: str) -> datetime:
@@ -120,7 +120,7 @@ def want_dt(dt: object) -> datetime:
 
 @want_dt.register
 def _from_date(dt: date):
-    return datetime(year=dt.year, month=dt.month, day=dt.day, tzinfo=UTC)
+    return datetime(year=dt.year, month=dt.month, day=dt.day, tzinfo=timezone.utc)
 
 
 @want_dt.register
@@ -130,7 +130,7 @@ def _from_datetime(dt: datetime):
 
 @want_dt.register
 def _from_int(dt: int):
-    return datetime.fromtimestamp(dt, tz=UTC)
+    return datetime.fromtimestamp(dt, tz=timezone.utc)
 
 
 @want_dt.register
@@ -194,7 +194,7 @@ def parse_date_filename_with_seconds(raw: str) -> datetime:
     >>> parse_date_filename_with_seconds('2021-04-07T08-46-02')
     datetime.datetime(2021, 4, 7, 8, 46, 2, tzinfo=datetime.timezone.utc)
     """
-    return datetime.strptime(raw, "%Y-%m-%dT%H-%M-%S").replace(tzinfo=UTC)
+    return datetime.strptime(raw, "%Y-%m-%dT%H-%M-%S").replace(tzinfo=timezone.utc)
 
 
 def as_day_name(dt: datetime | date) -> str:
@@ -308,7 +308,7 @@ def week_dt(year: int, week: int) -> datetime:
     >>> week_dt(2023, 18)
     datetime.datetime(2023, 5, 1, 0, 0, tzinfo=datetime.timezone.utc)
     """
-    jan_1st = datetime(year, 1, 1, tzinfo=UTC)
+    jan_1st = datetime(year, 1, 1, tzinfo=timezone.utc)
     start_monday = jan_1st - timedelta(days=jan_1st.weekday())
     if week_nr(start_monday) != 1:
         start_monday += timedelta(weeks=1)

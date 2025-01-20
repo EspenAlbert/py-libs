@@ -1,7 +1,7 @@
 [project]
 name = "model-lib"
 version = "1.0.0+rc1"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
   "pydantic~=2.10.4",
   "pydantic-settings~=2.7.1",

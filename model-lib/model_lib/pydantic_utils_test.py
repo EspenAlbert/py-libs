@@ -1,4 +1,4 @@
-from datetime import UTC, timedelta
+from datetime import timezone, timedelta
 
 import pydantic
 from pydantic import BaseModel, Field, model_serializer
@@ -136,7 +136,7 @@ def test_utc_datetime():
     dt_no_timezone = parse_dt("2023-08-16T16:42:14")
     assert dt_no_timezone.tzinfo is None
     model = _TimeModel(utc=dt_no_timezone, utc_ms=dt_no_timezone)
-    assert model.utc.tzinfo == UTC
+    assert model.utc.tzinfo == timezone.utc
 
 
 def test_utc_datetime_ms():

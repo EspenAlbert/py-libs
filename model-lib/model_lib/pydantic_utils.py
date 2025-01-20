@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any, List, Type, TypeVar, Union
 
 import pydantic
@@ -161,7 +161,7 @@ if IS_PYDANTIC_V2:
 
     def ensure_timezone(value: datetime):
         if not value.tzinfo:
-            return value.replace(tzinfo=UTC)
+            return value.replace(tzinfo=timezone.utc)
         return value
 
     utc_datetime: TypeAlias = Annotated[datetime, AfterValidator(ensure_timezone)]
@@ -176,7 +176,7 @@ else:
         @classmethod
         def ensure_utc(cls, value: datetime):
             if not value.tzinfo:
-                return value.replace(tzinfo=UTC)
+                return value.replace(tzinfo=timezone.utc)
             return value
 
     utc_datetime: TypeAlias = Union[_utc_datetime, datetime]

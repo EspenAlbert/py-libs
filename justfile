@@ -1,3 +1,7 @@
+alias b := build
+alias t := test
+pre-push: lint test
+  @echo "All checks passed"
 build:
   uv build --package zero-3rdparty
   uv build --package model-lib
@@ -18,8 +22,8 @@ test-all:
   just test 3.13
 cov:
   export RUN_SLOW=false && uv run pytest --cov --cov-report=html
-cov-full:
-  export RUN_SLOW=true && uv run pytest --cov --cov-report=html
+cov-full format='html':
+  export RUN_SLOW=true && uv run pytest --cov --cov-report={{format}}
 open-cov: cov
   open htmlcov/index.html
 open-cov-full: cov-full

@@ -115,6 +115,7 @@ def _want_bool_str(s: str) -> bool:
 def _want_bool_bool(s: bool) -> bool:
     return s
 
+
 @want_bool.register
 def _want_bool_int(s: int) -> bool:
     if s == 0:

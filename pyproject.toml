@@ -35,7 +35,7 @@ show-fixes=true
 exclude=["_pants", "compose_chart_export", "docker_compose_parser", "docker_example"]
 
 [tool.ruff.lint]
-extend-ignore=[ "E501", "UP006", "UP007", "UP035"]
+extend-ignore=[ "E501", "UP006", "UP007", "UP035", "UP017"]
 extend-select = ['Q', 'RUF100', 'C90', 'UP', 'I', 'T']
 flake8-quotes = {inline-quotes = 'double', multiline-quotes = 'double'}
 isort = { known-first-party = ['tests'] }

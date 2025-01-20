@@ -4,7 +4,7 @@ format-codes."""
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import timezone, date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from functools import singledispatch
 from typing import TypeVar
 

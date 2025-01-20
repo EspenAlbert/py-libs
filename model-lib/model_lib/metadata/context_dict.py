@@ -48,7 +48,7 @@ class CopyConfig:
     never: bool = False
     thread_copy: bool | Callable[[], bool] = False
     task_copy: bool | Callable[[], bool] = True
-    copy_func: Callable[[T], T] = identity
+    copy_func: Callable[[T], T] = identity # type: ignore
     # is thread
     on_copy_done: ParentChildCopy | None = None
 

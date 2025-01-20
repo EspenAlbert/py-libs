@@ -72,7 +72,7 @@ def create_model(
     return cls(**model_args) if model_kwargs else cls(model_args)  # type: ignore
 
 
-def _lookup_safe(model_name: str) -> Type[T] | None:
+def _lookup_safe(model_name: str) -> Type | None:
     with suppress(UnknownModelError):
         return model_name_to_t(model_name)
     return None
@@ -111,7 +111,7 @@ def parse_model_metadata(
     return create_model(model_cls, model_args, extra_kwargs or {}), metadata
 
 
-def parse_model_name_kwargs_list(payload: RegisteredPayloadT) -> list[T]:
+def parse_model_name_kwargs_list(payload: Any) -> list:
     raw_events: list = cast(list, parse_payload(payload))
     parsed_events = []
     for cls_name_kwargs in raw_events:
@@ -159,12 +159,12 @@ def _parse_list(payload: list, format=FileFormat.json):
     return payload
 
 
-def get_parsers() -> dict[Type[RegisteredPayloadT], PayloadParser]:
+def get_parsers() -> dict[Type, PayloadParser]:
     return _registered_parsers
 
 
 def register_parser(
-    payload_type: Type[RegisteredPayloadT], call: PayloadParser
+    payload_type: Type, call: PayloadParser
 ) -> None:
     if previous := _registered_parsers.get(payload_type):
         raise PayloadParserAlreadyExistError(as_name(previous), as_name(call))

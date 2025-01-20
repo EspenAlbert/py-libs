@@ -148,7 +148,7 @@ def test_utc_datetime_ms():
 
 def test_dumping_time_model():
     dt = parse_dt("2023-08-16T16:42:14.123456")
-    model = _TimeModel(utc=dt, utc_ms=dt, td=30)
+    model = _TimeModel(utc=dt, utc_ms=dt, td=30) # type: ignore
     assert model.td == timedelta(seconds=30)
     expected_json = '{"utc":"2023-08-16T16:42:14.123456Z","utc_ms":"2023-08-16T16:42:14.123000Z","td":"PT30S"}'
     assert dump(model, "json") == expected_json

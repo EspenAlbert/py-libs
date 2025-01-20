@@ -39,7 +39,7 @@ def dump_as_toml_str_compact(
     # dumps to json and parse 1st to support custom types
     # and since an error will have a side effect on the instance creating a _TomlObject
     if isinstance(instance, list):
-        raw: list = dump_as_list(instance)
+        raw: list | dict = dump_as_list(instance) # type: ignore
     else:
         raw: dict = dump_as_dict(instance)  # type: ignore
     return dump_toml_str(

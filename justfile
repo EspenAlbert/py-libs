@@ -34,3 +34,6 @@ pre-release: build
   uv pip sync --python .venv-ci/bin/python .venv-ci/requirements.txt
   uv pip install --python .venv-ci/bin/python -r .venv-ci/requirements.txt
   .venv-ci/bin/python scripts/model_lib_pre_release.py
+docs command='serve':
+  uv run scripts/pre_docs.py
+  mkdocs {{command}}

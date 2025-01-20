@@ -11,7 +11,7 @@ def field_names(cls: type[T] | T) -> list[str]:
     return [f.name for f in fields(cls)]  # type: ignore
 
 
-def values(instance: T) -> list:
+def values(instance: object) -> list:
     return [getattr(instance, name) for name in field_names(instance)]
 
 
@@ -32,7 +32,7 @@ def copy(
 
 
 def key_values(
-    instance: T, filter: Callable[[str], bool] | None = None
+    instance: object, filter: Callable[[str], bool] | None = None
 ) -> dict[str, Any]:
     return {
         field_name: getattr(instance, field_name)

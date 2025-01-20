@@ -6,7 +6,7 @@ from zero_3rdparty.iter_utils import first_or_none
 V = TypeVar("V")
 
 
-class TypeDict(Dict[Type, Iterable[V]]):
+class TypeDict(Dict[Type | tuple[Type, bool], Iterable[tuple[V, bool]]]):
     """Stores a list of Iterable[Tuple[V, bool]] But when the value is get, the
     iterator of the __getitem__ is returned."""
 
@@ -29,9 +29,9 @@ class TypeDict(Dict[Type, Iterable[V]]):
         )
 
     def filter(self, key: Type, strict: bool, base_t: Type):
-        return strict is False or key is base_t
+        return not strict or key is base_t
 
-    def __getitem__(self, item: Type) -> Iterable[V]:
+    def __getitem__(self, item: Type) -> Iterable[V]:  # type: ignore
         for base_t in item.__mro__[:-1]:  # skip object
             for value, strict in super().get(base_t, []):  # type: ignore
                 if self.filter(item, strict, base_t):  # type: ignore
@@ -46,4 +46,4 @@ class TypeDict(Dict[Type, Iterable[V]]):
         return value
 
     def __len__(self):
-        return sum(len(values) for values in self.values())
+        return sum(len(values) for values in self.values())  # type: ignore

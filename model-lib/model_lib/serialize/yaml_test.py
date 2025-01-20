@@ -2,7 +2,7 @@ from pathlib import Path
 
 # flake8: noqa
 # otherwise pants will not include the file in the tests
-from model_lib.serialize import *
+from model_lib.serialize import * # type: ignore
 from model_lib.serialize import yaml_serialize
 from model_lib.serialize.yaml_serialize import (
     _add_brackets,

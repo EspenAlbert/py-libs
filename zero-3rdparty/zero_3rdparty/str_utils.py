@@ -269,20 +269,6 @@ def skip_lines(lines: str, skip_parts: List[str]) -> str:
     )
 
 
-_long_string = "some-very-long-merryh-piece-of-text-that-has-an-end"
-
-
-def reduce_len(message_value: AnyStr) -> AnyStr:
-    """
-    >>> reduce_len(_long_string)
-    'some-very-lo[...]t-has-an-end'
-    """
-    total_length = len(message_value)
-    one_fourth = total_length // 4
-    placeholder = "[...]" if isinstance(message_value, str) else b"[...]"
-    return message_value[:one_fourth] + placeholder + message_value[-one_fourth:]
-
-
 def ensure_within_len(msg: str, max_length: int, truncator="...") -> str:
     """
     >>> ensure_within_len("123456789", max_length=8)

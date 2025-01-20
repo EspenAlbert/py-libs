@@ -52,6 +52,7 @@ interpreter_constraints=[">=3.11"]
 
 def test_parse_toml_str():
     parsed = parse_payload(_toml_example, "toml")
+    assert isinstance(parsed, dict)
     assert parsed["black"] == {"config": "pyproject.toml"}
 
 
@@ -59,6 +60,7 @@ def test_parse_toml_path(tmp_path):
     path = tmp_path / "my_file.toml"
     path.write_text(_toml_example)
     parsed = parse_payload(path)
+    assert isinstance(parsed, dict)
     assert parsed["black"] == {"config": "pyproject.toml"}
 
 

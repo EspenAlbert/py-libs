@@ -64,9 +64,9 @@ def clean_dir(
     path: Path, expected_parents: int = 2, recreate: bool = True, ignore_errors=True
 ) -> None:
     if not running_in_container_environment():
-        assert (
-            len(Path(path).parents) > expected_parents
-        ), f"rm root by accident {path}?"
+        assert len(Path(path).parents) > expected_parents, (
+            f"rm root by accident {path}?"
+        )
     rm_tree_logged(str(path), logger, ignore_errors=ignore_errors)
     if recreate:
         path.mkdir(parents=True, exist_ok=True)
@@ -95,7 +95,7 @@ def copy(
         shutil.copy(src, dest)
 
 
-def ensure_parents_write_text(path: os.PathLike, text: str, log: bool = False) -> None:
+def ensure_parents_write_text(path: Path | str, text: str, log: bool = False) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)

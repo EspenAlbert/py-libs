@@ -7,16 +7,18 @@ from dataclasses import dataclass
 from pathlib import Path
 
 REPO_PATH = Path(__file__).parents[1]
-
+MODEL_LIB = "model-lib"
 _pkg_names = {
-    "m": "model-lib",
+    "m": MODEL_LIB,
     "z": "zero-3rdparty",
 }
 
-_pkg_tag_prefix = dict(zip(_pkg_names.values(),_pkg_names.keys()))
+_pkg_tag_prefix = dict(zip(_pkg_names.values(), _pkg_names.keys()))
+
 
 def pkg_tag(pkg_name: str, pkg_version: str) -> str:
     return _pkg_tag_prefix[pkg_name] + pkg_version
+
 
 def find_pkg(pkg_name: str) -> str:
     for key, value in _pkg_names.items():
@@ -31,7 +33,7 @@ def find_pkg(pkg_name: str) -> str:
 
 
 _version_regex = re.compile(
-    r"^(VERSION|version)\s+=\s+\"(?P<version>\d+\.\d+\.\d+\+?[\w\d]*)\"$", re.M
+    r"^(VERSION|version)\s+:?=\s+\"(?P<version>\d+\.\d+\.\d+\+?[\w\d]*)\"$", re.M
 )
 
 
@@ -62,7 +64,10 @@ def sub_version(pkg_name: str, old_version: str, new_version: str) -> None:
     def replacer(match: re.Match) -> str:
         return match.group(0).replace(old_version, new_version)
 
-    for path in [init_file(pkg_name), pyproject_file(pkg_name)]:
+    files = [init_file(pkg_name), pyproject_file(pkg_name)]
+    if pkg_name == MODEL_LIB:
+        files.append(REPO_PATH / "justfile")
+    for path in files:
         if not path.exists():
             raise FileNotFoundError(f"Could not find file: {path} for {pkg_name}")
         new_text = re.sub(_version_regex, replacer, path.read_text(), 1)
@@ -82,7 +87,7 @@ class PkgVersion:
         major, minor, patch = raw.split(".")
         extra = ""
         if non_digit := re.search(r"\D", patch):
-            patch, extra = patch[:non_digit.start()], patch[non_digit.start():]
+            patch, extra = patch[: non_digit.start()], patch[non_digit.start() :]
         return cls(int(major), int(minor), int(patch), extra)
 
     def bump_major(self) -> PkgVersion:
@@ -146,6 +151,7 @@ def main(pkg_name_input: str, command: str):
         raise ValueError(f"Unknown command: {command}")
     print(f"bumping from {pkg_version} to {str(new_version)}")
     sub_version(pkg_name, pkg_version, str(new_version))
+
 
 if __name__ == "__main__":
     *_, pkg_name_input, command = sys.argv

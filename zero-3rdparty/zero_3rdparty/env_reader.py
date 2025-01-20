@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from os import getenv
-from typing import Any, Callable, TypeVar
+from typing import Callable, TypeVar
 
 from zero_3rdparty.run_env import in_test_env
 from zero_3rdparty.str_utils import want_bool
@@ -24,12 +24,12 @@ T = TypeVar("T")
 
 
 def read_env_value(env_key: str, default: T) -> T:
-    value_converter: Callable[[Any], T] = type(default)
+    value_converter: Callable[[str], T] = type(default)
     if value_converter is bool:
         value_converter = want_bool  # type: ignore
     for key_variation in upper_lower_case(env_key):
         if str_value := getenv(key_variation, None):
-            return value_converter(str_value)
+            return value_converter(str_value)  # type: ignore
     return default
 
 

@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import Generic, Iterable, List, Sequence, Type, TypeVar
+from typing import Iterable, List, Type, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 from zero_3rdparty.object_name import as_name
 from zero_3rdparty.str_utils import want_bool
 
 from model_lib.errors import ClsNameAlreadyExist, UnknownModelError
-from model_lib.pydantic_utils import IS_PYDANTIC_V2, model_dump
+from model_lib.pydantic_utils import model_dump
 
 T = TypeVar("T")
 ModelT = TypeVar("ModelT", bound=BaseModel)
@@ -79,34 +79,15 @@ class TypeEvent:
         return [{type(event).__name__: event} for event in values]
 
 
-if IS_PYDANTIC_V2:
-    from pydantic import RootModel  # type: ignore
+SeqModelT = TypeVar("SeqModelT")
 
-    SeqModelT = TypeVar("SeqModelT")
 
-    class SeqModel(RootModel[list[SeqModelT]], Generic[SeqModelT]):
-        def __iter__(self) -> Iterable[SeqModelT]:  # type: ignore
-            return iter(self.root)
+class SeqModel(RootModel[list[SeqModelT]]):
+    def __iter__(self) -> Iterable[SeqModelT]:  # type: ignore
+        return iter(self.root)
 
-        def __getitem__(self, item):
-            return self.root[item]
+    def __getitem__(self, item):
+        return self.root[item]
 
-        def __len__(self):
-            return len(self.root)
-
-else:
-
-    class SeqModel(_Model, Generic[T]):  # type: ignore
-        __root__: Sequence[T]
-
-        def __init_subclass__(cls, **kwargs):
-            assert "__root__" in cls.__fields__
-
-        def __iter__(self) -> Iterable[T]:  # type: ignore
-            return iter(self.__root__)
-
-        def __getitem__(self, item):
-            return self.__root__[item]
-
-        def __len__(self):
-            return len(self.__root__)
+    def __len__(self):
+        return len(self.root)

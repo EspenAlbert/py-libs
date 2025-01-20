@@ -7,7 +7,7 @@ from contextlib import suppress
 from functools import partial
 from queue import Empty, Queue
 from threading import RLock
-from typing import Generic, TypeVar
+from typing import Generator, Generic, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +42,8 @@ class ClosableQueue(Queue[QueueT], Generic[QueueT]):
 
     def close(self):
         with self.mutex:
-            self.put(self.SENTINEL)
-            self.put = partial(_raise_queue_is_closed, queue=self)
+            self.put(self.SENTINEL)  # type: ignore
+            self.put = partial(_raise_queue_is_closed, queue=self)  # type: ignore
         with suppress(Exception):
             self.__QUEUES.remove(self)
 
@@ -51,7 +51,7 @@ class ClosableQueue(Queue[QueueT], Generic[QueueT]):
         with suppress(QueueIsClosed):
             self.close()
 
-    def __iter__(self) -> Iterable[QueueT]:
+    def __iter__(self) -> Generator[QueueT, None, None]:
         try:
             while True:
                 item = super().get(block=True)
@@ -75,12 +75,12 @@ class ClosableQueue(Queue[QueueT], Generic[QueueT]):
             return default
         else:
             if out is self.SENTINEL:
-                self.put(self.SENTINEL)  # ensure next iterator will finish immediately
+                self.put(self.SENTINEL)  # type: ignore # ensure next iterator will finish immediately
             return out
 
     def iter_non_blocking(self) -> Iterable[QueueT]:
         next_or_sentinel = partial(self.pop, self.SENTINEL)
-        return iter(next_or_sentinel, self.SENTINEL)
+        return iter(next_or_sentinel, self.SENTINEL)  # type: ignore
 
     @classmethod
     def close_all(cls):

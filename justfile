@@ -1,6 +1,6 @@
 alias b := build
 alias t := test
-version := '1.0.0a1'
+version := "1.0.0b1"
 pre-push: lint test
   @echo "All checks passed"
 build-only pkg_name:
@@ -16,7 +16,7 @@ lint:
   uv run ruff check .
 type:
   uv run pyright
-test version='3.10':
+test version='3.11':
   uv run --python {{version}} pytest
 test-all:
   just test 3.10
@@ -32,7 +32,7 @@ open-cov: cov
 open-cov-full: cov-full
   open htmlcov/index.html
 pre-release version=version: build
-  uv venv -p python3.10 .venv-ci
+  uv venv -p python3.11 .venv-ci
   echo "dist/model_lib-{{version}}-py3-none-any.whl[toml]" > .venv-ci/requirements.txt
   uv pip sync --python .venv-ci/bin/python .venv-ci/requirements.txt
   uv pip install --python .venv-ci/bin/python -r .venv-ci/requirements.txt

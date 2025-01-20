@@ -28,10 +28,10 @@ from model_lib.pydantic_utils import (
     utc_datetime_ms,
     field_names,
 )
-from model_lib.serialize import *  # noqa F403
+from model_lib.serialize import *  # noqa F403 # type: ignore
 
 UNKNOWN = "_UNKNOWN_"
-VERSION = "1.0.0a4"
+VERSION = "1.0.0b1"
 __all__ = (  # noqa F405
     "Entity",
     "Event",

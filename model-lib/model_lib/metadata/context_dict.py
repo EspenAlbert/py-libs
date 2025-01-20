@@ -48,7 +48,7 @@ class CopyConfig:
     never: bool = False
     thread_copy: bool | Callable[[], bool] = False
     task_copy: bool | Callable[[], bool] = True
-    copy_func: Callable[[T], T] = identity
+    copy_func: Callable[[T], T] = identity # type: ignore
     # is thread
     on_copy_done: ParentChildCopy | None = None
 
@@ -79,7 +79,7 @@ assert DEFAULT_CONFIG.copy_to_task
 
 def copy_value(key: KeyT, value: T) -> T:
     config = get_copy_behavior(key) or DEFAULT_CONFIG
-    return config.copy_func(value)
+    return config.copy_func(value) # type: ignore
 
 
 def set_copy_behavior(t: KeyT, config: CopyConfig) -> None:
@@ -196,7 +196,7 @@ def clear_context_dict():
         return
     if old is ...:
         return
-    _context_dict.set(...)
+    _context_dict.set(...) # type: ignore
 
 
 def get_context_instance(t: type[T]) -> T:

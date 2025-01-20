@@ -287,7 +287,7 @@ def last(iterable: Iterable[T]) -> Optional[T]:
 
 
 def group_by_once(
-    iterable: Iterable[VT], *, key=Callable[[VT], KT]
+    iterable: Iterable[VT], *, key: Callable[[VT], KT]
 ) -> dict[KT, list[VT]]:
     """
     >>> example = ["a", "b", "aa", "c"]

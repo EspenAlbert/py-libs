@@ -36,7 +36,7 @@ def test_cache_ttl(cache_time, expected_max_length):
     assert len(values) <= expected_max_length
 
 
-def call_cached_function(func):
+def call_cached_function(func) -> set:
     values: set[int] = set()
     start = monotonic()
     for i in range(round(TOTAL_RUNTIME / SLEEP_TIME)):
@@ -68,7 +68,7 @@ def test_test_cache_ttl_on_method():
     def call_both_instances():
         return instance.count(), instance2.count()
 
-    values = call_cached_function(call_both_instances)
+    values: set[tuple[int, int]] = call_cached_function(call_both_instances)
     assert all(r1 != r2 for r1, r2 in values)
     assert len({r1 for r1, _ in values}) <= 4
     assert len({r2 for _, r2 in values}) <= 4

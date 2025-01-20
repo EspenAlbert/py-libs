@@ -8,7 +8,6 @@ from model_lib import dump as dump_with_extension
 from model_lib.errors import DumperExist, NoDumper
 from model_lib.model_base import Event
 from model_lib.model_dump import dump, register_dumper
-from model_lib.pydantic_utils import IS_PYDANTIC_V2
 
 
 def test_register_and_remove_call():
@@ -74,9 +73,6 @@ def test_dumping_enum_to_yaml():
 def test_pydantic_json_dump():
     model = _EventWithCachedProperty(first_name="first", last_name="pydantic")
     assert model.full_name == "first pydantic"
-    if IS_PYDANTIC_V2:
-        expected = '{"first_name":"first","last_name":"pydantic"}'
-    else:
-        expected = '{"first_name": "first", "last_name": "pydantic", "full_name": "first pydantic"}'
+    expected = '{"first_name":"first","last_name":"pydantic"}'
     assert dump_with_extension(model, "json_pydantic") == expected
     assert dump_with_extension(model, FileFormat.pydantic_json) == expected

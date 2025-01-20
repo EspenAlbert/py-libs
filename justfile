@@ -28,7 +28,7 @@ open-cov: cov
   open htmlcov/index.html
 open-cov-full: cov-full
   open htmlcov/index.html
-pre-release:
+pre-release: build
   uv venv -p python3.10 .venv-ci
   echo "dist/model_lib-1.0.0+rc1-py3-none-any.whl[toml]" > .venv-ci/requirements.txt
   uv pip sync --python .venv-ci/bin/python .venv-ci/requirements.txt

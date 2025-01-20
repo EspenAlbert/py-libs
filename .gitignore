@@ -3,7 +3,10 @@ __pycache__/
 **/.pytest_cache
 *.pyc
 .venv/
+.venv-ci/
 .ruff_cache
+.coverage
+
 # Pants workspace files
 /.pants.d/
 /dist

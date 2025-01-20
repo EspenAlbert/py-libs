@@ -2,24 +2,91 @@ name: release
 on:
   push:
     tags:
-      - v*
+      - "*"
+  workflow_dispatch: {}
 jobs:
-  release:
+  build:
+    name: >-
+      Build Python 🐍 distribution 📦
     runs-on: ubuntu-latest
+    outputs:
+      pkg: ${{ steps.get_package.outputs.pkg }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - name: setup-steps
+        uses: "./.github/templates/setup-steps"
+      - name: Get the package
+        id: get_package
+        run: echo "pkg=v$(just pkg-find ${{ github.ref_name }})" >> "$GITHUB_OUTPUT"
+      - name: build
+        run: just build-only ${{ steps.get_package.outputs.pkg }}
+      - name: Store the distribution packages
+        uses: actions/upload-artifact@v4
         with:
-          token: ${{ secrets.GH_PAT }}
-      - name: pants_init
-        uses: "./.github/templates/pants_init"
-        with:
-          gh_pat: secrets.GH_PAT
-      - name: publish_to_pypi
-        env:
-          PANTS_TWINE_ARGS: "['-p ${{ secrets.TWINE_PASSWORD }}', '-u __token__']"
-          VERSION: ${{ github.ref_name }}
-        run: |
-          pants publish zero_3rdparty/src/::
-          pants publish model_lib/src/::
-          pants publish docker_compose_parser/src/::
-          pants publish compose_chart_export/src/::
+          name: python-package-distributions
+          path: py/dist/
+  
+  publish-to-pypi:
+    name: >-
+      Publish Python 🐍 distribution 📦 to PyPI
+    if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
+    needs:
+    - build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/${{needs.build.outputs.pkg}}  # Replace <package-name> with your PyPI project name
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Publish distribution 📦 to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    name: >-
+      Sign the Python 🐍 distribution 📦 with Sigstore
+      and upload them to GitHub Release
+    needs:
+    - publish-to-pypi
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # IMPORTANT: mandatory for making GitHub Releases
+      id-token: write  # IMPORTANT: mandatory for sigstore
+
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Sign the dists with Sigstore
+      uses: sigstore/gh-action-sigstore-python@v3.0.0
+      with:
+        inputs: >-
+          ./dist/*.whl
+    - name: Create GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: >-
+        gh release create
+        '${{ github.ref_name }}'
+        --repo '${{ github.repository }}'
+        --notes "Release notes for ${{ github.ref_name }}"
+    - name: Upload artifact signatures to GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      # Upload to GitHub Release using the `gh` CLI.
+      # `dist/` contains the built packages, and the
+      # sigstore-produced signatures and certificates.
+      run: >-
+        gh release upload
+        '${{ github.ref_name }}' dist/**
+        --repo '${{ github.repository }}'
+  

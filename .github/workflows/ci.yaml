@@ -1,42 +1,74 @@
 name: CI - Lint Test Package
 
 on:
+  pull_request:
+    types: [opened, reopened]
   push:
     branches:
       - "**"
 jobs:
-  build:
+  pre_job:
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@v5
+        with:
+          concurrent_skipping: 'same_content_newer'
+  lint:
+    needs: pre_job
+    if: needs.pre_job.outputs.should_skip != 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - name: setup-steps
+        uses: "./.github/templates/setup-steps"
+      - run: just lint
+  type-check:
+    needs: pre_job
+    if: needs.pre_job.outputs.should_skip != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: setup-steps
+        uses: "./.github/templates/setup-steps"
+      - run: just type
+  build:
+    needs: pre_job
+    if: needs.pre_job.outputs.should_skip != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: setup-steps
+        uses: "./.github/templates/setup-steps"
+      - name: build
+        run: just build
+      - name: pre-release
+        run: just pre-release
+  test:
+    needs: pre_job
+    if: needs.pre_job.outputs.should_skip != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: setup-steps
+        uses: "./.github/templates/setup-steps"
+      - run: just test
+      - run: just cov-full xml
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
         with:
-          token: ${{ secrets.GH_PAT }}
-      - name: pants_init
-        uses: "./.github/templates/pants_init"
-        with:
-          gh_pat: secrets.GH_PAT
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      - name: Check BUILD files
-        run: "pants tailor --check update-build-files --check ::"
-      - name: Lint
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
+  workflow-check:
+    needs: pre_job
+    if: needs.pre_job.outputs.should_skip != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check workflow files
         run: |
-          pants lint ::
-        if: success() || failure()
-      - name: Test
-        if: success() || failure()
-        run: |
-          export PANTS_TEST_USE_COVERAGE=true
-          pants test ::
-      - name: Package
-        if: success() || failure()
-        run: "pants --tag='-arm' package ::"
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
-        if: success() || failure()
-        with:
-          files: ./dist/coverage/python/coverage.xml
+          bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          ./actionlint -color
+        shell: bash

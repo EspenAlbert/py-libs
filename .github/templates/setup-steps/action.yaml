@@ -1,0 +1,19 @@
+name: setup-steps
+description: 'Setup steps for running just commands'
+
+inputs:
+  python-version:
+    default: '3.10'
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v4
+      with:
+        python-version: "${{ inputs.python-version }}"
+    - uses: yezz123/setup-uv@v4
+      with:
+        uv-version: "0.5.15"
+    - uses: extractions/setup-just@v2
+      with:
+        just-version: "1.38.0"

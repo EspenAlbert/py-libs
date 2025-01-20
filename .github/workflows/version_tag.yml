@@ -1,0 +1,43 @@
+name: 'New Version Tag'
+run-name: 'Create a new tag for the release'
+
+on:
+  push:
+    branches: 
+    - "main"
+    paths:
+    - "model-lib/model_lib/__init__.py"
+    - "zero-3rdparty/zero_3rdparty/__init__.py"
+
+jobs:
+  create-tag:
+    strategy:
+      fail-fast: false
+      matrix:
+        pkg: ["model-lib", "zero-3rdparty"]
+
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: write
+    steps: 
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: setup-steps
+        uses: "./.github/templates/setup-steps"
+      - name: Get the tag
+        id: get_tag
+        run: echo "tag=v$(just pkg-version ${{ matrix.pkg }} tag)" >> "$GITHUB_OUTPUT"
+      - name: Create release tag
+        id: tag_create
+        uses: rickstaa/action-create-tag@a1c7777fcb2fee4f19b0f283ba888afa11678b72
+        with:
+          tag: ${{ steps.get_tag.outputs.tag }}
+          tag_exists_error: false
+      # https://stackoverflow.com/questions/72110432/github-workflow-is-not-triggered-after-pushing-tags
+      - name: TriggerRelease
+        if: ${{ steps.tag_create.outputs.tag_exists != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run release.yaml --ref ${{ steps.get_tag.outputs.tag }}

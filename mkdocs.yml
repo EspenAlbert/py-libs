@@ -39,12 +39,15 @@ extra:
     - icon: fontawesome/brands/github-alt
       link: https://github.com/EspenAlbert
 
+not_in_nav: |
+  _pants/*
+  compose_chart_export/*
+  docker_compose_parser/*
+
 nav:
 - Get Started: index.md
-- Model Lib: model_lib
-- Compose Chart Export: compose_chart_export
-- Docker Compose Parser: docker_compose_parser
-- zero-3rdparty: zero_3rdparty
+- Model Lib: model-lib/index.md
+- Zero 3rdparty: zero-3rdparty/index.md
 
 
 markdown_extensions:

@@ -3,6 +3,8 @@ alias t := test
 version := '1.0.0a1'
 pre-push: lint test
   @echo "All checks passed"
+build-only pkg_name:
+  uv build --package {{pkg_name}}
 build:
   uv build --package zero-3rdparty
   uv build --package model-lib
@@ -38,3 +40,7 @@ pre-release version=version: build
 docs command='serve':
   uv run scripts/pre_docs.py
   uv run mkdocs {{command}}
+pkg-version pkg_name command='read': # use m for model-lib and z for zero-3rdparty, bump-{patch,minor,major,alpha,beta,rc} or tag to read the git tag
+  @uv run scripts/pkg_version.py {{pkg_name}} {{command}}
+pkg-find tag_name:
+  @uv run scripts/pkg_version.py {{tag_name}} decode-tag

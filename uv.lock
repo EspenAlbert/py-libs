@@ -507,7 +507,7 @@ wheels = [
 
 [[package]]
 name = "model-lib"
-version = "1.0.0+rc1"
+version = "1.0.0a1"
 source = { editable = "model-lib" }
 dependencies = [
     { name = "pydantic" },
@@ -1274,5 +1274,5 @@ wheels = [
 
 [[package]]
 name = "zero-3rdparty"
-version = "1.0.0+rc1"
+version = "1.0.0a1"
 source = { editable = "zero-3rdparty" }

@@ -31,6 +31,7 @@ from model_lib.pydantic_utils import (
 from model_lib.serialize import *  # noqa F403
 
 UNKNOWN = "_UNKNOWN_"
+VERSION = "1.0.0a1"
 __all__ = (  # noqa F405
     "Entity",
     "Event",

@@ -27,7 +27,7 @@ jobs:
         uses: "./.github/templates/setup-steps"
       - name: Get the tag
         id: get_tag
-        run: echo "tag=v$(just pkg-version ${{ matrix.pkg }} tag)" >> "$GITHUB_OUTPUT"
+        run: echo "tag=$(just pkg-version ${{ matrix.pkg }} tag)" >> "$GITHUB_OUTPUT"
       - name: Create release tag
         id: tag_create
         uses: rickstaa/action-create-tag@a1c7777fcb2fee4f19b0f283ba888afa11678b72

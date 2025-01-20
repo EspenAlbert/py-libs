@@ -36,4 +36,4 @@ pre-release: build
   .venv-ci/bin/python scripts/model_lib_pre_release.py
 docs command='serve':
   uv run scripts/pre_docs.py
-  mkdocs {{command}}
+  uv run mkdocs {{command}}

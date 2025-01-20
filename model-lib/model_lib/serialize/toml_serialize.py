@@ -32,7 +32,7 @@ class TomlModule:
 toml = TomlModule()
 _, version_minor, *__ = sys.version_info
 with suppress(ModuleNotFoundError):
-    import tomlkit
+    import tomlkit  # type: ignore
 
     def loads(value: str) -> Union[dict, list]:
         loaded = tomlkit.loads(value)
@@ -43,7 +43,7 @@ with suppress(ModuleNotFoundError):
 
 if not toml.loads_ready:
     try:
-        import tomli
+        import tomli  # type: ignore
 
         toml.loads = tomli.loads
     except ModuleNotFoundError:
@@ -66,7 +66,7 @@ _dumps = toml.dumps
 
 
 def dump_toml_str(data: object, **kwargs) -> str:
-    return _dumps(data, **kwargs)
+    return _dumps(data, **kwargs) # type: ignore
 
 
 _loads = toml.loads

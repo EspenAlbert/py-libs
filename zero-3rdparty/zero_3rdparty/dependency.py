@@ -110,7 +110,7 @@ class MissingDependencies(BaseError):
         self.missing_dependencies = missing_dependencies
 
 
-def _as_member_dependencies(member: Any) -> list[tuple[str, type[T]]]:
+def _as_member_dependencies(member: T) -> list[tuple[str, type[T]]]:
     """
     Tip:
         cannot use inspect.getmembers since it will ignore dependencies

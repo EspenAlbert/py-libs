@@ -65,7 +65,7 @@ def create_model(
     model_kwargs = isinstance(model_args, dict)
     if extra_kwargs:
         return (
-            cls(**(model_args | extra_kwargs))
+            cls(**(model_args | extra_kwargs)) # type: ignore
             if model_kwargs
             else cls(model_args, **extra_kwargs)  # type: ignore
         )

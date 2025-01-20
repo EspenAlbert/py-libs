@@ -3,10 +3,10 @@ from __future__ import annotations
 import logging
 import re
 from io import StringIO
-from os import getenv
 from pathlib import Path
 from typing import Callable, List, Mapping, Match, Union
 
+import yaml
 from pydantic import BaseModel
 from zero_3rdparty.dict_nested import read_nested
 from zero_3rdparty.file_utils import PathLike
@@ -16,35 +16,6 @@ from model_lib.dump_functions import base_model_dumper
 from model_lib.model_dump import register_dumper
 
 logger = logging.getLogger(__name__)
-
-
-try:
-    import yaml  # type: ignore
-except ModuleNotFoundError:
-    allow_ignore = "yes,true,1"
-    ignore_name = "IGNORE_YAML_MISSING"
-    yaml_missing = Exception(f"pip install PyYAML or export {ignore_name}=yes")
-    if getenv(ignore_name, "no").lower() in allow_ignore:
-        logger.warning("PyYAML not installed, but ignored!")
-    else:
-        raise yaml_missing
-
-    class yaml_dummy:
-        def safe_dump(self, *_, **__):
-            raise yaml_missing
-
-        def safe_load(self, *_, **__):
-            raise yaml_missing
-
-        @property
-        def Dumper(self):
-            raise yaml_missing
-
-        @property
-        def SafeDumper(self):
-            raise yaml_missing
-
-    yaml = yaml_dummy()  # type: ignore
 
 
 def dump_yaml_str(
@@ -83,7 +54,7 @@ def dump_yaml_str(
     return s.getvalue()
 
 
-def dump_yaml_file(path: PathLike, data: Mapping, width=1000, sort_keys: bool = False):
+def dump_yaml_file(path: PathLike| str, data: Mapping, width=1000, sort_keys: bool = False):
     with open(path, "w") as f:
         yaml.safe_dump(
             data, stream=f, default_flow_style=False, width=width, sort_keys=sort_keys

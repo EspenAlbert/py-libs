@@ -16,7 +16,7 @@ lint:
   uv run ruff check .
 type:
   uv run pyright
-test version='3.10':
+test version='3.11':
   uv run --python {{version}} pytest
 test-all:
   just test 3.10

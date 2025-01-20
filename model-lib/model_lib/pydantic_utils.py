@@ -3,32 +3,11 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, List, Type, TypeVar, Union
 
-import pydantic
-from pydantic import BaseModel, conint
+from pydantic import AfterValidator, BaseModel, TypeAdapter, conint
+from pydantic.v1.datetime_parse import parse_datetime
+from pydantic_settings import BaseSettings
 from typing_extensions import Annotated, TypeAlias
-
-IS_SETTINGS_INSTALLED = False
-IS_PYDANTIC_V2 = int(pydantic.VERSION.split(".")[0]) >= 2
-use_pydantic_settings = False
-try:
-    from pydantic_settings import BaseSettings
-
-    IS_SETTINGS_INSTALLED = True
-
-except ModuleNotFoundError:
-    if IS_PYDANTIC_V2:
-        from pydantic.v1.env_settings import BaseSettings
-    else:
-        from pydantic import BaseSettings
-if IS_PYDANTIC_V2:
-    from pydantic import TypeAdapter
-    from pydantic.v1.datetime_parse import parse_datetime
-else:
-    from pydantic import parse_obj_as
-    from pydantic.datetime_parse import parse_datetime
-
-from zero_3rdparty.datetime_utils import as_ms_precision_utc, ensure_tz  # noqa: E402
-from zero_3rdparty.iter_utils import first  # noqa: E402
+from zero_3rdparty.datetime_utils import as_ms_precision_utc, ensure_tz
 
 
 def env_var_name(
@@ -36,22 +15,17 @@ def env_var_name(
 ) -> str:
     model_field = model_fields(settings).get(field_name)
     assert model_field, f"{settings}.{field_name} NOT FOUND"
-    if IS_SETTINGS_INSTALLED:
-        from pydantic_settings.sources import EnvSettingsSource
+    from pydantic_settings.sources import EnvSettingsSource
 
-        model_config = settings.model_config
-        source = EnvSettingsSource(
-            settings,  # type: ignore
-            case_sensitive=model_config["case_sensitive"],
-            env_prefix=model_config["env_prefix"],
-            env_nested_delimiter=model_config["env_nested_delimiter"],
-        )
-        field_infos = source._extract_field_info(model_field, field_name)
-        return field_infos[0][1]
-    extra_info = model_field.field_info.extra
-    if env := extra_info.get("env"):
-        return env
-    return first(extra_info["env_names"], str)
+    model_config = settings.model_config
+    source = EnvSettingsSource(
+        settings,  # type: ignore
+        case_sensitive=model_config.get("case_sensitive"),
+        env_prefix=model_config.get("env_prefix"),
+        env_nested_delimiter=model_config.get("env_nested_delimiter"),
+    )
+    field_infos = source._extract_field_info(model_field, field_name)
+    return field_infos[0][1]
 
 
 def env_var_names(settings: BaseSettings | Type[BaseSettings]) -> list[str]:
@@ -59,56 +33,35 @@ def env_var_names(settings: BaseSettings | Type[BaseSettings]) -> list[str]:
 
 
 def parse_object_as(object_type: Type, data: Any):
-    if IS_PYDANTIC_V2:
-        return TypeAdapter(object_type).validate_python(data)
-    else:
-        return parse_obj_as(object_type, data)
+    return TypeAdapter(object_type).validate_python(data)
 
 
 def get_field_type(field):
-    if IS_PYDANTIC_V2:
-        return field.annotation
-    else:
-        return field.type_
+    return field.annotation
 
 
 def model_fields(model):
-    if IS_PYDANTIC_V2:
-        return model.model_fields
-    else:
-        return model.__fields__
+    return model.model_fields
 
 
 def model_dump(model, **kwargs):
-    if IS_PYDANTIC_V2:
-        return model.model_dump(**kwargs)
-    else:
-        return model.dict(**kwargs)
+    return model.model_dump(**kwargs)
 
 
 def model_json(model: BaseModel, **kwargs) -> str:
-    if IS_PYDANTIC_V2:
-        return model.model_dump_json(**kwargs)
-    else:
-        return model.json(**kwargs)
+    return model.model_dump_json(**kwargs)
 
 
 uint16 = conint(gt=-1, lt=65536)
 
 
 def cls_defaults(model: Type[BaseModel]) -> dict:
-    if IS_PYDANTIC_V2:
-        from pydantic_core import PydanticUndefined
+    from pydantic_core import PydanticUndefined
 
-        return {
-            name: field.get_default()
-            for name, field in model_fields(model).items()
-            if field.get_default() != PydanticUndefined
-        }
     return {
         name: field.get_default()
         for name, field in model_fields(model).items()
-        if field.get_default() is not None
+        if field.get_default() != PydanticUndefined
     }
 
 
@@ -148,55 +101,22 @@ BaseModelT = TypeVar("BaseModelT", bound=BaseModel)
 
 
 def copy_and_validate(model: BaseModelT, **updates) -> BaseModelT:
-    cls = type(model)
-    if IS_PYDANTIC_V2:
-        return model.model_copy(update=updates, deep=True)
-    new_model = model.copy(update=updates, deep=True)
-    return cls(**new_model.dict())
+    return model.model_copy(update=updates, deep=True)
 
 
 parse_dt = parse_datetime
-if IS_PYDANTIC_V2:
-    from pydantic import AfterValidator
 
-    def ensure_timezone(value: datetime):
-        if not value.tzinfo:
-            return value.replace(tzinfo=timezone.utc)
-        return value
 
-    utc_datetime: TypeAlias = Annotated[datetime, AfterValidator(ensure_timezone)]
-else:
+def ensure_timezone(value: datetime):
+    if not value.tzinfo:
+        return value.replace(tzinfo=timezone.utc)
+    return value
 
-    class _utc_datetime(datetime):
-        @classmethod
-        def __get_validators__(cls):
-            yield parse_datetime
-            yield cls.ensure_utc
 
-        @classmethod
-        def ensure_utc(cls, value: datetime):
-            if not value.tzinfo:
-                return value.replace(tzinfo=timezone.utc)
-            return value
+utc_datetime: TypeAlias = Annotated[datetime, AfterValidator(ensure_timezone)]
 
-    utc_datetime: TypeAlias = Union[_utc_datetime, datetime]
+utc_datetime_ms: TypeAlias = Annotated[datetime, AfterValidator(as_ms_precision_utc)]
 
-if IS_PYDANTIC_V2:
-    utc_datetime_ms: TypeAlias = Annotated[
-        datetime, AfterValidator(as_ms_precision_utc)
-    ]
-else:
-
-    class _utc_datetime_ms(datetime):
-        @classmethod
-        def __get_validators__(cls):
-            yield parse_datetime
-            yield as_ms_precision_utc
-
-    # necessary otherwise pycharm complains when passing a datetime and not utc_datetime
-    #: handy for mongo which only supports ms anyway.
-    #: WARNING: do not use with default_factory
-    utc_datetime_ms: TypeAlias = Union[_utc_datetime_ms, datetime]
 StrBytesIntFloat: TypeAlias = Union[str, bytes, int, float]
 
 

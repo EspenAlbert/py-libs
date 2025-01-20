@@ -19,8 +19,7 @@ jobs:
         id: get_package
         run: echo "pkg=v$(just pkg-find ${{ github.ref_name }})" >> "$GITHUB_OUTPUT"
       - name: build
-        run: |
-          just build-only {{ steps.get_package.outputs.pkg }}
+        run: just build-only ${{ steps.get_package.outputs.pkg }}
       - name: Store the distribution packages
         uses: actions/upload-artifact@v4
         with:

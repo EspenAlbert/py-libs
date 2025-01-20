@@ -103,7 +103,7 @@ def update(
     simple_path: str,
     new_value: object,
     ensure_parents: bool = True,
-) -> dict[str, object]: ...
+) -> dict[str, Any]: ...
 
 
 @overload

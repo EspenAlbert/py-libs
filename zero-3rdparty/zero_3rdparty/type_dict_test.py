@@ -76,7 +76,7 @@ def test_type_dict_add_many():
 
 def test_deleting():
     d = TypeDict()
-    d[_Base] = 2
+    d[_Base] = [2]  # type: ignore
     assert _Base in d
     del d[_Base]
     assert _Base not in d

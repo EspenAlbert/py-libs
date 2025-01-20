@@ -27,6 +27,9 @@ omit = ["*_test.py"]
 [tool.pyright]
 include = ["model-lib", "zero-3rdparty"]
 venvPath = ".venv"
+exclude = [
+    "zero-3rdparty/zero_3rdparty/timeparse.py",
+]
 
 [tool.ruff]
 line-length = 88

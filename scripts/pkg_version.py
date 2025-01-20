@@ -13,10 +13,12 @@ _pkg_names = {
     "z": "zero-3rdparty",
 }
 
-_pkg_tag_prefix = dict(zip(_pkg_names.values(),_pkg_names.keys()))
+_pkg_tag_prefix = dict(zip(_pkg_names.values(), _pkg_names.keys()))
+
 
 def pkg_tag(pkg_name: str, pkg_version: str) -> str:
     return _pkg_tag_prefix[pkg_name] + pkg_version
+
 
 def find_pkg(pkg_name: str) -> str:
     for key, value in _pkg_names.items():
@@ -82,7 +84,7 @@ class PkgVersion:
         major, minor, patch = raw.split(".")
         extra = ""
         if non_digit := re.search(r"\D", patch):
-            patch, extra = patch[:non_digit.start()], patch[non_digit.start():]
+            patch, extra = patch[: non_digit.start()], patch[non_digit.start() :]
         return cls(int(major), int(minor), int(patch), extra)
 
     def bump_major(self) -> PkgVersion:
@@ -146,6 +148,7 @@ def main(pkg_name_input: str, command: str):
         raise ValueError(f"Unknown command: {command}")
     print(f"bumping from {pkg_version} to {str(new_version)}")
     sub_version(pkg_name, pkg_version, str(new_version))
+
 
 if __name__ == "__main__":
     *_, pkg_name_input, command = sys.argv

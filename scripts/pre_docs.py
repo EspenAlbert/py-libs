@@ -4,7 +4,12 @@ from typing import Iterable
 
 SRC = Path(__file__).parent.parent
 DOCS_DIR = SRC / "docs"
-IGNORED_MD_DIRECTORIES = [".pytest_cache", "test", "dist", ".venv",]
+IGNORED_MD_DIRECTORIES = [
+    ".pytest_cache",
+    "test",
+    "dist",
+    ".venv",
+]
 
 FILENAME_RENAME = {"readme.md": "index.md"}
 

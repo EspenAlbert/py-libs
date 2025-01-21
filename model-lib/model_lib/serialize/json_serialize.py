@@ -15,12 +15,12 @@ T = TypeVar("T")
 dump_call: TypeAlias = Callable[[T], str]
 dump_parse: TypeAlias = Optional[tuple[dump_call, dump_call, Callable[[str], Any]]]
 
+
 def dump(instance: Any) -> str:
     if isinstance(instance, pydantic.BaseModel):
         return instance.model_dump_json()
-    return json.dumps(
-        instance, indent=None, separators=(",", ":"), default=model_dump
-    )
+    return json.dumps(instance, indent=None, separators=(",", ":"), default=model_dump)
+
 
 def pretty_dump(instance: Any) -> str:
     if isinstance(instance, pydantic.BaseModel):
@@ -32,5 +32,6 @@ def pretty_dump(instance: Any) -> str:
         ensure_ascii=False,
         default=model_dump,
     )
+
 
 parse = json.loads

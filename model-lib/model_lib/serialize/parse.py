@@ -65,7 +65,7 @@ def create_model(
     model_kwargs = isinstance(model_args, dict)
     if extra_kwargs:
         return (
-            cls(**(model_args | extra_kwargs)) # type: ignore
+            cls(**(model_args | extra_kwargs))  # type: ignore
             if model_kwargs
             else cls(model_args, **extra_kwargs)  # type: ignore
         )
@@ -163,9 +163,7 @@ def get_parsers() -> dict[Type, PayloadParser]:
     return _registered_parsers
 
 
-def register_parser(
-    payload_type: Type, call: PayloadParser
-) -> None:
+def register_parser(payload_type: Type, call: PayloadParser) -> None:
     if previous := _registered_parsers.get(payload_type):
         raise PayloadParserAlreadyExistError(as_name(previous), as_name(call))
     _registered_parsers[payload_type] = call

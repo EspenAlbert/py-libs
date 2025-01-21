@@ -66,7 +66,7 @@ _dumps = toml.dumps
 
 
 def dump_toml_str(data: object, **kwargs) -> str:
-    return _dumps(data, **kwargs) # type: ignore
+    return _dumps(data, **kwargs)  # type: ignore
 
 
 _loads = toml.loads

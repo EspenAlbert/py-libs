@@ -26,7 +26,7 @@ expected_dump_formats: list[str] = [
     "toml",
     "toml_compact",
 ]
-missing_dump_formats: set[str] = set(FileFormat) - set(expected_dump_formats) # type: ignore
+missing_dump_formats: set[str] = set(FileFormat) - set(expected_dump_formats)  # type: ignore
 assert not missing_dump_formats, f"found missing dump formats: {missing_dump_formats}"
 
 

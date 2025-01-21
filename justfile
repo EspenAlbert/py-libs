@@ -1,7 +1,7 @@
 alias b := build
 alias t := test
 version := "1.0.0b1"
-pre-push: lint test
+pre-push: lint fmt-check test
   @echo "All checks passed"
 build-only pkg_name:
   uv build --package {{pkg_name}}
@@ -10,6 +10,8 @@ build:
   uv build --package model-lib
 fix:
   uv run ruff check --fix .
+fmt-check:
+  uv run ruff format --check .
 fmt:
   uv run ruff format .
 lint:

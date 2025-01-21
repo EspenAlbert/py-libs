@@ -24,9 +24,9 @@
 # py-libs (drastic changes coming for v1.0.0)
 
 - An experiment for sharing python packages
-- [compose_chart_export](./compose_chart_export/readme.md)
+- ~~[compose_chart_export](./compose_chart_export/readme.md)~~
 	- `pip install compose-chart-export`
-- [docker_compose_parser](./docker_compose_parser/readme.md)
+- ~~[docker_compose_parser](./docker_compose_parser/readme.md)~~
 	- `pip install docker-compose-parser`
 - [model_lib-pydantic base models with convenient dump methods](./model-lib/readme.md)
 	- `pip install model-lib`

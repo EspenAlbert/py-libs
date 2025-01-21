@@ -61,6 +61,7 @@ flowchart TD
 - [Install `uv`](https://docs.astral.sh/uv/getting-started/installation/)
 
 ```sh
+pre-commit install --hook-type pre-push
 uv sync
 code .
 ```

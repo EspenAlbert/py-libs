@@ -11,5 +11,6 @@ repos:
       entry: bash -c 'just pre-push'
       language: system
       always_run: true
+      types: [file]
 default_stages:
   - pre-push

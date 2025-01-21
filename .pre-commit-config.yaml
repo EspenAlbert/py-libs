@@ -4,3 +4,12 @@ repos:
   rev: v4.3.0
   hooks:
   - id: no-commit-to-branch
+- repo: local
+  hooks:
+    - id: pre-push
+      name: Lint & Test
+      entry: bash -c 'just pre-push'
+      language: system
+      always_run: true
+default_stages:
+  - pre-push

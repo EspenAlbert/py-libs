@@ -1,7 +1,7 @@
 alias b := build
 alias t := test
 version := "1.0.0b1"
-pre-push: lint test
+pre-push: lint fmt test
   @echo "All checks passed"
 build-only pkg_name:
   uv build --package {{pkg_name}}

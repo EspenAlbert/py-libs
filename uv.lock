@@ -1274,5 +1274,5 @@ wheels = [
 
 [[package]]
 name = "zero-3rdparty"
-version = "1.0.0a4"
+version = "1.0.0b1"
 source = { editable = "zero-3rdparty" }

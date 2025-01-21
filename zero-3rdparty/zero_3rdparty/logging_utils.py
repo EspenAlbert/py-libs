@@ -28,7 +28,7 @@ class LimitMessageLength(logging.Filter):
             and len(msg) > self.length
         ):
             record.msg = record.msg[: self.length]
-        return super().filter(record) # type: ignore
+        return super().filter(record)  # type: ignore
 
 
 def limit_message_length(logger: logging.Logger | None = None) -> None:

@@ -1,6 +1,6 @@
 alias b := build
 alias t := test
-version := "1.0.0b1"
+version := "1.0.0b2"
 pre-push: lint fmt-check test
   @echo "All checks passed"
 build-only pkg_name:

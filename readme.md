@@ -65,3 +65,13 @@ pre-commit install --hook-type pre-push
 uv sync
 code .
 ```
+
+## Release process
+1. Do changes on your branch
+2. Bump the versions you want to deploy
+```sh
+just pkg-version z beta # alpha/patch,etc.
+just pkg-version m beta
+```
+3. Merge and wait for release to complete
+

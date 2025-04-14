@@ -28,6 +28,7 @@ omit = ["*_test.py"]
 include = ["model-lib", "zero-3rdparty"]
 venvPath = ".venv"
 exclude = [
+    "zero-3rdparty/zero_3rdparty/humps.py",
     "zero-3rdparty/zero_3rdparty/timeparse.py",
 ]
 
@@ -47,7 +48,7 @@ isort = { known-first-party = ['tests'] }
 "model-lib/model_lib/__init__.py" = ["I001"]
 "model-lib/model_lib/metadata/__init__.py" = ["I001"]
 "scripts/*.py" = ["T201"]
-
+"zero-3rdparty/zero_3rdparty/humps.py" = ["T201", "UP038"]
 
 [dependency-groups]
 dev = [

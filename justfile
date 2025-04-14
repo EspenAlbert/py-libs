@@ -1,6 +1,6 @@
 alias b := build
 alias t := test
-version := "1.0.0b1"
+version := "1.0.0b2"
 pre-push: lint fmt-check test
   @echo "All checks passed"
 build-only pkg_name:
@@ -35,7 +35,7 @@ open-cov-full: cov-full
   open htmlcov/index.html
 pre-release version=version: build
   uv venv -p python3.11 .venv-ci
-  echo "dist/model_lib-{{version}}-py3-none-any.whl[toml]" > .venv-ci/requirements.txt
+  echo "dist/model_lib-{{version}}-py3-none-any.whl[toml]\ndist/zero_3rdparty-{{version}}-py3-none-any.whl" > .venv-ci/requirements.txt
   uv pip sync --python .venv-ci/bin/python .venv-ci/requirements.txt
   uv pip install --python .venv-ci/bin/python -r .venv-ci/requirements.txt
   .venv-ci/bin/python scripts/model_lib_pre_release.py

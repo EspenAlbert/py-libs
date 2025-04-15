@@ -31,10 +31,16 @@ def find_pkg(pkg_name: str) -> str:
 
     raise ValueError(f"Unknown package name: {pkg_name}")
 
+def find_pkg_key(pkg_name: str) -> str:
+    if pkg_name in _pkg_names:
+        return pkg_name
+    return _pkg_tag_prefix[pkg_name]
 
-_version_regex = re.compile(
-    r"^(VERSION|version)\s+:?=\s+\"(?P<version>\d+\.\d+\.\d+\+?[\w\d]*)\"$", re.M
-)
+version_pattern_str = r"^(VERSION|version)\s+:?=\s+\"(?P<version>\d+\.\d+\.\d+\+?[\w\d]*)\"$"
+_version_regex = re.compile(version_pattern_str, re.M)
+
+def pkg_version_regex(pkg_name: str) -> re.Pattern:
+    return re.compile(f"^{find_pkg_key(pkg_name)}{version_pattern_str[1:]}", re.M)
 
 
 def find_pkg_version(pkg_name: str) -> str:
@@ -62,15 +68,17 @@ def extract_version(pkg_name: str, text: str):
 
 def sub_version(pkg_name: str, old_version: str, new_version: str) -> None:
     def replacer(match: re.Match) -> str:
-        return match.group(0).replace(old_version, new_version)
+        return match[0].replace(old_version, new_version)
 
-    files = [init_file(pkg_name), pyproject_file(pkg_name)]
-    if pkg_name == MODEL_LIB:
-        files.append(REPO_PATH / "justfile")
-    for path in files:
+    file_regex ={
+        init_file(pkg_name): _version_regex,
+        pyproject_file(pkg_name): _version_regex,
+        REPO_PATH / "justfile": pkg_version_regex(pkg_name),
+    }
+    for path, path_regex in file_regex.items():
         if not path.exists():
             raise FileNotFoundError(f"Could not find file: {path} for {pkg_name}")
-        new_text = re.sub(_version_regex, replacer, path.read_text(), 1)
+        new_text = re.sub(path_regex, replacer, path.read_text(), 1)
         path.write_text(new_text)
 
 

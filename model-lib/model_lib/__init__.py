@@ -32,7 +32,7 @@ from model_lib.serialize import *  # noqa F403 # type: ignore
 from model_lib.static_settings import StaticSettings
 
 UNKNOWN = "_UNKNOWN_"
-VERSION = "1.0.0b2"
+VERSION = "1.0.0b3"
 __all__ = (  # noqa F405
     "Entity",
     "Event",

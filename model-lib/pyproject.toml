@@ -1,12 +1,12 @@
 [project]
 name = "model-lib"
-version = "1.0.0b2"
+version = "1.0.0b3"
 requires-python = ">=3.10"
 dependencies = [
   "pydantic~=2.10.4",
   "pydantic-settings~=2.7.1",
   "pyyaml>=6.0.2",
-  "zero-3rdparty",
+  "zero-3rdparty==1.0.0b2",
 ]
 readme = "readme.md"
 license = "MIT"

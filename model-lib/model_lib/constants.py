@@ -15,7 +15,7 @@ METADATA_MODEL_NAME_BACKUP_FIELD = "model_name_backup"
 class FileFormat(StrEnum):
     json = "json"
     pretty_json = "pretty_json"
-    json_pretty = "pretty_json"
+    json_pretty = "json_pretty"
     yaml = "yaml"
     yml = "yml"
     # only recommended to use with pydantic2

@@ -31,13 +31,18 @@ def find_pkg(pkg_name: str) -> str:
 
     raise ValueError(f"Unknown package name: {pkg_name}")
 
+
 def find_pkg_key(pkg_name: str) -> str:
     if pkg_name in _pkg_names:
         return pkg_name
     return _pkg_tag_prefix[pkg_name]
 
-version_pattern_str = r"^(VERSION|version)\s+:?=\s+\"(?P<version>\d+\.\d+\.\d+\+?[\w\d]*)\"$"
+
+version_pattern_str = (
+    r"^(VERSION|version)\s+:?=\s+\"(?P<version>\d+\.\d+\.\d+\+?[\w\d]*)\"$"
+)
 _version_regex = re.compile(version_pattern_str, re.M)
+
 
 def pkg_version_regex(pkg_name: str) -> re.Pattern:
     return re.compile(f"^{find_pkg_key(pkg_name)}{version_pattern_str[1:]}", re.M)
@@ -70,7 +75,7 @@ def sub_version(pkg_name: str, old_version: str, new_version: str) -> None:
     def replacer(match: re.Match) -> str:
         return match[0].replace(old_version, new_version)
 
-    file_regex ={
+    file_regex = {
         init_file(pkg_name): _version_regex,
         pyproject_file(pkg_name): _version_regex,
         REPO_PATH / "justfile": pkg_version_regex(pkg_name),

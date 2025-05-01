@@ -19,6 +19,7 @@ dump_formats = list(FileFormat)
 expected_dump_formats: list[str] = [
     "json",
     "pretty_json",
+    "json_pretty",
     "yaml",
     "yml",
     "json_pydantic",

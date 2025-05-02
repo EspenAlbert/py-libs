@@ -3,7 +3,8 @@ description: 'Setup steps for running just commands'
 
 inputs:
   python-version:
-    default: '3.10'
+    default: '3.13'
+    description: 'Python version to use'
 
 runs:
   using: composite

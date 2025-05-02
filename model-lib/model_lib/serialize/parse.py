@@ -142,7 +142,6 @@ def _parse_path(payload: Path, format=FileFormat.json):
     file_format = payload.suffix
     if raw_format := _file_format_to_raw_format.get(file_format):
         if raw_format != format:
-            logger.warning(f"overriding format: {format}->{file_format} {payload.name}")
             format = file_format.lstrip(".")
     else:
         logger.warning(f"attempting to parse a file {payload.name} as {format}")

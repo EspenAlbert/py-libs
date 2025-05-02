@@ -1,6 +1,6 @@
 alias b := build
 alias t := test
-mversion := "1.0.0b3"
+mversion := "1.0.0b4"
 zversion := "1.0.0b2"
 pre-push: lint fmt-check test
   @echo "All checks passed"

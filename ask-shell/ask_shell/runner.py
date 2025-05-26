@@ -12,10 +12,10 @@ from typing import Callable
 
 from ask_shell.colors import ContentType
 from ask_shell.models import (
-    BashConfig,
     BashError,
-    BashRun,
     RunIncompleteError,
+    ShellConfig,
+    ShellRun,
     StartResult,
 )
 from ask_shell.printer import log_exception, print_with
@@ -56,29 +56,29 @@ def _read_until_complete(
         log_exception(e)
 
 
-def _as_config(config: BashConfig | str) -> BashConfig:
+def _as_config(config: ShellConfig | str) -> ShellConfig:
     if isinstance(config, str):
-        return BashConfig(script=config)
+        return ShellConfig(script=config)
     else:
-        assert isinstance(config, BashConfig), f"not a BashConfig or str: {config!r}"
+        assert isinstance(config, ShellConfig), f"not a ShellConfig or str: {config!r}"
     return config
 
 
-def run(config: BashConfig | str) -> BashRun:
+def run(config: ShellConfig | str) -> ShellRun:
     config = _as_config(config)
     on_started = Future()  # type: ignore
     _pool.submit(_execute_run, config, on_started)
     return on_started.result()
 
 
-def run_and_wait(config: BashConfig | str, timeout: float | None = None) -> BashRun:
+def run_and_wait(config: ShellConfig | str, timeout: float | None = None) -> ShellRun:
     config = _as_config(config)
     run = _execute_run(config)
     run.wait_until_complete(timeout)
     return run
 
 
-def run_error(run: BashRun, timeout: float | None = 1) -> BaseException | None:
+def run_error(run: ShellRun, timeout: float | None = 1) -> BaseException | None:
     try:
         run._complete_flag.result(timeout=timeout)
     except BaseException as e:
@@ -86,16 +86,16 @@ def run_error(run: BashRun, timeout: float | None = 1) -> BaseException | None:
 
 
 def wait_on_ok_errors(
-    *runs: BashRun,  # type: ignore
+    *runs: ShellRun,  # type: ignore
     timeout: float | None = None,
     skip_kill_timeouts: bool = False,  # type: ignore
-) -> tuple[list[BashRun], list[tuple[BaseException, BashRun]]]:
+) -> tuple[list[ShellRun], list[tuple[BaseException, ShellRun]]]:
     future_runs = {run._complete_flag: run for run in runs}
     done, not_done = wait(
         [run._complete_flag for run in runs], timeout, return_when="ALL_COMPLETED"
     )
-    errors: list[tuple[BaseException, BashRun]] = []
-    oks: list[BashRun] = []
+    errors: list[tuple[BaseException, ShellRun]] = []
+    oks: list[ShellRun] = []
 
     if not_done:
         if skip_kill_timeouts:
@@ -103,7 +103,7 @@ def wait_on_ok_errors(
                 (RunIncompleteError(future_runs[run]), future_runs[run])
                 for run in not_done
             )
-            runs: list[BashRun] = [future_runs[f] for f in done]  # type: ignore
+            runs: list[ShellRun] = [future_runs[f] for f in done]  # type: ignore
         else:
             for run in runs:
                 if run.is_running and (p_open := run.p_open):
@@ -118,11 +118,11 @@ def wait_on_ok_errors(
     return oks, errors
 
 
-_runs: dict[int, BashRun] = {}
+_runs: dict[int, ShellRun] = {}
 
 
 @contextmanager
-def _track_run(bash_run: BashRun):
+def _track_run(bash_run: ShellRun):
     key = id(bash_run)
     _runs[key] = bash_run
     try:
@@ -160,8 +160,8 @@ def stop_runs_and_pool():
 atexit.register(stop_runs_and_pool)
 
 
-def _execute_run(config: BashConfig, on_started: Future | None = None) -> BashRun:
-    bash_run = BashRun(config)
+def _execute_run(config: ShellConfig, on_started: Future | None = None) -> ShellRun:
+    bash_run = ShellRun(config)
     for attempt in range(1, config.attempts + 1):
         prefix = config.print_prefix
         if attempt > 1:
@@ -179,7 +179,7 @@ def _execute_run(config: BashConfig, on_started: Future | None = None) -> BashRu
 
 @dataclass
 class _FutureContext:
-    run: BashRun
+    run: ShellRun
     start_future: Future = field(default_factory=Future, init=False)
 
     def result(self) -> None:
@@ -200,8 +200,8 @@ class _FutureContext:
 
 
 def _attempt_run(
-    bash_run: BashRun, prefix: str, on_started: Future | None, is_last_attempt: bool
-) -> BashRun | None:
+    bash_run: ShellRun, prefix: str, on_started: Future | None, is_last_attempt: bool
+) -> ShellRun | None:
     config = bash_run.config
     start_future = _FutureContext(bash_run)
 

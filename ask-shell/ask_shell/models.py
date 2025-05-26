@@ -28,17 +28,17 @@ class StartResult(NamedTuple):
 
 
 @dataclass
-class BashConfig:
+class ShellConfig:
     """
-    >>> BashConfig("some_script").print_prefix
+    >>> ShellConfig("some_script").print_prefix
     'some_script'
-    >>> BashConfig("some_script some_arg").print_prefix
+    >>> ShellConfig("some_script some_arg").print_prefix
     'some_script some_arg'
-    >>> BashConfig("some_script some_arg --option1").print_prefix
+    >>> ShellConfig("some_script some_arg --option1").print_prefix
     'some_script some_arg'
-    >>> BashConfig("some_script some_arg", cwd="/some/path/prefix").print_prefix
+    >>> ShellConfig("some_script some_arg", cwd="/some/path/prefix").print_prefix
     'prefix some_script some_arg'
-    >>> BashConfig("some_script some_arg", cwd="/some/path/prefix", print_prefix="override").print_prefix
+    >>> ShellConfig("some_script some_arg", cwd="/some/path/prefix", print_prefix="override").print_prefix
     'override'
     """
 
@@ -49,7 +49,7 @@ class BashConfig:
     print_prefix: str = _empty  # type: ignore
     extra_popen_kwargs: dict = field(default_factory=dict)
     allow_non_zero_exit: bool = False
-    should_retry: Callable[[BashRun], bool] = always_retry
+    should_retry: Callable[[ShellRun], bool] = always_retry
     ansi_content: bool = False
 
     def __post_init__(self):
@@ -79,10 +79,10 @@ class BashConfig:
 
 
 @dataclass
-class BashRun:
+class ShellRun:
     """Only created by this file never outside!"""
 
-    config: BashConfig
+    config: ShellConfig
     p_open: subprocess.Popen | None = field(init=False, default=None)
 
     _complete_flag: Future = field(default_factory=Future, init=False)
@@ -148,7 +148,7 @@ class BashRun:
 
 
 class BashError(Exception):
-    def __init__(self, run: BashRun, base_error: BaseException | None = None):
+    def __init__(self, run: ShellRun, base_error: BaseException | None = None):
         self.run = run
         self.base_error = base_error
 
@@ -166,5 +166,5 @@ class BashError(Exception):
 
 
 class RunIncompleteError(Exception):
-    def __init__(self, run: BashRun):
+    def __init__(self, run: ShellRun):
         self.run = run

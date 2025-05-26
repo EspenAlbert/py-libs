@@ -21,7 +21,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-toml = ["pydantic~=2.10.4", "pydantic-settings~=2.7.1", "tomli-w~=1.1.0", "zero-3rdparty"]
+toml = ["pydantic~=2.10.4", "pydantic-settings~=2.7.1", "tomli-w~=1.1.0"]
 
 [build-system]
 requires = ["hatchling"]

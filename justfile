@@ -2,6 +2,8 @@ alias b := build
 alias t := test
 mversion := "1.0.0b4"
 zversion := "1.0.0b2"
+quick: fmt fix lint
+  @echo "Quick checks passed"
 pre-push: lint fmt-check test
   @echo "All checks passed"
 build-only pkg_name:
@@ -19,8 +21,8 @@ lint:
   uv run ruff check .
 type:
   uv run pyright
-test version='3.11':
-  uv run --python {{version}} pytest
+test version='3.11' test-path='':
+  uv run --python {{version}} pytest {{test-path}}
 test-all:
   just test 3.10
   just test 3.11

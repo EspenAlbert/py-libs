@@ -12,9 +12,9 @@ from typing import Callable
 
 from ask_shell.colors import ContentType
 from ask_shell.models import (
-    BashError,
     RunIncompleteError,
     ShellConfig,
+    ShellError,
     ShellRun,
     StartResult,
 )
@@ -22,7 +22,7 @@ from ask_shell.printer import log_exception, print_with
 
 logger = logging.getLogger(__name__)
 
-_pool = ThreadPoolExecutor(max_workers=int(getenv("BASH_THREAD_COUNT", "50")))
+_pool = ThreadPoolExecutor(max_workers=int(getenv("RUN_THREAD_COUNT", "50")))
 _STDOUT = ContentType.STDOUT
 _STDERR = ContentType.STDERR
 _ERROR = ContentType.ERROR
@@ -122,15 +122,15 @@ _runs: dict[int, ShellRun] = {}
 
 
 @contextmanager
-def _track_run(bash_run: ShellRun):
-    key = id(bash_run)
-    _runs[key] = bash_run
+def _track_run(shell_run: ShellRun):
+    key = id(shell_run)
+    _runs[key] = shell_run
     try:
         yield
     except (KeyboardInterrupt, InterruptedError) as e:
         logger.info(f"interrupt: {e!r}")
         stop_runs_and_pool()
-        bash_run._complete()
+        shell_run._complete()
     finally:
         _runs.pop(key, None)
 
@@ -161,20 +161,20 @@ atexit.register(stop_runs_and_pool)
 
 
 def _execute_run(config: ShellConfig, on_started: Future | None = None) -> ShellRun:
-    bash_run = ShellRun(config)
+    shell_run = ShellRun(config)
     for attempt in range(1, config.attempts + 1):
         prefix = config.print_prefix
         if attempt > 1:
             prefix += f"-{attempt}"
             print_with(f"attempt: {attempt}", prefix=prefix, content_type=_WARNING)
         is_last_attempt = attempt == config.attempts
-        if result := _attempt_run(bash_run, prefix, on_started, is_last_attempt):
+        if result := _attempt_run(shell_run, prefix, on_started, is_last_attempt):
             return result
         if retry_call := config.should_retry:
-            if not retry_call(bash_run):
-                bash_run._complete()
+            if not retry_call(shell_run):
+                shell_run._complete()
                 break
-    return bash_run
+    return shell_run
 
 
 @dataclass
@@ -200,10 +200,10 @@ class _FutureContext:
 
 
 def _attempt_run(
-    bash_run: ShellRun, prefix: str, on_started: Future | None, is_last_attempt: bool
+    shell_run: ShellRun, prefix: str, on_started: Future | None, is_last_attempt: bool
 ) -> ShellRun | None:
-    config = bash_run.config
-    start_future = _FutureContext(bash_run)
+    config = shell_run.config
+    start_future = _FutureContext(shell_run)
 
     def _start_in_thread():
         with start_future:
@@ -217,23 +217,23 @@ def _attempt_run(
 
     run_future = _pool.submit(_start_in_thread)
     start_future.result()
-    with _track_run(bash_run):
+    with _track_run(shell_run):
         try:
             if on_started and not on_started.done():
-                on_started.set_result(bash_run)
+                on_started.set_result(shell_run)
             run_future.result()
-            if bash_run.clean_complete:
-                bash_run._complete()
-                return bash_run
+            if shell_run.clean_complete:
+                shell_run._complete()
+                return shell_run
             if is_last_attempt or config.allow_non_zero_exit:
-                bash_run._complete()
+                shell_run._complete()
         except Exception as e:
             print_with(repr(e), prefix=prefix, content_type=_ERROR)
             log_exception(e)
             if is_last_attempt:
                 base_error = run_future.exception()
-                error = BashError(bash_run, base_error=base_error)
-                bash_run._complete(error)
+                error = ShellError(shell_run, base_error=base_error)
+                shell_run._complete(error)
                 raise error from e
     return None
 
@@ -251,13 +251,12 @@ def _run(
             stderr=subprocess.PIPE,
             preexec_fn=setsid,
             universal_newlines=True,
-            shell=False,
         )
         | kwargs
     )
     stdout_result: list[str] = []
     stderr_result: list[str] = []
-    with subprocess.Popen(["bash", "-c", script], **kwargs) as proc:  # type: ignore
+    with subprocess.Popen(script, shell=True, **kwargs) as proc:  # type: ignore
         process_started(StartResult(proc, stdout_result, stderr_result))
 
         def read_stdout():

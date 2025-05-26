@@ -7,8 +7,8 @@ from os import getenv
 import pytest
 
 from ask_shell import (
-    BashError,
     ShellConfig,
+    ShellError,
     ShellRun,
     kill,
     print_with_override,
@@ -44,9 +44,9 @@ def test_async_run():
 
 
 def test_error_run():
-    with pytest.raises(BashError) as exc:
+    with pytest.raises(ShellError) as exc:
         run_and_wait(ShellConfig(script="unknown hello"))
-    assert exc.value.stderr == "bash: unknown: command not found"
+    assert exc.value.stderr == "/bin/sh: unknown: command not found"
 
 
 def test_invalid_popen_args():
@@ -56,7 +56,7 @@ def test_invalid_popen_args():
 
 
 def test_allow_non_zero_exit():
-    with pytest.raises(BashError):
+    with pytest.raises(ShellError):
         run_and_wait("exit 1")
     result = run_and_wait(ShellConfig("exit 1", allow_non_zero_exit=True))
     assert result.exit_code == 1
@@ -94,7 +94,7 @@ def test_multiple_attempts(tmp_path):
 def test_not_enough_attempts(tmp_path):
     script_path = tmp_path / "attempt.py"
     script_path.write_text(_attempt_script)
-    with pytest.raises(BashError) as exc:
+    with pytest.raises(ShellError) as exc:
         run_and_wait(ShellConfig(script=f"{PYTHON_EXEC} {script_path}", attempts=2))
     assert "attempt in script: 2/3" in exc.value.stdout
     assert exc.value.exit_code == 1
@@ -107,7 +107,7 @@ def test_multi_attempts_retry_call_false(tmp_path):
     def never_retry(_):
         return False
 
-    with pytest.raises(BashError) as exc:
+    with pytest.raises(ShellError) as exc:
         run_and_wait(
             ShellConfig(
                 script=f"{PYTHON_EXEC} {script_path}",
@@ -204,7 +204,7 @@ except KeyboardInterrupt:
 """
 
 
-def test_adding_callback_to_bash_run():
+def test_adding_callback_to_shell_run():
     result = run("sleep 1")
     flag = False
 
@@ -217,7 +217,7 @@ def test_adding_callback_to_bash_run():
     assert flag
 
 
-def test_adding_failing_callback_to_bash_run():
+def test_adding_failing_callback_to_shell_run():
     result = run("sleep 1")
     flag = False
 
@@ -235,13 +235,13 @@ def test_allow_process_to_finish(tmp_path):
     filename = "continue_after_abort.py"
     file_path = tmp_path / filename
     file_path.write_text(_continue_after_abort)
-    bash_run = run(ShellConfig(f"{PYTHON_EXEC} {filename}", cwd=tmp_path))
+    shell_run = run(ShellConfig(f"{PYTHON_EXEC} {filename}", cwd=tmp_path))
     time.sleep(0.2)
     start = time.monotonic()
-    popen = bash_run.p_open
+    popen = shell_run.p_open
     assert popen, "no process"
     kill(popen, immediate=False, abort_timeout=3)
-    stdout = bash_run.stdout
+    stdout = shell_run.stdout
     duration = time.monotonic() - start
     assert 1 < duration < 2
     assert "start_sleep" in stdout

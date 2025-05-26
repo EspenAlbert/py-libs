@@ -90,7 +90,7 @@ class ShellRun:
     _current_std_err: list[str] = field(init=False, default_factory=list)
 
     def wait_until_complete(self, timeout: float | None = None):
-        """Raises: BashError"""
+        """Raises: ShellError"""
         self._complete_flag.result(timeout)
 
     def add_done_callback(self, call: Callable[[], Any]):
@@ -123,7 +123,7 @@ class ShellRun:
         ):
             self._complete_flag.set_result(self)
         else:
-            self._complete_flag.set_exception(BashError(self, error))
+            self._complete_flag.set_exception(ShellError(self, error))
 
     def _set_start_result(self, start_result: StartResult):
         self.p_open = start_result.p_open
@@ -147,7 +147,7 @@ class ShellRun:
         return self.exit_code is None
 
 
-class BashError(Exception):
+class ShellError(Exception):
     def __init__(self, run: ShellRun, base_error: BaseException | None = None):
         self.run = run
         self.base_error = base_error

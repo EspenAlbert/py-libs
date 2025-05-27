@@ -6,8 +6,11 @@ import subprocess
 from concurrent.futures import Future
 from dataclasses import dataclass, field
 from pathlib import Path
-from random import choices
-from typing import Any, Callable, NamedTuple
+from shutil import which
+from typing import Any, Callable, NamedTuple, Self
+
+from model_lib.model_base import Entity
+from pydantic import Field, model_validator
 
 from ask_shell.colors import ContentType
 from ask_shell.printer import print_with
@@ -21,14 +24,55 @@ def always_retry(_):
     return True
 
 
+def install_instructions(binary_name: str) -> str:
+    return (
+        f"Please install '{binary_name}' using your package manager or download it from "
+        f"https://www.google.com/search?q=install+{binary_name}"
+    )
+
+
 class StartResult(NamedTuple):
     p_open: subprocess.Popen
     stdout: list[str]
     stderr: list[str]
 
 
-@dataclass
-class ShellConfig:
+def is_executable(filepath: Path) -> bool:
+    return filepath.is_file() and os.access(filepath, os.X_OK)
+
+
+class ShellInput(NamedTuple):
+    binary_name: str
+    file_path: Path | None
+    args: list[str]
+
+    @property
+    def is_binary_call(self) -> bool:
+        return self.binary_name != ""
+
+    def file_path_relative(self, cwd: Path) -> str:
+        assert self.file_path, "file_path should not be None"
+        return (
+            str(self.file_path.relative_to(cwd))
+            if self.file_path.is_relative_to(cwd)
+            else str(self.file_path)
+        )
+
+    @property
+    def first_arg(self) -> str:
+        for i, arg in enumerate(self.args):
+            if arg.startswith("-"):
+                continue
+            if i == 0:
+                return arg
+            prev_arg = self.args[i - 1]
+            prev_arg_is_flag = prev_arg.startswith("-") and "=" not in prev_arg
+            if not prev_arg_is_flag:
+                return arg
+        return ""
+
+
+class ShellConfig(Entity):
     """
     >>> ShellConfig("some_script").print_prefix
     'some_script'
@@ -42,39 +86,82 @@ class ShellConfig:
     'override'
     """
 
-    script: str
-    env: dict[str, str] = _empty  # type: ignore
-    cwd: str | Path = _empty  # type: ignore
+    shell_input: str
+    env: dict[str, str] = Field(default_factory=dict)
+    skip_os_env: bool = False
+    skip_binary_check: bool = False
+    cwd: Path = Field(default=None, description="Set to Path.cwd() if not provided")  # type: ignore
     attempts: int = 1
-    print_prefix: str = _empty  # type: ignore
-    extra_popen_kwargs: dict = field(default_factory=dict)
+    print_prefix: str = Field(
+        default=None, description="Use cwd+binary_name+first_arg if not provided"
+    )  # type: ignore
+    extra_popen_kwargs: dict = Field(default_factory=dict)
     allow_non_zero_exit: bool = False
     should_retry: Callable[[ShellRun], bool] = always_retry
-    ansi_content: bool = False
+    ansi_content: bool = Field(default=None, description="Inferred if not provided")  # type: ignore
+    is_binary_call: bool = Field(default=None, description="Inferred if not provided")  # type: ignore
 
-    def __post_init__(self):
-        if self.env is _empty:
-            self.env = dict(**os.environ)
-        if self.print_prefix is _empty:
-            self._infer_print_prefix()
-
-    def _infer_print_prefix(self):
-        match self.script.split():
-            case [program, arg, *_]:
-                self.print_prefix = f"{program} {arg}"
-            case [program]:
-                self.print_prefix = program
+    @property
+    def binary_file_args(self) -> ShellInput:
+        match self.shell_input.split():
+            case [file_or_binary, *args] if os.sep in file_or_binary:
+                file_or_binary_path = Path(file_or_binary).resolve()
+                if is_executable(file_or_binary_path):
+                    return ShellInput("", file_or_binary_path, args)
+                return ShellInput(file_or_binary, None, args)
+            case [file_or_binary, *args]:
+                return ShellInput(file_or_binary, None, args)
             case _:
-                self.print_prefix = "".join(choices(string_or_digit, k=5))
-        if self.cwd is not _empty:
-            self.print_prefix = f"{Path(self.cwd).name} {self.print_prefix}"
-        self.print_prefix = self.print_prefix.strip()[:MAX_PREFIX_LEN]
+                raise ValueError("shell_input must not be empty")
+
+    @model_validator(mode="after")
+    def post_init(self) -> Self:
+        if self.cwd is None:
+            self.cwd = Path.cwd().resolve()
+        parsed_input = self.binary_file_args
+        if (
+            not self.skip_binary_check
+            and parsed_input.is_binary_call
+            and not which(parsed_input.binary_name)
+        ):
+            install = install_instructions(parsed_input.binary_name)
+            raise ValueError(
+                f"Binary or non-executable '{parsed_input.binary_name}' not found. {install}"
+            )
+        if self.is_binary_call is None:
+            self.is_binary_call = parsed_input.is_binary_call
+        if self.print_prefix is None:
+            self._infer_print_prefix(parsed_input)
+        if not self.skip_os_env:
+            self.env = os.environ | self.env
+        if self.ansi_content is None:
+            self._infer_ansi_content(parsed_input)
+        return self
+
+    def _infer_print_prefix(self, parsed_input: ShellInput):
+        cwd = self.cwd
+        prefix_parts = [f"{cwd.parent.name}/{cwd.name}" if cwd.parents else cwd.name]
+        if parsed_input.is_binary_call:
+            prefix_parts.append(parsed_input.binary_name)
+        else:
+            prefix_parts.append(parsed_input.file_path_relative(cwd))
+        if first_arg := parsed_input.first_arg:
+            prefix_parts.append(first_arg)
+        self.print_prefix = " ".join(prefix_parts)
+
+    def _infer_ansi_content(self, parsed_input: ShellInput):
+        if parsed_input.is_binary_call and parsed_input.binary_name in (
+            "terraform",
+            "kubectl",
+        ):
+            self.ansi_content = True
+        else:
+            self.ansi_content = False
 
     @property
     def popen_kwargs(self):
         kwargs: dict[str, Any] = {"env": self.env} | self.extra_popen_kwargs
-        if self.cwd is not _empty:
-            kwargs["cwd"] = self.cwd
+        kwargs["cwd"] = self.cwd
         return kwargs
 
 

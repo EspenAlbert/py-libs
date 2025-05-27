@@ -8,7 +8,10 @@ from concurrent.futures import Future, ThreadPoolExecutor, wait
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from os import getenv, setsid
+from pathlib import Path
 from typing import Callable
+
+from model_lib.pydantic_utils import copy_and_validate
 
 from ask_shell.colors import ContentType
 from ask_shell.models import (
@@ -56,23 +59,74 @@ def _read_until_complete(
         log_exception(e)
 
 
-def _as_config(config: ShellConfig | str) -> ShellConfig:
+def _as_config(config: ShellConfig | str, **kwargs) -> ShellConfig:
+    kwargs_not_none = {k: v for k, v in kwargs.items() if v is not None}
     if isinstance(config, str):
-        return ShellConfig(script=config)
-    else:
-        assert isinstance(config, ShellConfig), f"not a ShellConfig or str: {config!r}"
-    return config
+        return ShellConfig(shell_input=config, **kwargs_not_none)
+    assert isinstance(config, ShellConfig), f"not a ShellConfig or str: {config!r}"
+    return copy_and_validate(config, **kwargs_not_none)
 
 
-def run(config: ShellConfig | str) -> ShellRun:
-    config = _as_config(config)
+def run(
+    script: ShellConfig | str,
+    *,
+    env: dict[str, str] | None = None,
+    skip_os_env: bool | None = None,
+    cwd: str | Path | None = None,
+    attempts: int | None = None,
+    print_prefix: str | None = None,
+    extra_popen_kwargs: dict | None = None,
+    allow_non_zero_exit: bool | None = None,
+    should_retry: Callable[[ShellRun], bool] | None = None,
+    ansi_content: bool | None = None,
+    skip_binary_check: bool | None = None,
+) -> ShellRun:
+    script = _as_config(
+        script,
+        env=env,
+        skip_os_env=skip_os_env,
+        cwd=cwd,
+        attempts=attempts,
+        print_prefix=print_prefix,
+        extra_popen_kwargs=extra_popen_kwargs,
+        allow_non_zero_exit=allow_non_zero_exit,
+        should_retry=should_retry,
+        ansi_content=ansi_content,
+        skip_binary_check=skip_binary_check,
+    )
     on_started = Future()  # type: ignore
-    _pool.submit(_execute_run, config, on_started)
+    _pool.submit(_execute_run, script, on_started)
     return on_started.result()
 
 
-def run_and_wait(config: ShellConfig | str, timeout: float | None = None) -> ShellRun:
-    config = _as_config(config)
+def run_and_wait(
+    script: ShellConfig | str,
+    timeout: float | None = None,
+    *,
+    env: dict[str, str] | None = None,
+    skip_os_env: bool | None = None,
+    cwd: str | Path | None = None,
+    attempts: int | None = None,
+    print_prefix: str | None = None,
+    extra_popen_kwargs: dict | None = None,
+    allow_non_zero_exit: bool | None = None,
+    should_retry: Callable[[ShellRun], bool] | None = None,
+    ansi_content: bool | None = None,
+    skip_binary_check: bool | None = None,
+) -> ShellRun:
+    config = _as_config(
+        script,
+        env=env,
+        skip_os_env=skip_os_env,
+        cwd=cwd,
+        attempts=attempts,
+        print_prefix=print_prefix,
+        extra_popen_kwargs=extra_popen_kwargs,
+        allow_non_zero_exit=allow_non_zero_exit,
+        should_retry=should_retry,
+        ansi_content=ansi_content,
+        skip_binary_check=skip_binary_check,
+    )
     run = _execute_run(config)
     run.wait_until_complete(timeout)
     return run
@@ -209,7 +263,7 @@ def _attempt_run(
         with start_future:
             _run(
                 prefix,
-                config.script,
+                config.shell_input,
                 start_future.on_started,
                 config.popen_kwargs,
                 config.ansi_content,

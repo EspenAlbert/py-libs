@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import platform
 import string
 import subprocess
 from concurrent.futures import Future
@@ -27,7 +28,7 @@ def always_retry(_):
 def install_instructions(binary_name: str) -> str:
     return (
         f"Please install '{binary_name}' using your package manager or download it from "
-        f"https://www.google.com/search?q=install+{binary_name}"
+        f"https://www.google.com/search?q=install+{binary_name}+{platform.system()}"
     )
 
 

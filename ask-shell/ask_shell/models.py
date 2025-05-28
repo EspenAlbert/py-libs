@@ -8,13 +8,17 @@ from concurrent.futures import Future
 from dataclasses import dataclass, field
 from pathlib import Path
 from shutil import which
-from typing import Any, Callable, NamedTuple, Self
+from threading import RLock
+from typing import Any, Callable, NamedTuple, Self, TypeAlias, Union
 
 from model_lib.model_base import Entity
 from pydantic import Field, model_validator
+from rich.console import Console
+from zero_3rdparty.closable_queue import ClosableQueue
 
 from ask_shell.colors import ContentType
 from ask_shell.printer import print_with
+from ask_shell.settings import AskShellSettings
 
 _empty = object()
 string_or_digit = string.ascii_letters + string.digits
@@ -32,12 +36,6 @@ def install_instructions(binary_name: str) -> str:
     )
 
 
-class StartResult(NamedTuple):
-    p_open: subprocess.Popen
-    stdout: list[str]
-    stderr: list[str]
-
-
 def is_executable(filepath: Path) -> bool:
     return filepath.is_file() and os.access(filepath, os.X_OK)
 
@@ -46,6 +44,12 @@ class ShellInput(NamedTuple):
     binary_name: str
     file_path: Path | None
     args: list[str]
+
+    @property
+    def name(self) -> str:
+        if self.file_path:
+            return self.file_path.name
+        return self.binary_name
 
     @property
     def is_binary_call(self) -> bool:
@@ -102,6 +106,26 @@ class ShellConfig(Entity):
     should_retry: Callable[[ShellRun], bool] = always_retry
     ansi_content: bool = Field(default=None, description="Inferred if not provided")  # type: ignore
     is_binary_call: bool = Field(default=None, description="Inferred if not provided")  # type: ignore
+    settings: AskShellSettings = field(default_factory=AskShellSettings.from_env)
+    run_output_dir: Path | None = Field(
+        default=None,
+        description="Directory to store run logs, defaults to settings.run_logs /{XX}_{self.exec_name}",
+    )
+    run_log_stem_prefix: str = Field(default="", description="Prefix for run log stem")
+
+    @property
+    def exec_name(self) -> str:
+        return self.binary_file_args.name
+
+    def run_log_stem(self, attempt: int) -> str:
+        if attempt > 1:
+            return f"{self.exec_name}_{attempt}"
+        return self.exec_name
+
+    def run_output_dir_resolved(self) -> Path:
+        if self.run_output_dir is None:
+            return self.settings.next_run_logs_dir(self.exec_name)
+        return self.run_output_dir
 
     @property
     def binary_file_args(self) -> ShellInput:
@@ -168,15 +192,90 @@ class ShellConfig(Entity):
 
 
 @dataclass
+class _stdStarted:
+    is_stdout: bool
+    console: Console
+
+
+@dataclass
+class _stdOutput:
+    is_stdout: bool
+    content: str
+
+
+@dataclass
+class _pOpenStarted:
+    p_open: subprocess.Popen
+
+
+OutputCallbackT: TypeAlias = Callable[
+    [str], bool
+]  # returns True if the callback is done and should be removed
+InternalMessageT: TypeAlias = Union[_stdStarted, _stdOutput, _pOpenStarted]
+ShellRunQueueT: TypeAlias = ClosableQueue[InternalMessageT]
+
+
+@dataclass
 class ShellRun:
     """Only created by this file never outside!"""
 
     config: ShellConfig
     p_open: subprocess.Popen | None = field(init=False, default=None)
 
-    _complete_flag: Future = field(default_factory=Future, init=False)
-    _current_std_out: list[str] = field(init=False, default_factory=list)
-    _current_std_err: list[str] = field(init=False, default_factory=list)
+    _start_flag: Future[ShellRun] = field(default_factory=Future, init=False)
+    _complete_flag: Future[ShellRun] = field(default_factory=Future, init=False)
+    _stdout: Console | None = field(init=False, default=None)
+    _stderr: Console | None = field(init=False, default=None)
+    _queue: ShellRunQueueT = field(init=False, default_factory=ClosableQueue)
+    _lock: RLock = field(init=False, default_factory=RLock)
+    _stdout_callbacks: list[OutputCallbackT] = field(init=False, default_factory=list)
+    _stderr_callbacks: list[OutputCallbackT] = field(init=False, default_factory=list)
+
+    @property
+    def has_started(self) -> bool:
+        return self._stdout is not None and self._stderr is not None
+
+    def add_callback(
+        self, call: OutputCallbackT, *, is_stdout: bool, skip_old_lines: bool = False
+    ):
+        assert self.is_running, "Cannot add callback to a completed run"
+        with self._lock:
+            if is_stdout:
+                self._stdout_callbacks.append(call)
+            else:
+                self._stderr_callbacks.append(call)
+            if skip_old_lines:
+                return
+            if is_stdout:
+                for line in self.stdout.splitlines():
+                    if call(line):
+                        self._stdout_callbacks.remove(call)
+            else:
+                for line in self.stderr.splitlines():
+                    if call(line):
+                        self._stderr_callbacks.remove(call)
+
+    def _on_message(self, message: InternalMessageT):
+        with self._lock:
+            match message:
+                case _stdStarted(is_stdout=True, console=console):
+                    self._stdout = console
+                    if self.has_started:
+                        self._start_flag.set_result(self)
+                case _stdStarted(is_stdout=False, console=console):
+                    self._stderr = console
+                case _pOpenStarted(p_open=p_open):
+                    self.p_open = p_open
+                case _stdOutput(is_stdout=True, content=content):
+                    for call in self._stdout_callbacks:
+                        if call(content):
+                            self._stdout_callbacks.remove(call)
+                case _stdOutput(is_stdout=False, content=content):
+                    if self._stderr:
+                        self._stderr.log(content)
+
+    def wait_on_started(self, timeout: float | None = None) -> ShellRun:
+        return self._start_flag.result(timeout)
 
     def wait_until_complete(self, timeout: float | None = None):
         """Raises: ShellError"""
@@ -214,18 +313,17 @@ class ShellRun:
         else:
             self._complete_flag.set_exception(ShellError(self, error))
 
-    def _set_start_result(self, start_result: StartResult):
-        self.p_open = start_result.p_open
-        self._current_std_out = start_result.stdout
-        self._current_std_err = start_result.stderr
-
     @property
     def stdout(self) -> str:
-        return "".join(self._current_std_out).strip("\n")
+        if self._stdout is None:
+            return ""
+        return self._stdout.export_text(clear=False)
 
     @property
     def stderr(self) -> str:
-        return "".join(self._current_std_err).strip("\n")
+        if self._stderr is None:
+            return ""
+        return self._stderr.export_text(clear=False)
 
     @property
     def clean_complete(self):

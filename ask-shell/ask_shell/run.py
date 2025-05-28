@@ -4,14 +4,14 @@ import atexit
 import logging
 import signal
 import subprocess
-from concurrent.futures import Future, ThreadPoolExecutor, wait
+from concurrent.futures import ThreadPoolExecutor, wait
 from contextlib import contextmanager
-from dataclasses import dataclass, field
 from os import getenv, setsid
 from pathlib import Path
-from typing import Callable
+from typing import IO, Callable
 
 from model_lib.pydantic_utils import copy_and_validate
+from rich.console import Console
 
 from ask_shell.colors import ContentType
 from ask_shell.models import (
@@ -19,9 +19,13 @@ from ask_shell.models import (
     ShellConfig,
     ShellError,
     ShellRun,
-    StartResult,
+    ShellRunQueueT,
+    _pOpenStarted,
+    _stdOutput,
+    _stdStarted,
 )
 from ask_shell.printer import log_exception, print_with
+from ask_shell.settings import AskShellSettings
 
 logger = logging.getLogger(__name__)
 _STDOUT = ContentType.STDOUT
@@ -31,7 +35,9 @@ _WARNING = ContentType.WARNING
 _pool = ThreadPoolExecutor(
     max_workers=int(getenv("RUN_THREAD_COUNT", "50"))
 )  # Each run will take 3 threads: 1 for stdout, 1 for stderr, and 1 for popen wait.
-_runs: dict[int, ShellRun] = {} # internal to store running ShellRuns to support stopping them on exit
+_runs: dict[
+    int, ShellRun
+] = {}  # internal to store running ShellRuns to support stopping them on exit
 
 
 def stop_runs_and_pool():
@@ -46,7 +52,7 @@ atexit.register(stop_runs_and_pool)
 
 
 def run(
-    script: ShellConfig | str,
+    config: ShellConfig | str,
     *,
     env: dict[str, str] | None = None,
     skip_os_env: bool | None = None,
@@ -58,9 +64,11 @@ def run(
     should_retry: Callable[[ShellRun], bool] | None = None,
     ansi_content: bool | None = None,
     skip_binary_check: bool | None = None,
+    start_timeout: float | None = None,
+    settings: AskShellSettings | None = None,
 ) -> ShellRun:
-    script = _as_config(
-        script,
+    config = _as_config(
+        config,
         env=env,
         skip_os_env=skip_os_env,
         cwd=cwd,
@@ -71,10 +79,11 @@ def run(
         should_retry=should_retry,
         ansi_content=ansi_content,
         skip_binary_check=skip_binary_check,
+        settings=settings,
     )
-    on_started = Future()  # type: ignore
-    _pool.submit(_execute_run, script, on_started)
-    return on_started.result()
+    run = ShellRun(config)
+    _pool.submit(_execute_run, run)
+    return run.wait_on_started(start_timeout)
 
 
 def run_and_wait(
@@ -91,6 +100,7 @@ def run_and_wait(
     should_retry: Callable[[ShellRun], bool] | None = None,
     ansi_content: bool | None = None,
     skip_binary_check: bool | None = None,
+    settings: AskShellSettings | None = None,
 ) -> ShellRun:
     config = _as_config(
         script,
@@ -104,8 +114,10 @@ def run_and_wait(
         should_retry=should_retry,
         ansi_content=ansi_content,
         skip_binary_check=skip_binary_check,
+        settings=settings,
     )
-    run = _execute_run(config)
+    run = ShellRun(config)
+    _pool.submit(_execute_run, run)
     run.wait_until_complete(timeout)
     return run
 
@@ -216,15 +228,34 @@ def _track_run(shell_run: ShellRun):
         _runs.pop(key, None)
 
 
-def _execute_run(config: ShellConfig, on_started: Future | None = None) -> ShellRun:
-    shell_run = ShellRun(config)
+def _execute_run(shell_run: ShellRun) -> ShellRun:
+    config = shell_run.config
+
+    def queue_consumer():
+        for message in shell_run._queue:
+            try:
+                shell_run._on_message(message)
+            except BaseException as e:
+                print_with(
+                    f"Error processing message: {e!r}",
+                    prefix=config.print_prefix,
+                    content_type=_ERROR,
+                )
+                log_exception(e)
+
+    _pool.submit(queue_consumer)
+
+    output_dir = config.run_output_dir_resolved()
+    output_dir.mkdir(parents=True, exist_ok=True)
     for attempt in range(1, config.attempts + 1):
         prefix = config.print_prefix
         if attempt > 1:
             prefix += f"-{attempt}"
             print_with(f"attempt: {attempt}", prefix=prefix, content_type=_WARNING)
         is_last_attempt = attempt == config.attempts
-        if result := _attempt_run(shell_run, prefix, on_started, is_last_attempt):
+        if result := _attempt_run(
+            shell_run, prefix, is_last_attempt, output_dir, config.run_log_stem(attempt)
+        ):
             return result
         if retry_call := config.should_retry:
             if not retry_call(shell_run):
@@ -233,51 +264,25 @@ def _execute_run(config: ShellConfig, on_started: Future | None = None) -> Shell
     return shell_run
 
 
-@dataclass
-class _FutureContext:
-    run: ShellRun
-    start_future: Future = field(default_factory=Future, init=False)
-
-    def result(self) -> None:
-        self.start_future.result()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_val:
-            self.start_future.set_exception(exc_val)
-            self.run._complete(exc_val)
-
-    def on_started(self, start: StartResult):
-        self.run._set_start_result(start)
-        if not self.start_future.done():
-            self.start_future.set_result(self.run)
-
-
 def _attempt_run(
-    shell_run: ShellRun, prefix: str, on_started: Future | None, is_last_attempt: bool
+    shell_run: ShellRun,
+    prefix: str,
+    is_last_attempt: bool,
+    output_dir: Path,
+    file_name: str,
 ) -> ShellRun | None:
+    """Returns a ShellRun when it completed successfully, otherwise None."""
     config = shell_run.config
-    start_future = _FutureContext(shell_run)
-
-    def _start_in_thread():
-        with start_future:
-            _run(
-                prefix,
-                config.shell_input,
-                start_future.on_started,
-                config.popen_kwargs,
-                config.ansi_content,
-            )
-
-    run_future = _pool.submit(_start_in_thread)
-    start_future.result()
     with _track_run(shell_run):
         try:
-            if on_started and not on_started.done():
-                on_started.set_result(shell_run)
-            run_future.result()
+            _run(
+                config.shell_input,
+                shell_run._queue,
+                config.popen_kwargs,
+                config.ansi_content,
+                output_dir,
+                file_name,
+            )
             if shell_run.clean_complete:
                 shell_run._complete()
                 return shell_run
@@ -287,19 +292,19 @@ def _attempt_run(
             print_with(repr(e), prefix=prefix, content_type=_ERROR)
             log_exception(e)
             if is_last_attempt:
-                base_error = run_future.exception()
-                error = ShellError(shell_run, base_error=base_error)
+                error = ShellError(shell_run, base_error=e)
                 shell_run._complete(error)
                 raise error from e
     return None
 
 
 def _run(
-    prefix: str,
     script: str,
-    process_started: Callable[[StartResult], None],
+    queue: ShellRunQueueT,
     kwargs: dict,
     ansi_content: bool,
+    output_dir: Path,
+    file_name: str,
 ) -> None:
     kwargs = (
         dict(
@@ -310,56 +315,79 @@ def _run(
         )
         | kwargs
     )
-    stdout_result: list[str] = []
-    stderr_result: list[str] = []
     with subprocess.Popen(script, shell=True, **kwargs) as proc:  # type: ignore
-        process_started(StartResult(proc, stdout_result, stderr_result))
+        queue.put_nowait(_pOpenStarted(proc))
+
+        def stdout_started(is_stdout: bool, console: Console):
+            queue.put_nowait(_stdStarted(is_stdout=is_stdout, console=console))
+
+        def add_stdout_line(line: str):
+            queue.put_nowait(_stdOutput(is_stdout=True, content=line))
 
         def read_stdout():
+            output_path = output_dir / f"{file_name}.stdout.log"
             _read_until_complete(
-                proc,
-                is_stdout=True,
-                prefix=prefix,
-                result=stdout_result,
-                ansi_content=ansi_content,
+                stream=proc.stdout,  # type: ignore
+                output_path=output_path,
+                on_console_ready=lambda console: stdout_started(
+                    is_stdout=True, console=console
+                ),
+                on_line=add_stdout_line,
             )
 
+        def add_stderr_line(line: str):
+            queue.put_nowait(_stdOutput(is_stdout=False, content=line))
+
         def read_stderr():
+            output_path = output_dir / f"{file_name}.stderr.log"
             _read_until_complete(
-                proc,
-                is_stdout=False,
-                prefix=prefix,
-                result=stderr_result,
-                ansi_content=ansi_content,
+                stream=proc.stderr,  # type: ignore
+                output_path=output_path,
+                on_console_ready=lambda console: stdout_started(
+                    is_stdout=False, console=console
+                ),
+                on_line=add_stderr_line,
             )
 
         fut_stdout = _pool.submit(read_stdout)
         fut_stderr = _pool.submit(read_stderr)
+        # no proc.wait/communicate, not sure if it will work
         wait([fut_stdout, fut_stderr])
 
 
 def _read_until_complete(
-    proc: subprocess.Popen,
-    is_stdout: bool,
-    prefix: str,
-    result: list[str],
-    ansi_content: bool,
+    stream: IO[str],
+    output_path: Path,
+    on_console_ready: Callable[[Console], None],
+    on_line: Callable[[str], None],
 ):
-    stream = proc.stdout if is_stdout else proc.stderr
-    content_type = _STDOUT if is_stdout else _STDERR
-    try:
-        for line in iter(stream.readline, ""):  # type: ignore
-            result.append(line)
-            print_with(
-                line.strip("\n"),
-                prefix=prefix,
-                content_type=content_type,
-                ansi_content=ansi_content,
-            )
-    except ValueError as e:
-        if "I/O operation on closed file" in str(e):
-            return
-        print_with(repr(e), prefix=prefix, content_type=_ERROR)
-        log_exception(e)
-    except BaseException as e:
-        log_exception(e)
+    # content_type = _STDOUT if is_stdout else _STDERR
+
+    with open(output_path, "w") as f:
+        console = Console(file=f, record=True, log_path=False, soft_wrap=True)
+        on_console_ready(console)
+        old_write = f.write
+
+        def write_hook(text: str):
+            # might need a different callback if ansi_content is True
+            text_no_extras = [line.strip() for line in text.splitlines()]
+            return old_write("\n".join(text_no_extras) + "\n")
+
+        f.write = write_hook
+        for line in iter(stream.readline, ""):
+            console.log(line)
+            on_line(line)
+        # try:
+        #     print_with(
+        #         line.strip("\n"),
+        #         prefix=prefix,
+        #         content_type=content_type,
+        #         ansi_content=ansi_content,
+        #     )
+        # except ValueError as e:
+        #     if "I/O operation on closed file" in str(e):
+        #         return
+        #     print_with(repr(e), prefix=prefix, content_type=_ERROR)
+        #     log_exception(e)
+        # except BaseException as e:
+        #     log_exception(e)

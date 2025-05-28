@@ -24,47 +24,25 @@ from ask_shell.models import (
 from ask_shell.printer import log_exception, print_with
 
 logger = logging.getLogger(__name__)
-
-_pool = ThreadPoolExecutor(max_workers=int(getenv("RUN_THREAD_COUNT", "50")))
 _STDOUT = ContentType.STDOUT
 _STDERR = ContentType.STDERR
 _ERROR = ContentType.ERROR
 _WARNING = ContentType.WARNING
+_pool = ThreadPoolExecutor(
+    max_workers=int(getenv("RUN_THREAD_COUNT", "50"))
+)  # Each run will take 3 threads: 1 for stdout, 1 for stderr, and 1 for popen wait.
+_runs: dict[int, ShellRun] = {} # internal to store running ShellRuns to support stopping them on exit
 
 
-def _read_until_complete(
-    proc: subprocess.Popen,
-    is_stdout: bool,
-    prefix: str,
-    result: list[str],
-    ansi_content: bool,
-):
-    stream = proc.stdout if is_stdout else proc.stderr
-    content_type = _STDOUT if is_stdout else _STDERR
-    try:
-        for line in iter(stream.readline, ""):  # type: ignore
-            result.append(line)
-            print_with(
-                line.strip("\n"),
-                prefix=prefix,
-                content_type=content_type,
-                ansi_content=ansi_content,
-            )
-    except ValueError as e:
-        if "I/O operation on closed file" in str(e):
-            return
-        print_with(repr(e), prefix=prefix, content_type=_ERROR)
-        log_exception(e)
-    except BaseException as e:
-        log_exception(e)
+def stop_runs_and_pool():
+    print_with(
+        "STOPPING stop_runs_and_pool", prefix="_ask_shell", content_type=_WARNING
+    )
+    kill_all_runs(reason="atexit")
+    _pool.shutdown(wait=True)
 
 
-def _as_config(config: ShellConfig | str, **kwargs) -> ShellConfig:
-    kwargs_not_none = {k: v for k, v in kwargs.items() if v is not None}
-    if isinstance(config, str):
-        return ShellConfig(shell_input=config, **kwargs_not_none)
-    assert isinstance(config, ShellConfig), f"not a ShellConfig or str: {config!r}"
-    return copy_and_validate(config, **kwargs_not_none)
+atexit.register(stop_runs_and_pool)
 
 
 def run(
@@ -132,6 +110,14 @@ def run_and_wait(
     return run
 
 
+def _as_config(config: ShellConfig | str, **kwargs) -> ShellConfig:
+    kwargs_not_none = {k: v for k, v in kwargs.items() if v is not None}
+    if isinstance(config, str):
+        return ShellConfig(shell_input=config, **kwargs_not_none)
+    assert isinstance(config, ShellConfig), f"not a ShellConfig or str: {config!r}"
+    return copy_and_validate(config, **kwargs_not_none)
+
+
 def run_error(run: ShellRun, timeout: float | None = 1) -> BaseException | None:
     try:
         run._complete_flag.result(timeout=timeout)
@@ -172,23 +158,6 @@ def wait_on_ok_errors(
     return oks, errors
 
 
-_runs: dict[int, ShellRun] = {}
-
-
-@contextmanager
-def _track_run(shell_run: ShellRun):
-    key = id(shell_run)
-    _runs[key] = shell_run
-    try:
-        yield
-    except (KeyboardInterrupt, InterruptedError) as e:
-        logger.info(f"interrupt: {e!r}")
-        stop_runs_and_pool()
-        shell_run._complete()
-    finally:
-        _runs.pop(key, None)
-
-
 def kill_all_runs(
     immediate: bool = False, reason: str = "", abort_timeout: float = 3.0
 ):
@@ -203,15 +172,48 @@ def kill_all_runs(
             )
 
 
-def stop_runs_and_pool():
-    print_with(
-        "STOPPING stop_runs_and_pool", prefix="_ask_shell", content_type=_WARNING
-    )
-    kill_all_runs(reason="atexit")
-    _pool.shutdown(wait=True)
+def kill(
+    proc: subprocess.Popen,
+    immediate: bool = False,
+    reason: str = "",
+    prefix: str = "",
+    abort_timeout: float = 3.0,
+):
+    """https://stackoverflow.com/questions/4789837/how-to-terminate-a-python-subprocess-launched-with-shell-true"""
+    if proc.returncode is not None:
+        # already finished
+        return
+
+    def warn(message: str):
+        print_with(message, prefix=prefix, content_type=_WARNING)
+
+    warn(f"killing: {reason}")
+    try:
+        if immediate:
+            proc.terminate()
+        else:
+            proc.send_signal(signal.SIGINT)
+        proc.wait(timeout=abort_timeout)
+        warn("killing complete")
+    except subprocess.TimeoutExpired:
+        warn(f"timeout after {abort_timeout}s! forcing a kill")
+        proc.terminate()
+    except (OSError, ValueError) as e:
+        warn(f"unable to get output when shutting down {e!r}")
 
 
-atexit.register(stop_runs_and_pool)
+@contextmanager
+def _track_run(shell_run: ShellRun):
+    key = id(shell_run)
+    _runs[key] = shell_run
+    try:
+        yield
+    except (KeyboardInterrupt, InterruptedError) as e:
+        logger.info(f"interrupt: {e!r}")
+        stop_runs_and_pool()
+        shell_run._complete()
+    finally:
+        _runs.pop(key, None)
 
 
 def _execute_run(config: ShellConfig, on_started: Future | None = None) -> ShellRun:
@@ -336,31 +338,28 @@ def _run(
         wait([fut_stdout, fut_stderr])
 
 
-def kill(
+def _read_until_complete(
     proc: subprocess.Popen,
-    immediate: bool = False,
-    reason: str = "",
-    prefix: str = "",
-    abort_timeout: float = 3.0,
+    is_stdout: bool,
+    prefix: str,
+    result: list[str],
+    ansi_content: bool,
 ):
-    """https://stackoverflow.com/questions/4789837/how-to-terminate-a-python-subprocess-launched-with-shell-true"""
-    if proc.returncode is not None:
-        # already finished
-        return
-
-    def warn(message: str):
-        print_with(message, prefix=prefix, content_type=_WARNING)
-
-    warn(f"killing: {reason}")
+    stream = proc.stdout if is_stdout else proc.stderr
+    content_type = _STDOUT if is_stdout else _STDERR
     try:
-        if immediate:
-            proc.terminate()
-        else:
-            proc.send_signal(signal.SIGINT)
-        proc.wait(timeout=abort_timeout)
-        warn("killing complete")
-    except subprocess.TimeoutExpired:
-        warn(f"timeout after {abort_timeout}s! forcing a kill")
-        proc.terminate()
-    except (OSError, ValueError) as e:
-        warn(f"unable to get output when shutting down {e!r}")
+        for line in iter(stream.readline, ""):  # type: ignore
+            result.append(line)
+            print_with(
+                line.strip("\n"),
+                prefix=prefix,
+                content_type=content_type,
+                ansi_content=ansi_content,
+            )
+    except ValueError as e:
+        if "I/O operation on closed file" in str(e):
+            return
+        print_with(repr(e), prefix=prefix, content_type=_ERROR)
+        log_exception(e)
+    except BaseException as e:
+        log_exception(e)

@@ -89,15 +89,16 @@ class ShellConfig(Entity):
 
     shell_input: str
     env: dict[str, str] = Field(default_factory=dict)
+    extra_popen_kwargs: dict = Field(default_factory=dict)
+    allow_non_zero_exit: bool = False
     skip_os_env: bool = False
     skip_binary_check: bool = False
     cwd: Path = Field(default=None, description="Set to Path.cwd() if not provided")  # type: ignore
+
     attempts: int = 1
     print_prefix: str = Field(
         default=None, description="Use cwd+binary_name+first_arg if not provided"
     )  # type: ignore
-    extra_popen_kwargs: dict = Field(default_factory=dict)
-    allow_non_zero_exit: bool = False
     should_retry: Callable[[ShellRun], bool] = always_retry
     ansi_content: bool = Field(default=None, description="Inferred if not provided")  # type: ignore
     is_binary_call: bool = Field(default=None, description="Inferred if not provided")  # type: ignore

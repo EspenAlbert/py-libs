@@ -189,10 +189,9 @@ def test_kill_process(tmp_path, immediate):
     popen = started.p_open
     assert popen, "no process to kill"
     kill(
-        popen,
+        started,
         immediate=immediate,
         reason="test-kill",
-        prefix=started.config.print_prefix,
     )
     duration = time.monotonic() - start
     assert duration < 4
@@ -250,7 +249,7 @@ def test_allow_process_to_finish(tmp_path):
     start = time.monotonic()
     popen = shell_run.p_open
     assert popen, "no process"
-    kill(popen, immediate=False, abort_timeout=3)
+    kill(shell_run, immediate=False, abort_timeout=3)
     stdout = shell_run.stdout
     duration = time.monotonic() - start
     assert 1 < duration < 2
@@ -284,3 +283,14 @@ def test_wait_safely_on_ok_failures_all_ok():
     oks, errors = wait_on_ok_errors(*runs, timeout=1)
     assert not errors
     assert all(run.clean_complete for run in oks)
+
+
+def test_break_of_match_statement_breaks_loop():
+    ids = []
+    for id in range(10):
+        match id:
+            case 5:
+                break
+            case _:
+                ids.append(id)
+    assert ids == [0, 1, 2, 3, 4]

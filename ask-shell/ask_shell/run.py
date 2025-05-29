@@ -1,3 +1,13 @@
+"""Design Principles:
+1. ShellConfig used to provide user configuration of the run.
+2. A ShellRun is created for each run, which manages the execution and output.
+3. The events are communicated through a queue, guaranteeing the order of messages.
+4. You can either run or run_and_wait, where the latter waits for completion while the 1st will exit after command has started.
+5. Message Callbacks can be used to direct output to the console, by default it is directed to a `.log` file which supports dumping ANSI content at the end of the run to a `.html` file.
+6. Retries are supported, with a configurable number of attempts and a retry condition.
+7. Any errors are converted into a `ShellError` which contains the run and base exception. Use `allow_non_zero_exit` to allow runs to complete with a non-zero exit code without raising this error.
+"""
+
 from __future__ import annotations
 
 import atexit
@@ -5,7 +15,6 @@ import logging
 import signal
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, wait
-from contextlib import contextmanager
 from os import getenv, setsid
 from pathlib import Path
 from typing import IO, Callable
@@ -13,25 +22,20 @@ from typing import IO, Callable
 from model_lib.pydantic_utils import copy_and_validate
 from rich.console import Console
 
-from ask_shell.colors import ContentType
 from ask_shell.models import (
+    POpenStartedMessage,
+    RetryAttemptMessage,
     RunIncompleteError,
     ShellConfig,
-    ShellError,
     ShellRun,
     ShellRunQueueT,
-    _pOpenStarted,
-    _stdOutput,
-    _stdStarted,
+    StdOutputMessage,
+    StdReadErrorMessage,
+    StdStartedMessage,
 )
-from ask_shell.printer import log_exception, print_with
 from ask_shell.settings import AskShellSettings
 
 logger = logging.getLogger(__name__)
-_STDOUT = ContentType.STDOUT
-_STDERR = ContentType.STDERR
-_ERROR = ContentType.ERROR
-_WARNING = ContentType.WARNING
 _pool = ThreadPoolExecutor(
     max_workers=int(getenv("RUN_THREAD_COUNT", "50"))
 )  # Each run will take 3 threads: 1 for stdout, 1 for stderr, and 1 for popen wait.
@@ -41,10 +45,9 @@ _runs: dict[
 
 
 def stop_runs_and_pool():
-    print_with(
-        "STOPPING stop_runs_and_pool", prefix="_ask_shell", content_type=_WARNING
-    )
-    kill_all_runs(reason="atexit")
+    if _runs:
+        logger.warning("STOPPING stop_runs_and_pool")
+        kill_all_runs(reason="atexit")
     _pool.shutdown(wait=True)
 
 
@@ -158,9 +161,8 @@ def wait_on_ok_errors(
             runs: list[ShellRun] = [future_runs[f] for f in done]  # type: ignore
         else:
             for run in runs:
-                if run.is_running and (p_open := run.p_open):
-                    prefix = run.config.print_prefix
-                    kill(p_open, immediate=True, reason="timeout", prefix=prefix)
+                if run.is_running:
+                    kill(run, immediate=True, reason="timeout")
 
     for run in runs:
         if error := run_error(run):
@@ -174,128 +176,110 @@ def kill_all_runs(
     immediate: bool = False, reason: str = "", abort_timeout: float = 3.0
 ):
     for run in _runs.values():
-        if p_open := run.p_open:
-            kill(
-                p_open,
-                immediate=immediate,
-                reason=reason,
-                abort_timeout=abort_timeout,
-                prefix=run.config.print_prefix,
-            )
+        kill(
+            run,
+            immediate=immediate,
+            reason=reason,
+            abort_timeout=abort_timeout,
+        )
 
 
 def kill(
-    proc: subprocess.Popen,
+    run: ShellRun,
     immediate: bool = False,
     reason: str = "",
-    prefix: str = "",
     abort_timeout: float = 3.0,
 ):
     """https://stackoverflow.com/questions/4789837/how-to-terminate-a-python-subprocess-launched-with-shell-true"""
-    if proc.returncode is not None:
-        # already finished
+    proc = run.p_open
+    if not proc or proc.returncode is not None:
+        # not running
         return
 
-    def warn(message: str):
-        print_with(message, prefix=prefix, content_type=_WARNING)
-
-    warn(f"killing: {reason}")
+    logger.warning(f"killing starting: {run} {reason}")
     try:
         if immediate:
             proc.terminate()
         else:
             proc.send_signal(signal.SIGINT)
         proc.wait(timeout=abort_timeout)
-        warn("killing complete")
+        logger.info(f"killing completed: {run} {reason}")
     except subprocess.TimeoutExpired:
-        warn(f"timeout after {abort_timeout}s! forcing a kill")
+        logger.warning(
+            f"killingtimeout after {abort_timeout}s! forcing a kill: {run} {reason}"
+        )
         proc.terminate()
     except (OSError, ValueError) as e:
-        warn(f"unable to get output when shutting down {e!r}")
-
-
-@contextmanager
-def _track_run(shell_run: ShellRun):
-    key = id(shell_run)
-    _runs[key] = shell_run
-    try:
-        yield
-    except (KeyboardInterrupt, InterruptedError) as e:
-        logger.info(f"interrupt: {e!r}")
-        stop_runs_and_pool()
-        shell_run._complete()
-    finally:
-        _runs.pop(key, None)
+        logger.warning(f"unable to get output when shutting down: {run} {e!r}")
 
 
 def _execute_run(shell_run: ShellRun) -> ShellRun:
     config = shell_run.config
 
+    queue = shell_run._queue
+
     def queue_consumer():
-        for message in shell_run._queue:
+        for message in queue:
             try:
                 shell_run._on_message(message)
             except BaseException as e:
-                print_with(
-                    f"Error processing message: {e!r}",
-                    prefix=config.print_prefix,
-                    content_type=_ERROR,
-                )
-                log_exception(e)
+                logger.warning(f"Error processing message for {shell_run}: {e!r}")
+                logger.exception(e)
 
-    _pool.submit(queue_consumer)
-
+    consumer_future = _pool.submit(queue_consumer)
     output_dir = config.run_output_dir_resolved()
     output_dir.mkdir(parents=True, exist_ok=True)
     for attempt in range(1, config.attempts + 1):
-        prefix = config.print_prefix
         if attempt > 1:
-            prefix += f"-{attempt}"
-            print_with(f"attempt: {attempt}", prefix=prefix, content_type=_WARNING)
+            queue.put_nowait(RetryAttemptMessage(attempt=attempt))
+            logger.warning(
+                f"Retrying run {shell_run} attempt {attempt} of {config.attempts}"
+            )
         is_last_attempt = attempt == config.attempts
-        if result := _attempt_run(
-            shell_run, prefix, is_last_attempt, output_dir, config.run_log_stem(attempt)
-        ):
-            return result
-        if retry_call := config.should_retry:
-            if not retry_call(shell_run):
-                shell_run._complete()
+        attempt_log_prefix = config.run_log_stem(attempt)
+
+        result = _attempt_run(shell_run, output_dir, attempt_log_prefix)
+        match result:
+            case ShellRun() if result.clean_complete or is_last_attempt:
                 break
+            case ShellRun() if not config.should_retry(result):
+                break
+            case BaseException():
+                shell_run._complete(error=result)
+                return shell_run
+    shell_run._complete()  # will ensure the queue is closed
+    consumer_future.result()  # wait for the consumer to finish processing messages
     return shell_run
 
 
 def _attempt_run(
     shell_run: ShellRun,
-    prefix: str,
-    is_last_attempt: bool,
     output_dir: Path,
     file_name: str,
-) -> ShellRun | None:
+) -> ShellRun | BaseException:
     """Returns a ShellRun when it completed successfully, otherwise None."""
     config = shell_run.config
-    with _track_run(shell_run):
-        try:
-            _run(
-                config.shell_input,
-                shell_run._queue,
-                config.popen_kwargs,
-                config.ansi_content,
-                output_dir,
-                file_name,
-            )
-            if shell_run.clean_complete:
-                shell_run._complete()
-                return shell_run
-            if is_last_attempt or config.allow_non_zero_exit:
-                shell_run._complete()
-        except Exception as e:
-            print_with(repr(e), prefix=prefix, content_type=_ERROR)
-            log_exception(e)
-            if is_last_attempt:
-                error = ShellError(shell_run, base_error=e)
-                shell_run._complete(error)
-                raise error from e
-    return None
+    key = id(shell_run)
+    _runs[key] = shell_run
+    try:
+        _run(
+            config.shell_input,
+            shell_run._queue,
+            config.popen_kwargs,
+            config.ansi_content,
+            output_dir,
+            file_name,
+        )
+        return shell_run
+    except BaseException as e:
+        if isinstance(e, KeyboardInterrupt | InterruptedError):
+            logger.info(f"interrupt in {run} {e!r}")
+            stop_runs_and_pool()
+        logger.warning(f"Error running {shell_run}: {e!r}")
+        logger.exception(e)
+        return e
+    finally:
+        _runs.pop(key, None)
 
 
 def _run(
@@ -316,38 +300,48 @@ def _run(
         | kwargs
     )
     with subprocess.Popen(script, shell=True, **kwargs) as proc:  # type: ignore
-        queue.put_nowait(_pOpenStarted(proc))
+        queue.put_nowait(POpenStartedMessage(proc))
 
-        def stdout_started(is_stdout: bool, console: Console):
-            queue.put_nowait(_stdStarted(is_stdout=is_stdout, console=console))
+        def stdout_started(is_stdout: bool, console: Console, log_path: Path):
+            queue.put_nowait(
+                StdStartedMessage(
+                    is_stdout=is_stdout, console=console, log_path=log_path
+                )
+            )
 
         def add_stdout_line(line: str):
-            queue.put_nowait(_stdOutput(is_stdout=True, content=line))
+            queue.put_nowait(StdOutputMessage(is_stdout=True, content=line))
 
         def read_stdout():
             output_path = output_dir / f"{file_name}.stdout.log"
-            _read_until_complete(
-                stream=proc.stdout,  # type: ignore
-                output_path=output_path,
-                on_console_ready=lambda console: stdout_started(
-                    is_stdout=True, console=console
-                ),
-                on_line=add_stdout_line,
-            )
+            try:
+                _read_until_complete(
+                    stream=proc.stdout,  # type: ignore
+                    output_path=output_path,
+                    on_console_ready=lambda console: stdout_started(
+                        is_stdout=True, console=console, log_path=output_path
+                    ),
+                    on_line=add_stdout_line,
+                )
+            except BaseException as e:
+                queue.put_nowait(StdReadErrorMessage(is_stdout=True, error=e))
 
         def add_stderr_line(line: str):
-            queue.put_nowait(_stdOutput(is_stdout=False, content=line))
+            queue.put_nowait(StdOutputMessage(is_stdout=False, content=line))
 
         def read_stderr():
             output_path = output_dir / f"{file_name}.stderr.log"
-            _read_until_complete(
-                stream=proc.stderr,  # type: ignore
-                output_path=output_path,
-                on_console_ready=lambda console: stdout_started(
-                    is_stdout=False, console=console
-                ),
-                on_line=add_stderr_line,
-            )
+            try:
+                _read_until_complete(
+                    stream=proc.stderr,  # type: ignore
+                    output_path=output_path,
+                    on_console_ready=lambda console: stdout_started(
+                        is_stdout=False, console=console, log_path=output_path
+                    ),
+                    on_line=add_stderr_line,
+                )
+            except BaseException as e:
+                queue.put_nowait(StdReadErrorMessage(is_stdout=False, error=e))
 
         fut_stdout = _pool.submit(read_stdout)
         fut_stderr = _pool.submit(read_stderr)

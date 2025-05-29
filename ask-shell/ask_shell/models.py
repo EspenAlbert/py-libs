@@ -5,6 +5,7 @@ import platform
 import string
 import subprocess
 from concurrent.futures import Future
+from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
 from shutil import which
@@ -77,6 +78,48 @@ class ShellInput(NamedTuple):
         return ""
 
 
+@dataclass
+class StdStartedMessage:
+    is_stdout: bool
+    console: Console
+    log_path: Path
+
+
+@dataclass
+class StdOutputMessage:
+    is_stdout: bool
+    content: str
+
+
+@dataclass
+class POpenStartedMessage:
+    p_open: subprocess.Popen
+
+
+@dataclass
+class StdReadErrorMessage:
+    is_stdout: bool
+    error: BaseException
+
+
+@dataclass
+class RetryAttemptMessage:
+    attempt: int
+
+
+OutputCallbackT: TypeAlias = Callable[
+    [str], bool
+]  # returns True if the callback is done and should be removed
+InternalMessageT: TypeAlias = Union[
+    StdStartedMessage,
+    StdOutputMessage,
+    POpenStartedMessage,
+    StdReadErrorMessage,
+    RetryAttemptMessage,
+]
+ShellRunQueueT: TypeAlias = ClosableQueue[InternalMessageT]
+
+
 class ShellConfig(Entity):
     """
     >>> ShellConfig("some_script").print_prefix
@@ -112,6 +155,14 @@ class ShellConfig(Entity):
         description="Directory to store run logs, defaults to settings.run_logs /{XX}_{self.exec_name}",
     )
     run_log_stem_prefix: str = Field(default="", description="Prefix for run log stem")
+    skip_html_log_files: bool = Field(
+        default=False,
+        description="Skip HTML log files, by default dumps HTML logs to support viewing colored output in browsers",
+    )
+    message_callbacks: list[Callable[[InternalMessageT], bool]] = Field(
+        default_factory=list,
+        description="Callbacks for run messages, useful for custom handling of stdout/stderr",
+    )
 
     @property
     def exec_name(self) -> str:
@@ -192,32 +243,13 @@ class ShellConfig(Entity):
 
 
 @dataclass
-class _stdStarted:
-    is_stdout: bool
-    console: Console
-
-
-@dataclass
-class _stdOutput:
-    is_stdout: bool
-    content: str
-
-
-@dataclass
-class _pOpenStarted:
-    p_open: subprocess.Popen
-
-
-OutputCallbackT: TypeAlias = Callable[
-    [str], bool
-]  # returns True if the callback is done and should be removed
-InternalMessageT: TypeAlias = Union[_stdStarted, _stdOutput, _pOpenStarted]
-ShellRunQueueT: TypeAlias = ClosableQueue[InternalMessageT]
-
-
-@dataclass
 class ShellRun:
-    """Only created by this file never outside!"""
+    """Stores dynamic behavior. Only created by this file never outside.
+
+    Args:
+        _start_flag: Future[ShellRun]: Flag that is set when the run has both p_open and stdout/stderr reading started. During multiple attempts, only the 1st attempt will call it.
+
+    """
 
     config: ShellConfig
     p_open: subprocess.Popen | None = field(init=False, default=None)
@@ -225,54 +257,97 @@ class ShellRun:
     _start_flag: Future[ShellRun] = field(default_factory=Future, init=False)
     _complete_flag: Future[ShellRun] = field(default_factory=Future, init=False)
     _stdout: Console | None = field(init=False, default=None)
+    _stdout_log_path: Path | None = field(init=False, default=None)
     _stderr: Console | None = field(init=False, default=None)
+    _stderr_log_path: Path | None = field(init=False, default=None)
     _queue: ShellRunQueueT = field(init=False, default_factory=ClosableQueue)
     _lock: RLock = field(init=False, default_factory=RLock)
-    _stdout_callbacks: list[OutputCallbackT] = field(init=False, default_factory=list)
-    _stderr_callbacks: list[OutputCallbackT] = field(init=False, default_factory=list)
+    _current_attempt: int = field(init=False, default=1)
 
     @property
     def has_started(self) -> bool:
         return self._stdout is not None and self._stderr is not None
 
-    def add_callback(
+    def __str__(self) -> str:
+        return " ".join(
+            part
+            for part in (
+                "ShellRun(",
+                self.config.print_prefix,
+                "running" if self.is_running else f"exit_code={self.exit_code}",
+                ""
+                if self._current_attempt == 1
+                else f"attempt={self._current_attempt}/{self.config.attempts}",
+                ")",
+            )
+            if part
+        )
+
+    def add_output_callback(
         self, call: OutputCallbackT, *, is_stdout: bool, skip_old_lines: bool = False
-    ):
-        assert self.is_running, "Cannot add callback to a completed run"
+    ) -> Callable[[], None] | None:
+        """Adds a callback that will be called on each new line of output.
+        Args:
+            call: Callable that takes a line of output and returns True if the callback is done and should be removed.
+            is_stdout: If True, the callback will be called on stdout, otherwise on stderr.
+            skip_old_lines: If True, the callback will not be called on old lines of output, only new ones.
+
+        Returns:
+            Callable[[], None]: A function that can be called to remove the callback. None, if the callback is already removed.
+
+        Warning:
+            When `skip_old_lines` is True, the initial lines of stdout/stderr might have a "[08:34:09]" or similar prefix.
+            Also, there is a chance the same line will be called twice
+
+        """
+
+        def only_on_output_callback(message: InternalMessageT) -> bool:
+            if isinstance(message, StdOutputMessage) and message.is_stdout == is_stdout:
+                return call(message.content)
+            return False
+
+        def remove_callback():
+            with self._lock:
+                with suppress(ValueError):  # if the callback was already removed
+                    self.config.message_callbacks.remove(only_on_output_callback)
+
         with self._lock:
-            if is_stdout:
-                self._stdout_callbacks.append(call)
-            else:
-                self._stderr_callbacks.append(call)
-            if skip_old_lines:
-                return
-            if is_stdout:
-                for line in self.stdout.splitlines():
-                    if call(line):
-                        self._stdout_callbacks.remove(call)
-            else:
-                for line in self.stderr.splitlines():
-                    if call(line):
-                        self._stderr_callbacks.remove(call)
+            self.config.message_callbacks.append(only_on_output_callback)
+        if skip_old_lines:
+            return remove_callback
+        start_lines = (
+            self.stdout.splitlines() if is_stdout else self.stderr.splitlines()
+        )
+        for line in start_lines:
+            if call(line):
+                remove_callback()
+                return None
+        return remove_callback
 
     def _on_message(self, message: InternalMessageT):
         with self._lock:
+            for callback in list(self.config.message_callbacks):
+                if callback(message):
+                    self.config.message_callbacks.remove(callback)
             match message:
-                case _stdStarted(is_stdout=True, console=console):
+                case StdStartedMessage(
+                    is_stdout=True, console=console, log_path=log_path
+                ):
                     self._stdout = console
-                    if self.has_started:
-                        self._start_flag.set_result(self)
-                case _stdStarted(is_stdout=False, console=console):
+                    self._stdout_log_path = log_path
+                case StdStartedMessage(
+                    is_stdout=False, console=console, log_path=log_path
+                ):
                     self._stderr = console
-                case _pOpenStarted(p_open=p_open):
+                    self._stderr_log_path = log_path
+                case POpenStartedMessage(p_open=p_open):
                     self.p_open = p_open
-                case _stdOutput(is_stdout=True, content=content):
-                    for call in self._stdout_callbacks:
-                        if call(content):
-                            self._stdout_callbacks.remove(call)
-                case _stdOutput(is_stdout=False, content=content):
-                    if self._stderr:
-                        self._stderr.log(content)
+                case RetryAttemptMessage(attempt=attempt):
+                    if not self.config.skip_html_log_files:
+                        self._dump_html_logs()
+                    self._reset_read_state(attempt)
+            if not self._start_flag.done() and self.has_started:
+                self._start_flag.set_result(self)
 
     def wait_on_started(self, timeout: float | None = None) -> ShellRun:
         return self._start_flag.result(timeout)
@@ -312,18 +387,19 @@ class ShellRun:
             self._complete_flag.set_result(self)
         else:
             self._complete_flag.set_exception(ShellError(self, error))
+        self._queue.close()
 
     @property
     def stdout(self) -> str:
-        if self._stdout is None:
+        if self._stdout_log_path is None:
             return ""
-        return self._stdout.export_text(clear=False)
+        return self._stdout_log_path.read_text()
 
     @property
     def stderr(self) -> str:
-        if self._stderr is None:
+        if self._stderr_log_path is None:
             return ""
-        return self._stderr.export_text(clear=False)
+        return self._stderr_log_path.read_text()
 
     @property
     def clean_complete(self):
@@ -331,7 +407,23 @@ class ShellRun:
 
     @property
     def is_running(self):
-        return self.exit_code is None
+        return not self._complete_flag.done()
+
+    def _dump_html_logs(self):
+        if (stdout_logs := self._stdout_log_path) and self._stdout:
+            stdout_logs_html = stdout_logs.with_suffix(".html")
+            stdout_logs_html.write_text(self._stdout.export_html(clear=False))
+        if (stderr_logs := self._stderr_log_path) and self._stderr:
+            stderr_logs_html = stderr_logs.with_suffix(".html")
+            stderr_logs_html.write_text(self._stderr.export_html(clear=False))
+
+    def _reset_read_state(self, attempt: int):
+        self._current_attempt = attempt
+        self._stdout = None
+        self._stderr = None
+        self.p_open = None
+        self._stdout_log_path = None
+        self._stderr_log_path = None
 
 
 class ShellError(Exception):

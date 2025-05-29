@@ -21,6 +21,7 @@ from typing import IO, Callable
 
 from model_lib.pydantic_utils import copy_and_validate
 from rich.console import Console
+from rich.text import Text
 
 from ask_shell.models import (
     InternalMessageT,
@@ -343,7 +344,7 @@ def _run(
                         is_stdout=True, console=console, log_path=output_path
                     ),
                     on_line=add_stdout_line,
-                    skip_log_time=config.skip_log_time,
+                    config=config,
                 )
             except BaseException as e:
                 queue.put_nowait(StdReadErrorMessage(is_stdout=True, error=e))
@@ -361,7 +362,7 @@ def _run(
                         is_stdout=False, console=console, log_path=output_path
                     ),
                     on_line=add_stderr_line,
-                    skip_log_time=config.skip_log_time,
+                    config=config,
                 )
             except BaseException as e:
                 queue.put_nowait(StdReadErrorMessage(is_stdout=False, error=e))
@@ -377,7 +378,7 @@ def _read_until_complete(
     output_path: Path,
     on_console_ready: Callable[[Console], None],
     on_line: Callable[[str], None],
-    skip_log_time: bool = False,
+    config: ShellConfig,
 ):
     # content_type = _STDOUT if is_stdout else _STDERR
 
@@ -387,7 +388,7 @@ def _read_until_complete(
             record=True,
             log_path=False,
             soft_wrap=True,
-            log_time=not skip_log_time,
+            log_time=not config.skip_log_time,
         )
         on_console_ready(console)
         old_write = f.write
@@ -397,21 +398,12 @@ def _read_until_complete(
             text_no_extras = [line.strip() for line in text.splitlines()]
             return old_write("\n".join(text_no_extras) + "\n")
 
-        f.write = write_hook
+        def write_hook_ansi(text: str):
+            ansi_text = Text.from_ansi(text)
+            text_no_extras = [line.strip() for line in ansi_text.plain.splitlines()]
+            return old_write("\n".join(text_no_extras) + "\n")
+
+        f.write = write_hook_ansi if config.ansi_content else write_hook
         for line in iter(stream.readline, ""):
             console.log(line)
             on_line(line)
-        # try:
-        #     print_with(
-        #         line.strip("\n"),
-        #         prefix=prefix,
-        #         content_type=content_type,
-        #         ansi_content=ansi_content,
-        #     )
-        # except ValueError as e:
-        #     if "I/O operation on closed file" in str(e):
-        #         return
-        #     print_with(repr(e), prefix=prefix, content_type=_ERROR)
-        #     log_exception(e)
-        # except BaseException as e:
-        #     log_exception(e)

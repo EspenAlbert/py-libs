@@ -322,3 +322,11 @@ def test_break_of_match_statement_breaks_loop():
             case _:
                 ids.append(id)
     assert ids == [0, 1, 2, 3, 4]
+
+
+def test_ansi_content(tf_dir):
+    output = run_and_wait("terraform init", cwd=tf_dir, ansi_content=True)
+    assert "Terraform has been successfully initialized!" in output.stdout
+    assert "[0m[1m[32m" not in output.stdout, (
+        "ANSI codes should not be present in the output"
+    )

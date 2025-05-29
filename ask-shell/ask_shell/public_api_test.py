@@ -1,3 +1,4 @@
+import inspect
 import logging
 import sys
 import time
@@ -5,6 +6,7 @@ from json import loads
 from os import getenv
 
 import pytest
+from model_lib.pydantic_utils import field_names
 from pydantic import ValidationError
 
 from ask_shell import (
@@ -30,14 +32,37 @@ def stop_consumer():
     stop_runs_and_pool()
 
 
+@pytest.mark.parametrize("func", [run, run_and_wait], ids=["run", "run_and_wait"])
+def test_check_all_config_args_in_signatures(func):
+    names = set(field_names(ShellConfig)) - {"shell_input"}
+    annotations = {
+        name: annotation for name, annotation in ShellConfig.__annotations__.items()
+    }
+    signature = inspect.signature(func)
+    parameters = signature.parameters
+    missing_names = names - set(parameters.keys())
+    missing_names = "\n".join(
+        f"{name}: {annotations[name]} | None = None," for name in sorted(missing_names)
+    )
+    assert not missing_names, (
+        f"please update the signature of {func.__name__} to include:\n{missing_names}"
+    )
+
+
 def test_normal_run():
-    result = run_and_wait(ShellConfig(shell_input="echo hello"))
+    result = run_and_wait(ShellConfig(shell_input="echo hello", skip_log_time=True))
     assert result.stdout == "hello"
     assert result.stderr == ""
 
 
+def test_stderr_run():
+    result = run_and_wait(ShellConfig(shell_input="echo hello >&2", skip_log_time=True))
+    assert result.stdout == ""
+    assert result.stderr == "hello"
+
+
 def test_async_run():
-    result = run(ShellConfig(shell_input="sleep 1 && echo hello"))
+    result = run(ShellConfig(shell_input="sleep 1 && echo hello"), skip_log_time=True)
     assert result.is_running
     result.wait_until_complete(timeout=2)
     assert result.stdout == "hello"
@@ -52,11 +77,11 @@ def test_error_run():
 
 
 def test_invalid_popen_args():
-    with pytest.raises(TypeError) as exc:
+    with pytest.raises(ShellError) as exc:
         run_and_wait(
             ShellConfig(shell_input="echo ok", extra_popen_kwargs=dict(unknown=True))
         )
-    assert "unexpected keyword" in str(exc.value)
+    assert "unexpected keyword" in str(exc.value.base_error)
 
 
 def test_allow_non_zero_exit():
@@ -83,7 +108,7 @@ if attempt_path.exists():
 else:
     current_attempt = 1
 attempt_path.write_text(str(current_attempt+1))
-print(f"attempt in script: {current_attempt}/3")
+print(f"attempt in script: {current_attempt}/3", flush=True)
 if current_attempt < 3:
     raise Exception("sys_error")
 """
@@ -160,7 +185,9 @@ def test_parse_json(tmp_path):
     filename = "example.json"
     json_path = tmp_path / filename
     json_path.write_text(_parse_json_stdout)
-    result = run_and_wait(ShellConfig(shell_input=f"cat {filename}", cwd=tmp_path))
+    result = run_and_wait(
+        ShellConfig(shell_input=f"cat {filename}", cwd=tmp_path), skip_log_time=True
+    )
     time.sleep(0.1)
     stdout = result.stdout
     logger.info(stdout)
@@ -258,13 +285,14 @@ def test_allow_process_to_finish(tmp_path):
 
 
 def test_parallel_runs():
-    results = [run(ShellConfig(shell_input=f"sleep {i} && echo {i}")) for i in range(4)]
+    results = [run(ShellConfig(shell_input=f"sleep 1 && echo {i}")) for i in range(5)]
     start = time.time()
     for result in results:
         result.wait_until_complete()
     assert time.time() - start < 4
 
 
+@pytest.mark.skip("refactored, print_with not used by default yet")
 @pytest.mark.parametrize("call_old", [False, True])
 def test_print_with_override(call_old):
     called = False

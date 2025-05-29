@@ -23,6 +23,7 @@ from model_lib.pydantic_utils import copy_and_validate
 from rich.console import Console
 
 from ask_shell.models import (
+    InternalMessageT,
     POpenStartedMessage,
     RetryAttemptMessage,
     RunIncompleteError,
@@ -57,32 +58,44 @@ atexit.register(stop_runs_and_pool)
 def run(
     config: ShellConfig | str,
     *,
-    env: dict[str, str] | None = None,
-    skip_os_env: bool | None = None,
-    cwd: str | Path | None = None,
-    attempts: int | None = None,
-    print_prefix: str | None = None,
-    extra_popen_kwargs: dict | None = None,
     allow_non_zero_exit: bool | None = None,
-    should_retry: Callable[[ShellRun], bool] | None = None,
     ansi_content: bool | None = None,
-    skip_binary_check: bool | None = None,
-    start_timeout: float | None = None,
+    attempts: int | None = None,
+    cwd: str | Path | None = None,
+    env: dict[str, str] | None = None,
+    extra_popen_kwargs: dict | None = None,
+    is_binary_call: bool | None = None,
+    message_callbacks: list[Callable[[InternalMessageT], bool]] | None = None,
+    print_prefix: str | None = None,
+    run_log_stem_prefix: str | None = None,
+    run_output_dir: Path | None | None = None,
     settings: AskShellSettings | None = None,
+    should_retry: Callable[[ShellRun], bool] | None = None,
+    skip_binary_check: bool | None = None,
+    skip_html_log_files: bool | None = None,
+    skip_log_time: bool | None = None,
+    skip_os_env: bool | None = None,
+    start_timeout: float | None = None,
 ) -> ShellRun:
     config = _as_config(
         config,
-        env=env,
-        skip_os_env=skip_os_env,
-        cwd=cwd,
-        attempts=attempts,
-        print_prefix=print_prefix,
-        extra_popen_kwargs=extra_popen_kwargs,
         allow_non_zero_exit=allow_non_zero_exit,
-        should_retry=should_retry,
         ansi_content=ansi_content,
-        skip_binary_check=skip_binary_check,
+        attempts=attempts,
+        cwd=cwd,
+        env=env,
+        extra_popen_kwargs=extra_popen_kwargs,
+        is_binary_call=is_binary_call,
+        message_callbacks=message_callbacks,
+        print_prefix=print_prefix,
+        run_log_stem_prefix=run_log_stem_prefix,
+        run_output_dir=run_output_dir,
         settings=settings,
+        should_retry=should_retry,
+        skip_binary_check=skip_binary_check,
+        skip_html_log_files=skip_html_log_files,
+        skip_log_time=skip_log_time,
+        skip_os_env=skip_os_env,
     )
     run = ShellRun(config)
     _pool.submit(_execute_run, run)
@@ -93,31 +106,43 @@ def run_and_wait(
     script: ShellConfig | str,
     timeout: float | None = None,
     *,
-    env: dict[str, str] | None = None,
-    skip_os_env: bool | None = None,
-    cwd: str | Path | None = None,
-    attempts: int | None = None,
-    print_prefix: str | None = None,
-    extra_popen_kwargs: dict | None = None,
     allow_non_zero_exit: bool | None = None,
-    should_retry: Callable[[ShellRun], bool] | None = None,
     ansi_content: bool | None = None,
-    skip_binary_check: bool | None = None,
+    attempts: int | None = None,
+    cwd: str | Path | None = None,
+    env: dict[str, str] | None = None,
+    extra_popen_kwargs: dict | None = None,
+    is_binary_call: bool | None = None,
+    message_callbacks: list[Callable[[InternalMessageT], bool]] | None = None,
+    print_prefix: str | None = None,
+    run_log_stem_prefix: str | None = None,
+    run_output_dir: Path | None | None = None,
     settings: AskShellSettings | None = None,
+    should_retry: Callable[[ShellRun], bool] | None = None,
+    skip_binary_check: bool | None = None,
+    skip_html_log_files: bool | None = None,
+    skip_log_time: bool | None = None,
+    skip_os_env: bool | None = None,
 ) -> ShellRun:
     config = _as_config(
         script,
-        env=env,
-        skip_os_env=skip_os_env,
-        cwd=cwd,
-        attempts=attempts,
-        print_prefix=print_prefix,
-        extra_popen_kwargs=extra_popen_kwargs,
         allow_non_zero_exit=allow_non_zero_exit,
-        should_retry=should_retry,
         ansi_content=ansi_content,
-        skip_binary_check=skip_binary_check,
+        attempts=attempts,
+        cwd=cwd,
+        env=env,
+        extra_popen_kwargs=extra_popen_kwargs,
+        is_binary_call=is_binary_call,
+        message_callbacks=message_callbacks,
+        print_prefix=print_prefix,
+        run_log_stem_prefix=run_log_stem_prefix,
+        run_output_dir=run_output_dir,
         settings=settings,
+        should_retry=should_retry,
+        skip_binary_check=skip_binary_check,
+        skip_html_log_files=skip_html_log_files,
+        skip_log_time=skip_log_time,
+        skip_os_env=skip_os_env,
     )
     run = ShellRun(config)
     _pool.submit(_execute_run, run)
@@ -263,10 +288,8 @@ def _attempt_run(
     _runs[key] = shell_run
     try:
         _run(
-            config.shell_input,
+            config,
             shell_run._queue,
-            config.popen_kwargs,
-            config.ansi_content,
             output_dir,
             file_name,
         )
@@ -283,10 +306,8 @@ def _attempt_run(
 
 
 def _run(
-    script: str,
+    config: ShellConfig,
     queue: ShellRunQueueT,
-    kwargs: dict,
-    ansi_content: bool,
     output_dir: Path,
     file_name: str,
 ) -> None:
@@ -297,9 +318,9 @@ def _run(
             preexec_fn=setsid,
             universal_newlines=True,
         )
-        | kwargs
+        | config.popen_kwargs
     )
-    with subprocess.Popen(script, shell=True, **kwargs) as proc:  # type: ignore
+    with subprocess.Popen(config.shell_input, shell=True, **kwargs) as proc:  # type: ignore
         queue.put_nowait(POpenStartedMessage(proc))
 
         def stdout_started(is_stdout: bool, console: Console, log_path: Path):
@@ -322,6 +343,7 @@ def _run(
                         is_stdout=True, console=console, log_path=output_path
                     ),
                     on_line=add_stdout_line,
+                    skip_log_time=config.skip_log_time,
                 )
             except BaseException as e:
                 queue.put_nowait(StdReadErrorMessage(is_stdout=True, error=e))
@@ -339,6 +361,7 @@ def _run(
                         is_stdout=False, console=console, log_path=output_path
                     ),
                     on_line=add_stderr_line,
+                    skip_log_time=config.skip_log_time,
                 )
             except BaseException as e:
                 queue.put_nowait(StdReadErrorMessage(is_stdout=False, error=e))
@@ -354,11 +377,18 @@ def _read_until_complete(
     output_path: Path,
     on_console_ready: Callable[[Console], None],
     on_line: Callable[[str], None],
+    skip_log_time: bool = False,
 ):
     # content_type = _STDOUT if is_stdout else _STDERR
 
     with open(output_path, "w") as f:
-        console = Console(file=f, record=True, log_path=False, soft_wrap=True)
+        console = Console(
+            file=f,
+            record=True,
+            log_path=False,
+            soft_wrap=True,
+            log_time=not skip_log_time,
+        )
         on_console_ready(console)
         old_write = f.write
 

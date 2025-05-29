@@ -140,6 +140,7 @@ class ShellConfig(Entity):
     allow_non_zero_exit: bool = False
     skip_os_env: bool = False
     skip_binary_check: bool = False
+    skip_log_time: bool = False
     cwd: Path = Field(default=None, description="Set to Path.cwd() if not provided")  # type: ignore
 
     attempts: int = 1
@@ -275,9 +276,11 @@ class ShellRun:
                 "ShellRun(",
                 self.config.print_prefix,
                 "running" if self.is_running else f"exit_code={self.exit_code}",
-                ""
-                if self._current_attempt == 1
-                else f"attempt={self._current_attempt}/{self.config.attempts}",
+                (
+                    ""
+                    if self._current_attempt == 1
+                    else f"attempt={self._current_attempt}/{self.config.attempts}"
+                ),
                 ")",
             )
             if part
@@ -393,13 +396,13 @@ class ShellRun:
     def stdout(self) -> str:
         if self._stdout_log_path is None:
             return ""
-        return self._stdout_log_path.read_text()
+        return self._stdout_log_path.read_text().strip()
 
     @property
     def stderr(self) -> str:
         if self._stderr_log_path is None:
             return ""
-        return self._stderr_log_path.read_text()
+        return self._stderr_log_path.read_text().strip()
 
     @property
     def clean_complete(self):

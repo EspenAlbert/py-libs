@@ -20,6 +20,13 @@ from ask_shell import (
     stop_runs_and_pool,
     wait_on_ok_errors,
 )
+from ask_shell.models import (
+    AfterRunMessage,
+    BeforeRunMessage,
+    POpenStartedMessage,
+    StdOutputMessage,
+    StdStartedMessage,
+)
 
 PYTHON_EXEC = sys.executable
 running_in_pants = bool(getenv("RUNNING_IN_PANTS", ""))
@@ -330,3 +337,20 @@ def test_ansi_content(tf_dir):
     assert "[0m[1m[32m" not in output.stdout, (
         "ANSI codes should not be present in the output"
     )
+
+
+def test_message_callbacks():
+    message_class_names: list[str] = []
+
+    def message_callback(message):
+        message_class_names.append(message.__class__.__name__)
+
+    run_and_wait("echo ok", message_callbacks=[message_callback])  # type: ignore
+    assert message_class_names == [
+        BeforeRunMessage.__name__,
+        POpenStartedMessage.__name__,
+        StdStartedMessage.__name__,  # stdout/stderr
+        StdStartedMessage.__name__,  # stderr/stdout
+        StdOutputMessage.__name__,
+        AfterRunMessage.__name__,
+    ], f"Unexpected message class names: {message_class_names}"

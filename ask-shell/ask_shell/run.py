@@ -26,6 +26,8 @@ from rich.console import Console
 from rich.text import Text
 
 from ask_shell.models import (
+    AfterRunMessage,
+    BeforeRunMessage,
     InternalMessageT,
     POpenStartedMessage,
     RetryAttemptMessage,
@@ -270,8 +272,12 @@ def kill(
 
 
 def _execute_run(shell_run: ShellRun) -> ShellRun:
+    """
+    Principles:
+    1. This function is executed in a separate thread. Interrupts will not affect it.
+    2. It should handle every error condition and not raise exceptions.
+    """
     config = shell_run.config
-
     queue = shell_run._queue
 
     def queue_consumer():
@@ -282,29 +288,36 @@ def _execute_run(shell_run: ShellRun) -> ShellRun:
                 logger.warning(f"Error processing message for {shell_run}: {e!r}")
                 logger.exception(e)
 
+    try:
+        shell_run._on_message(
+            BeforeRunMessage(run=shell_run)
+        )  # can block, for example if the thread pool doesn't have enough threads free
+    except BaseException as e:
+        logger.warning(f"Error before starting run {shell_run}: {e!r}")
+        shell_run._complete(error=e)
+        return shell_run
+
     consumer_future = _pool.submit(queue_consumer)
     output_dir = config.run_output_dir_resolved()
     output_dir.mkdir(parents=True, exist_ok=True)
+    error: BaseException | None = None
     for attempt in range(1, config.attempts + 1):
         if attempt > 1:
             queue.put_nowait(RetryAttemptMessage(attempt=attempt))
             logger.warning(
                 f"Retrying run {shell_run} attempt {attempt} of {config.attempts}"
             )
-        is_last_attempt = attempt == config.attempts
         attempt_log_prefix = config.run_log_stem(attempt)
 
         result = _attempt_run(shell_run, output_dir, attempt_log_prefix)
         match result:
-            case ShellRun() if result.clean_complete or is_last_attempt:
-                break
-            case ShellRun() if not config.should_retry(result):
+            case ShellRun() if result.clean_complete or not config.should_retry(result):
                 break
             case BaseException():
-                shell_run._complete(error=result)
-                return shell_run
-    shell_run._complete()  # will ensure the queue is closed
-    consumer_future.result()  # wait for the consumer to finish processing messages
+                error = result
+                break
+    queue.put_nowait(AfterRunMessage(run=shell_run, error=error))
+    shell_run._complete(error=error, queue_consumer=consumer_future)
     return shell_run
 
 
@@ -313,7 +326,7 @@ def _attempt_run(
     output_dir: Path,
     file_name: str,
 ) -> ShellRun | BaseException:
-    """Returns a ShellRun when it completed successfully, otherwise None."""
+    """Run the shell command and handle the error, never raises an exception."""
     config = shell_run.config
     key = id(shell_run)
     _runs[key] = shell_run

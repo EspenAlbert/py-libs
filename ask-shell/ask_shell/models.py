@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import logging
 import os
 import platform
-import string
 import subprocess
 import sys
 from concurrent.futures import Future
@@ -18,13 +18,9 @@ from pydantic import Field, model_validator
 from rich.console import Console
 from zero_3rdparty.closable_queue import ClosableQueue
 
-from ask_shell.colors import ContentType
-from ask_shell.printer import print_with
 from ask_shell.settings import AskShellSettings
 
-_empty = object()
-string_or_digit = string.ascii_letters + string.digits
-MAX_PREFIX_LEN = 30
+logger = logging.getLogger(__name__)
 
 
 def always_retry(_):
@@ -108,6 +104,17 @@ class RetryAttemptMessage:
     attempt: int
 
 
+@dataclass
+class BeforeRunMessage:
+    run: ShellRun
+
+
+@dataclass
+class AfterRunMessage:
+    run: ShellRun
+    error: BaseException | None = None
+
+
 OutputCallbackT: TypeAlias = Callable[
     [str], bool
 ]  # returns True if the callback is done and should be removed
@@ -117,6 +124,8 @@ InternalMessageT: TypeAlias = Union[
     POpenStartedMessage,
     StdReadErrorMessage,
     RetryAttemptMessage,
+    BeforeRunMessage,
+    AfterRunMessage,
 ]
 ShellRunQueueT: TypeAlias = ClosableQueue[InternalMessageT]
 
@@ -337,7 +346,7 @@ class ShellRun:
     def _on_message(self, message: InternalMessageT):
         with self._lock:
             for callback in list(self.config.message_callbacks):
-                if callback(message):
+                if callback(message):  # todo: call safely?
                     self.config.message_callbacks.remove(callback)
             match message:
                 case StdStartedMessage(
@@ -380,24 +389,31 @@ class ShellRun:
             return p_open.returncode
         return None
 
-    def _complete(self, error: BaseException | None = None):
-        if self._complete_flag.done():
-            print_with(
-                "already done",
-                prefix=self.config.print_prefix,
-                content_type=ContentType.WARNING,
-            )
-            return
-        if (
-            (error or self.exit_code != 0)
-            and self.config.allow_non_zero_exit
-            or not error
-            and self.exit_code == 0
-        ):
-            self._complete_flag.set_result(self)
-        else:
-            self._complete_flag.set_exception(ShellError(self, error))
-        self._queue.close()
+    def _complete(
+        self, error: BaseException | None = None, queue_consumer: Future | None = None
+    ):
+        with self._lock:
+            if self._complete_flag.done():
+                logger.warning(f"already done {self}")
+                return
+            self._queue.close()
+        if queue_consumer:  # wait outside of lock, since the callback use the lock
+            queue_consumer.result()  # ensure the queue consumer is done before calling complete
+        with self._lock:
+            if (
+                (error or self.exit_code != 0)
+                and self.config.allow_non_zero_exit
+                or not error
+                and self.exit_code == 0
+            ):
+                self._complete_flag.set_result(self)
+            else:
+                shell_error = ShellError(self, error)
+                if (
+                    not self._start_flag.done()
+                ):  # if the run has not started yet, we must also set the start flag
+                    self._start_flag.set_exception(shell_error)
+                self._complete_flag.set_exception(shell_error)
 
     @property
     def stdout(self) -> str:

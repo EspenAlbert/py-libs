@@ -18,7 +18,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, wait
 from os import getenv, setsid
 from pathlib import Path
-from typing import IO, Callable
+from typing import IO, Any, Callable
 
 from model_lib.pydantic_utils import copy_and_validate
 from rich.console import Console
@@ -413,11 +413,38 @@ def _read_until_complete(
         f.write = write_hook_ansi if config.ansi_content else write_hook
         if config.user_input:
             out_stream = sys.stdout if ".stdout." in output_path.name else sys.stderr
-            for line in iter(stream.readline, ""):
-                out_stream.write(line)
+
+            def _on_line(line: str):
                 console.log(line, end="")
                 on_line(line)
+
+            _stream_one_character_at_a_time(
+                stream,
+                on_line=_on_line,
+                on_char=out_stream.write,
+            )
         else:
             for line in iter(stream.readline, ""):
                 console.log(line, end="")
                 on_line(line)
+
+
+def _stream_one_character_at_a_time(
+    stream: IO[str], on_line: Callable[[str], None], on_char: Callable[[str], Any]
+):
+    buffer = ""
+    while True:
+        try:
+            chunk = stream.read(1)  # Read one character at a time
+        except BaseException as e:
+            logger.error(f"Error reading from stream: {e!r}")
+            break
+        if not chunk:
+            break
+        buffer += chunk
+        on_char(chunk)
+        if chunk == "\n":
+            on_line(buffer)
+            buffer = ""
+    if buffer:  # Handle any remaining data (incomplete line)
+        on_line(buffer)

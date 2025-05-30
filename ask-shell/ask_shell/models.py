@@ -127,6 +127,7 @@ InternalMessageT: TypeAlias = Union[
     BeforeRunMessage,
     AfterRunMessage,
 ]
+MessageCallbackT: TypeAlias = Callable[[InternalMessageT], bool]
 ShellRunQueueT: TypeAlias = ClosableQueue[InternalMessageT]
 
 
@@ -171,7 +172,7 @@ class ShellConfig(Entity):
         default=False,
         description="Skip HTML log files, by default dumps HTML logs to support viewing colored output in browsers",
     )
-    message_callbacks: list[Callable[[InternalMessageT], bool]] = Field(
+    message_callbacks: list[MessageCallbackT] = Field(
         default_factory=list,
         description="Callbacks for run messages, useful for custom handling of stdout/stderr",
     )
@@ -228,6 +229,7 @@ class ShellConfig(Entity):
             self._infer_ansi_content(parsed_input)
         if self.user_input and self.skip_log_time is None:
             self.skip_log_time = True
+        self.message_callbacks.extend(self.settings.message_callbacks)
         return self
 
     def _infer_print_prefix(self, parsed_input: ShellInput):

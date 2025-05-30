@@ -17,7 +17,6 @@ from ask_shell import (
     print_with_override,
     run,
     run_and_wait,
-    stop_runs_and_pool,
     wait_on_ok_errors,
 )
 from ask_shell.models import (
@@ -31,12 +30,6 @@ from ask_shell.models import (
 PYTHON_EXEC = sys.executable
 running_in_pants = bool(getenv("RUNNING_IN_PANTS", ""))
 logger = logging.getLogger(__name__)
-
-
-@pytest.fixture(scope="session", autouse=True)
-def stop_consumer():
-    yield
-    stop_runs_and_pool()
 
 
 @pytest.mark.parametrize("func", [run, run_and_wait], ids=["run", "run_and_wait"])

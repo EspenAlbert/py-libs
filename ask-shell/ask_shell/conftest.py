@@ -1,6 +1,7 @@
 import pytest
 from zero_3rdparty.file_utils import ensure_parents_write_text
 
+from ask_shell._run import stop_runs_and_pool
 from ask_shell.settings import AskShellSettings
 
 
@@ -33,3 +34,9 @@ def tf_dir(settings):
     tf_path = settings.static_root / "terraform_example/main.tf"
     ensure_parents_write_text(tf_path, tf_example)
     return tf_path.parent
+
+
+@pytest.fixture(scope="session", autouse=True)
+def stop_consumer():
+    yield
+    stop_runs_and_pool()

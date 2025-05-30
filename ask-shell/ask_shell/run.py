@@ -42,7 +42,7 @@ from ask_shell.settings import AskShellSettings
 logger = logging.getLogger(__name__)
 _pool = ThreadPoolExecutor(
     max_workers=int(getenv("RUN_THREAD_COUNT", "50"))
-)  # Each run will take 3 threads: 1 for stdout, 1 for stderr, and 1 for popen wait.
+)  # Each run will take 4 threads: 1 for stdout, 1 for stderr, 1 for consuming queue messages and 1 for popen wait.
 _runs: dict[
     int, ShellRun
 ] = {}  # internal to store running ShellRuns to support stopping them on exit

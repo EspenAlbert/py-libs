@@ -4,6 +4,7 @@ import os
 import platform
 import string
 import subprocess
+import sys
 from concurrent.futures import Future
 from contextlib import suppress
 from dataclasses import dataclass, field
@@ -142,6 +143,7 @@ class ShellConfig(Entity):
     skip_binary_check: bool = False
     skip_log_time: bool = False
     cwd: Path = Field(default=None, description="Set to Path.cwd() if not provided")  # type: ignore
+    user_input: bool = False
 
     attempts: int = 1
     print_prefix: str = Field(
@@ -164,6 +166,7 @@ class ShellConfig(Entity):
         default_factory=list,
         description="Callbacks for run messages, useful for custom handling of stdout/stderr",
     )
+    terminal_width: int | None = 999
 
     @property
     def exec_name(self) -> str:
@@ -214,6 +217,8 @@ class ShellConfig(Entity):
             self.env = os.environ | self.env
         if self.ansi_content is None:
             self._infer_ansi_content(parsed_input)
+        if self.user_input and self.skip_log_time is None:
+            self.skip_log_time = True
         return self
 
     def _infer_print_prefix(self, parsed_input: ShellInput):
@@ -240,6 +245,8 @@ class ShellConfig(Entity):
     def popen_kwargs(self):
         kwargs: dict[str, Any] = {"env": self.env} | self.extra_popen_kwargs
         kwargs["cwd"] = self.cwd
+        if self.user_input:
+            kwargs["stdin"] = sys.stdin
         return kwargs
 
 

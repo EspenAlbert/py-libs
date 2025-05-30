@@ -14,6 +14,7 @@ import atexit
 import logging
 import signal
 import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor, wait
 from os import getenv, setsid
 from pathlib import Path
@@ -77,6 +78,8 @@ def run(
     skip_log_time: bool | None = None,
     skip_os_env: bool | None = None,
     start_timeout: float | None = None,
+    user_input: bool | None = None,
+    terminal_width: int | None = None,
 ) -> ShellRun:
     config = _as_config(
         config,
@@ -97,6 +100,8 @@ def run(
         skip_html_log_files=skip_html_log_files,
         skip_log_time=skip_log_time,
         skip_os_env=skip_os_env,
+        user_input=user_input,
+        terminal_width=terminal_width,
     )
     run = ShellRun(config)
     _pool.submit(_execute_run, run)
@@ -124,6 +129,8 @@ def run_and_wait(
     skip_html_log_files: bool | None = None,
     skip_log_time: bool | None = None,
     skip_os_env: bool | None = None,
+    user_input: bool | None = None,
+    terminal_width: int | None = None,
 ) -> ShellRun:
     config = _as_config(
         script,
@@ -144,6 +151,8 @@ def run_and_wait(
         skip_html_log_files=skip_html_log_files,
         skip_log_time=skip_log_time,
         skip_os_env=skip_os_env,
+        user_input=user_input,
+        terminal_width=terminal_width,
     )
     run = ShellRun(config)
     _pool.submit(_execute_run, run)
@@ -380,8 +389,6 @@ def _read_until_complete(
     on_line: Callable[[str], None],
     config: ShellConfig,
 ):
-    # content_type = _STDOUT if is_stdout else _STDERR
-
     with open(output_path, "w") as f:
         console = Console(
             file=f,
@@ -389,21 +396,28 @@ def _read_until_complete(
             log_path=False,
             soft_wrap=True,
             log_time=not config.skip_log_time,
+            width=config.terminal_width,
         )
         on_console_ready(console)
         old_write = f.write
 
         def write_hook(text: str):
-            # might need a different callback if ansi_content is True
             text_no_extras = [line.strip() for line in text.splitlines()]
-            return old_write("\n".join(text_no_extras) + "\n")
+            return old_write("\n".join(text_no_extras))
 
         def write_hook_ansi(text: str):
             ansi_text = Text.from_ansi(text)
             text_no_extras = [line.strip() for line in ansi_text.plain.splitlines()]
-            return old_write("\n".join(text_no_extras) + "\n")
+            return old_write("\n".join(text_no_extras))
 
         f.write = write_hook_ansi if config.ansi_content else write_hook
-        for line in iter(stream.readline, ""):
-            console.log(line)
-            on_line(line)
+        if config.user_input:
+            out_stream = sys.stdout if ".stdout." in output_path.name else sys.stderr
+            for line in iter(stream.readline, ""):
+                out_stream.write(line)
+                console.log(line, end="")
+                on_line(line)
+        else:
+            for line in iter(stream.readline, ""):
+                console.log(line, end="")
+                on_line(line)

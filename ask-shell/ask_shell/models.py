@@ -116,18 +116,18 @@ class AfterRunMessage:
 
 
 OutputCallbackT: TypeAlias = Callable[
-    [str], bool
+    [str], bool | None
 ]  # returns True if the callback is done and should be removed
 InternalMessageT: TypeAlias = Union[
-    StdStartedMessage,
-    StdOutputMessage,
-    POpenStartedMessage,
-    StdReadErrorMessage,
-    RetryAttemptMessage,
     BeforeRunMessage,
+    POpenStartedMessage,
+    StdStartedMessage,
+    StdReadErrorMessage,
+    StdOutputMessage,
+    RetryAttemptMessage,  # only on retries
     AfterRunMessage,
 ]
-MessageCallbackT: TypeAlias = Callable[[InternalMessageT], bool]
+MessageCallbackT: TypeAlias = Callable[[InternalMessageT], bool | None]
 ShellRunQueueT: TypeAlias = ClosableQueue[InternalMessageT]
 
 
@@ -322,7 +322,7 @@ class ShellRun:
 
         """
 
-        def only_on_output_callback(message: InternalMessageT) -> bool:
+        def only_on_output_callback(message: InternalMessageT) -> bool | None:
             if isinstance(message, StdOutputMessage) and message.is_stdout == is_stdout:
                 return call(message.content)
             return False

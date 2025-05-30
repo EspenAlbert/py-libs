@@ -1,7 +1,9 @@
 import pytest
+from rich.console import Console
 from zero_3rdparty.file_utils import ensure_parents_write_text
 
 from ask_shell._run import stop_runs_and_pool
+from ask_shell.interactive_rich import reset_progress
 from ask_shell.settings import AskShellSettings
 
 
@@ -40,3 +42,33 @@ def tf_dir(settings):
 def stop_consumer():
     yield
     stop_runs_and_pool()
+
+
+@pytest.fixture(autouse=True)
+def reset_progress_fix():
+    reset_progress()
+
+
+# https://github.com/Textualize/rich/blob/8c4d3d1d50047e3aaa4140d0ffc1e0c9f1df5af4/tests/test_live.py#L11
+def create_capture_console(
+    *, width: int = 60, height: int = 80, force_terminal: bool = True
+) -> Console:
+    return Console(
+        width=width,
+        height=height,
+        force_terminal=force_terminal,
+        legacy_windows=False,
+        color_system=None,  # use no color system to reduce complexity of output,
+        _environ={},
+    )
+
+
+@pytest.fixture()
+def capture_console() -> Console:  # type: ignore
+    """
+    Fixture to capture output from the console.
+    """
+    console = create_capture_console()
+    console.begin_capture()
+    yield console  # type: ignore
+    console.end_capture()

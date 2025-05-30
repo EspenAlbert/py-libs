@@ -16,6 +16,7 @@ import signal
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, wait
+from dataclasses import dataclass
 from os import getenv, setsid
 from pathlib import Path
 from typing import IO, Any, Callable
@@ -106,7 +107,8 @@ def run(
     )
     run = ShellRun(config)
     _pool.submit(_execute_run, run)
-    return run.wait_on_started(start_timeout)
+    with handle_interrupt_wait(f"interrupt when starting {run}"):
+        return run.wait_on_started(start_timeout)
 
 
 def run_and_wait(
@@ -157,15 +159,25 @@ def run_and_wait(
     )
     run = ShellRun(config)
     _pool.submit(_execute_run, run)
-    try:
+    with handle_interrupt_wait(f"interrupt when waiting for {run}"):
         run.wait_until_complete(timeout)
-    except BaseException as e:
-        if isinstance(e, KeyboardInterrupt | InterruptedError):
-            interrupt_error = f"interrupt when waiting for {run} {e!r}"
-            logger.info(f"interrupt in {run} {e!r}")
-            stop_runs_and_pool(interrupt_error)
-        raise e
     return run
+
+
+@dataclass
+class handle_interrupt_wait:
+    interrupt_message: str
+    immediate_kill: bool = False
+
+    def __enter__(self):
+        """Context manager to ensure that all runs are stopped on exit."""
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """Handle exit by stopping all runs."""
+        if exc_type is KeyboardInterrupt or exc_type is InterruptedError:
+            interrupt_error = f"{self.interrupt_message} {exc_value!r}"
+            stop_runs_and_pool(interrupt_error, immediate=self.immediate_kill)
 
 
 def _as_config(config: ShellConfig | str, **kwargs) -> ShellConfig:
@@ -189,9 +201,10 @@ def wait_on_ok_errors(
     skip_kill_timeouts: bool = False,  # type: ignore
 ) -> tuple[list[ShellRun], list[tuple[BaseException, ShellRun]]]:
     future_runs = {run._complete_flag: run for run in runs}
-    done, not_done = wait(
-        [run._complete_flag for run in runs], timeout, return_when="ALL_COMPLETED"
-    )
+    with handle_interrupt_wait("interrupt when waiting for runs"):
+        done, not_done = wait(
+            [run._complete_flag for run in runs], timeout, return_when="ALL_COMPLETED"
+        )
     errors: list[tuple[BaseException, ShellRun]] = []
     oks: list[ShellRun] = []
 

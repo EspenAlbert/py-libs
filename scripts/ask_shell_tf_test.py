@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from ask_shell.run import run_and_wait
+from ask_shell.run import run, run_and_wait, wait_on_ok_errors
 from zero_3rdparty import id_creator
 from zero_3rdparty.file_utils import ensure_parents_write_text
 
@@ -36,7 +36,9 @@ def run_tf_apply():
         "terraform init",
         cwd=main_tf.parent,
     )
-    run_and_wait("terraform apply", cwd=main_tf.parent, user_input=True)
+    # run_and_wait("terraform apply", cwd=main_tf.parent, user_input=True)
+    apply_run = run("terraform apply", cwd=main_tf.parent, user_input=True)
+    wait_on_ok_errors(apply_run, timeout=10)
 
 
 if __name__ == "__main__":

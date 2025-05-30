@@ -453,6 +453,20 @@ class ShellError(Exception):
     def stderr(self):
         return self.run.stderr
 
+    def __str__(self) -> str:
+        lines_stdout, lines_stderr = (
+            self.stdout.splitlines()[-10:],
+            self.stderr.splitlines()[-10:],
+        )
+        if lines_stdout:
+            lines_stdout.insert(0, "STDOUT")
+        if lines_stderr:
+            lines_stderr.insert(0, "STDERR")
+        last_lines_str = "\n".join(
+            line.strip() for line in lines_stdout + lines_stderr if line.strip()
+        )
+        return f"{str(self.run)}\nExit code: {self.exit_code}\nlines:{last_lines_str}"
+
 
 class RunIncompleteError(Exception):
     def __init__(self, run: ShellRun):

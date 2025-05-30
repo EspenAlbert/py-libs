@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 from ask_shell.run import run_and_wait
@@ -39,4 +40,8 @@ def run_tf_apply():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)-7s %(threadName)-s %(name)-s %(lineno)-s %(message)-s",
+    )
     run_tf_apply()

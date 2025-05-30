@@ -47,10 +47,11 @@ _runs: dict[
 ] = {}  # internal to store running ShellRuns to support stopping them on exit
 
 
-def stop_runs_and_pool():
+def stop_runs_and_pool(reason: str = "atexit", immediate: bool = False):
     if _runs:
         logger.warning("STOPPING stop_runs_and_pool")
-        kill_all_runs(reason="atexit")
+        kill_all_runs(reason=reason, immediate=immediate)
+
     _pool.shutdown(wait=True)
 
 
@@ -156,7 +157,14 @@ def run_and_wait(
     )
     run = ShellRun(config)
     _pool.submit(_execute_run, run)
-    run.wait_until_complete(timeout)
+    try:
+        run.wait_until_complete(timeout)
+    except BaseException as e:
+        if isinstance(e, KeyboardInterrupt | InterruptedError):
+            interrupt_error = f"interrupt when waiting for {run} {e!r}"
+            logger.info(f"interrupt in {run} {e!r}")
+            stop_runs_and_pool(interrupt_error)
+        raise e
     return run
 
 
@@ -228,7 +236,7 @@ def kill(
     """https://stackoverflow.com/questions/4789837/how-to-terminate-a-python-subprocess-launched-with-shell-true"""
     proc = run.p_open
     if not proc or proc.returncode is not None:
-        # not running
+        logger.info(f"killing run already completed: {run} {reason}")
         return
 
     logger.warning(f"killing starting: {run} {reason}")
@@ -305,9 +313,6 @@ def _attempt_run(
         )
         return shell_run
     except BaseException as e:
-        if isinstance(e, KeyboardInterrupt | InterruptedError):
-            logger.info(f"interrupt in {run} {e!r}")
-            stop_runs_and_pool()
         logger.warning(f"Error running {shell_run}: {e!r}")
         logger.exception(e)
         return e
@@ -418,10 +423,14 @@ def _read_until_complete(
                 console.log(line, end="")
                 on_line(line)
 
+            def _on_char(char: str):
+                out_stream.write(char)
+                out_stream.flush()
+
             _stream_one_character_at_a_time(
                 stream,
                 on_line=_on_line,
-                on_char=out_stream.write,
+                on_char=_on_char,
             )
         else:
             for line in iter(stream.readline, ""):
@@ -434,11 +443,7 @@ def _stream_one_character_at_a_time(
 ):
     buffer = ""
     while True:
-        try:
-            chunk = stream.read(1)  # Read one character at a time
-        except BaseException as e:
-            logger.error(f"Error reading from stream: {e!r}")
-            break
+        chunk = stream.read(1)  # Read one character at a time
         if not chunk:
             break
         buffer += chunk

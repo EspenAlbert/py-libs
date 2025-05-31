@@ -22,8 +22,8 @@ from pathlib import Path
 from typing import IO, Any, Callable
 
 from model_lib.pydantic_utils import copy_and_validate
+from rich.ansi import AnsiDecoder
 from rich.console import Console
-from rich.text import Text
 
 from ask_shell.models import (
     AfterRunMessage,
@@ -449,10 +449,13 @@ def _read_until_complete(
             text_no_extras = [line.strip() for line in text.splitlines()]
             return old_write("\n".join(text_no_extras))
 
+        decoder = AnsiDecoder()
+
         def write_hook_ansi(text: str):
-            ansi_text = Text.from_ansi(text)
-            text_no_extras = [line.strip() for line in ansi_text.plain.splitlines()]
-            return old_write("\n".join(text_no_extras))
+            plain_text = "\n".join(
+                decoder.decode_line(line).plain.strip() for line in text.splitlines()
+            )
+            return old_write(plain_text)
 
         f.write = write_hook_ansi if config.ansi_content else write_hook
         if config.user_input:

@@ -1,3 +1,4 @@
+import logging
 import sys
 from functools import lru_cache
 from os import getenv
@@ -5,6 +6,7 @@ from os import getenv
 from zero_3rdparty.run_env import in_test_env, running_in_container_environment
 
 ENV_NAME_FORCE_INTERACTIVE_SHELL = "FORCE_INTERACTIVE_SHELL"
+logger = logging.getLogger(__name__)
 
 
 @lru_cache
@@ -14,10 +16,23 @@ def interactive_shell() -> bool:
         "1",
         "yes",
     ):
+        logger.debug(
+            f"Interactive shell forced by environment variable {ENV_NAME_FORCE_INTERACTIVE_SHELL}"
+        )
         return True
-    return (
-        not running_in_container_environment()
-        and not in_test_env()
-        and sys.stdout.isatty()
-        and getenv("CI", "false").lower() not in ("true", "1", "yes")
-    )
+    if non_interactive_reason := _not_interactive_reason():
+        logger.debug(f"Interactive shell not available: {non_interactive_reason}")
+        return False
+    return True
+
+
+def _not_interactive_reason() -> str:
+    if in_test_env():
+        return "Running in test environment"
+    if not sys.stdout.isatty():
+        return "Standard output is not a TTY"
+    if getenv("CI", "false").lower() in ("true", "1", "yes"):
+        return "Running in CI environment"
+    if running_in_container_environment():
+        return "Running in container environment"
+    return ""

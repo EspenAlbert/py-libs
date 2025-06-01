@@ -132,3 +132,11 @@ def test_question_patcher_should_raise_value_error_when_there_are_no_more_input(
     with pytest.raises(ValueError):
         with question_patcher([]):
             select_list("Select an option:", ["Option 1", "Option 2"])
+
+
+def test_return_default_if_not_interactive_should_raise_error_when_not_interactive():
+    with pytest.raises(
+        ValueError,
+        match="Function called in non-interactive shell, but no default value provided",
+    ):
+        text("Are you sure?")

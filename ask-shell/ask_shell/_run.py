@@ -95,8 +95,8 @@ def run(
     skip_log_time: bool | None = None,
     skip_os_env: bool | None = None,
     start_timeout: float | None = None,
-    user_input: bool | None = None,
     terminal_width: int | None = None,
+    skip_interactive_check: bool | None = None,
 ) -> ShellRun:
     config = _as_config(
         config,
@@ -117,8 +117,11 @@ def run(
         skip_html_log_files=skip_html_log_files,
         skip_log_time=skip_log_time,
         skip_os_env=skip_os_env,
-        user_input=user_input,
         terminal_width=terminal_width,
+        skip_interactive_check=skip_interactive_check,
+    )
+    assert not config.user_input, (
+        "run() does not support user_input (only 1 should be active at a time), use run_and_wait() instead"
     )
     run = ShellRun(config)
     _pool.submit(_execute_run, run)
@@ -149,6 +152,7 @@ def run_and_wait(
     skip_os_env: bool | None = None,
     user_input: bool | None = None,
     terminal_width: int | None = None,
+    skip_interactive_check: bool | None = None,
 ) -> ShellRun:
     config = _as_config(
         script,
@@ -171,6 +175,7 @@ def run_and_wait(
         skip_os_env=skip_os_env,
         user_input=user_input,
         terminal_width=terminal_width,
+        skip_interactive_check=skip_interactive_check,
     )
     run = ShellRun(config)
     _pool.submit(_execute_run, run)

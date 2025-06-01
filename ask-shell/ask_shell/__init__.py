@@ -10,6 +10,7 @@ from ask_shell._run import (
     kill,
     wait_on_ok_errors,
 )
+from ask_shell._run_env import interactive_shell
 
 __all__ = (
     "ShellConfig",
@@ -18,6 +19,7 @@ __all__ = (
     "ContentType",
     "PrintWith",
     "console",
+    "interactive_shell",
     "kill_all_runs",
     "kill",
     "log_exception",

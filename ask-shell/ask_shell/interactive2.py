@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+import os
+from dataclasses import dataclass, field
+from functools import wraps
+from os import getenv
 from typing import Callable, TypeVar
 
 from prompt_toolkit.input.defaults import create_pipe_input
@@ -13,7 +16,9 @@ from questionary import Question, checkbox
 from questionary import confirm as _confirm
 from questionary import select as _select
 from questionary import text as _text
+from zero_3rdparty.object_name import as_name, func_arg_names
 
+from ask_shell._run_env import ENV_NAME_FORCE_INTERACTIVE_SHELL, interactive_shell
 from ask_shell.interactive_rich import ensure_progress_stopped
 
 T = TypeVar("T")
@@ -23,15 +28,37 @@ SEARCH_ENABLED_AFTER_CHOICES = 7
 
 
 def _default_asker(q: Question, _: type[T]) -> T:
-    # ensure progress bar doesn't refresh
-    # add an extra \n before the question, looks like I should do that on the top level api methods instead
     return q.unsafe_ask()
 
 
 _question_asker: TypedAsk = _default_asker
 
 
+FuncT = TypeVar("FuncT", bound=Callable)
+
+
+def return_default_if_not_interactive(func: FuncT) -> FuncT:
+    assert "default" in func_arg_names(func)
+
+    @wraps(func)
+    def return_default(*args, **kwargs):
+        if interactive_shell():
+            return func(*args, **kwargs)
+        default_value = kwargs.get("default", None)
+        if default_value is None:
+            raise ValueError(
+                f"Function called in non-interactive shell, but no default value provided &func={as_name(func)}"
+            )
+        logger.warning(
+            f"Function {as_name(func)} called in non-interactive shell, returning default value: {default_value}"
+        )
+        return default_value
+
+    return return_default  # type: ignore
+
+
 @ensure_progress_stopped
+@return_default_if_not_interactive
 def confirm(prompt_text: str, *, default: bool | None = None) -> bool:
     if default is None:
         return _question_asker(_confirm(prompt_text), bool)
@@ -39,11 +66,12 @@ def confirm(prompt_text: str, *, default: bool | None = None) -> bool:
 
 
 @ensure_progress_stopped
+@return_default_if_not_interactive
 def select_list_multiple(
     prompt_text: str,
     choices: list[str],
-    default: list[str] | None = None,
     *,
+    default: list[str] | None = None,
     options: SelectOptions | None = None,
 ) -> list[str]:
     assert choices, "choices must not be empty"
@@ -108,6 +136,7 @@ class SelectChosenOptions(BaseModel):
 
 
 @ensure_progress_stopped
+@return_default_if_not_interactive
 def text(
     prompt_text: str,
     default: str = "",
@@ -119,11 +148,12 @@ T = TypeVar("T")
 
 
 @ensure_progress_stopped
+@return_default_if_not_interactive
 def select_dict(
     prompt_text: str,
     choices: dict[str, T],
-    default: str | None = None,
     *,
+    default: str | None = None,
     options: SelectOptions | None = None,
 ) -> T:
     assert choices, "choices must not be empty"
@@ -144,11 +174,12 @@ def select_dict(
 
 
 @ensure_progress_stopped
+@return_default_if_not_interactive
 def select_list(
     prompt_text: str,
     choices: list[str],
-    default: str | None = None,
     *,
+    default: str | None = None,
     options: SelectOptions | None = None,
 ) -> str:
     assert choices, "choices must not be empty"
@@ -187,18 +218,31 @@ class KeyInput:
 
 @dataclass
 class question_patcher:
+    """Context manager to patch the questionary.ask_question, useful for testing."""
+
     responses: list[str]
     next_response: int = 0
+
+    _old_force_interactive_env_str: str = field(default="", init=False, repr=False)
 
     def __enter__(self):
         global _question_asker
         self._old_patcher = _question_asker
         _question_asker = self.ask_question
+        self._old_force_interactive_env_str = getenv(
+            ENV_NAME_FORCE_INTERACTIVE_SHELL, ""
+        )
+        interactive_shell.cache_clear()
+        os.environ[ENV_NAME_FORCE_INTERACTIVE_SHELL] = "true"
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         global _question_patcher
         _question_patcher = self._old_patcher
+        os.environ[ENV_NAME_FORCE_INTERACTIVE_SHELL] = (
+            self._old_force_interactive_env_str
+        )
+        interactive_shell.cache_clear()
 
     def ask_question(self, q: Question, response_type: type[T]) -> T:
         q.application.output = DummyOutput()

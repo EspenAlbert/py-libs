@@ -41,6 +41,10 @@ def test_check_all_config_args_in_signatures(func):
     signature = inspect.signature(func)
     parameters = signature.parameters
     missing_names = names - set(parameters.keys())
+    if func is run:
+        missing_names -= {
+            "user_input"
+        }  # run does not have user_input, as it is not supported
     missing_names = "\n".join(
         f"{name}: {annotations[name]} | None = None," for name in sorted(missing_names)
     )

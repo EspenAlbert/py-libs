@@ -18,9 +18,11 @@ from pydantic import Field, model_validator
 from rich.console import Console
 from zero_3rdparty.closable_queue import ClosableQueue
 
+from ask_shell._run_env import interactive_shell
 from ask_shell.settings import AskShellSettings
 
 logger = logging.getLogger(__name__)
+ERROR_MESSAGE_INTERACTIVE_SHELL = "Interactive shell is required for user input, but the current shell is not interactive, you can use skip_interactive_check=True to avoid this error"
 
 
 def always_retry(_):
@@ -152,6 +154,9 @@ class ShellConfig(Entity):
     skip_os_env: bool = False
     skip_binary_check: bool = False
     skip_log_time: bool = False
+    skip_interactive_check: bool = (
+        False  # can be useful for testing purposes, to skip the interactive shell check
+    )
     cwd: Path = Field(default=None, description="Set to Path.cwd() if not provided")  # type: ignore
     user_input: bool = False
 
@@ -229,6 +234,8 @@ class ShellConfig(Entity):
             self._infer_ansi_content(parsed_input)
         if self.user_input and self.skip_log_time is None:
             self.skip_log_time = True
+        if self.user_input and not self.skip_interactive_check:
+            assert interactive_shell(), ERROR_MESSAGE_INTERACTIVE_SHELL
         self.message_callbacks.extend(self.settings.message_callbacks)
         return self
 

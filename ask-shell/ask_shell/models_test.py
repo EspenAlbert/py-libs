@@ -1,6 +1,8 @@
 import pytest
+from pydantic import ValidationError
 
 from ask_shell import ShellConfig
+from ask_shell.models import ERROR_MESSAGE_INTERACTIVE_SHELL
 
 
 def test_infer_print_prefix(tmp_path):
@@ -22,3 +24,14 @@ def test_infer_print_prefix_with_global_flag(tmp_path, flag):
     )
     assert config.print_prefix == "some-repo/tf_module terraform apply"
     assert config.env == {}
+
+
+def test_assertion_error_with_user_input():
+    with pytest.raises(
+        ValidationError,
+        match=ERROR_MESSAGE_INTERACTIVE_SHELL,
+    ):
+        ShellConfig(
+            shell_input="echo 'Hello'",
+            user_input=True,
+        )

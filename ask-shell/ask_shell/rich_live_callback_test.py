@@ -15,10 +15,10 @@ from ask_shell.models import (
 from ask_shell.rich_live_callback import (
     RunConsoleLogger,
     _NoRuns,
-    _RunInfo,
     _StdoutIsBusy,
     _StdoutIsFree,
 )
+from ask_shell.rich_live_state import _RunInfo
 
 
 def run(user_input: bool = False) -> ShellRun:
@@ -55,6 +55,10 @@ _test_cases = [
             _MessageTestStep(
                 message=BeforeRunMessage(run=run_with_user_input),
                 expected_callback=_StdoutIsBusy,
+            ),
+            _MessageTestStep(
+                message=AfterRunMessage(run=run_with_user_input),
+                expected_callback=_NoRuns,
             ),
         ],
         run=run_with_user_input,
@@ -107,3 +111,4 @@ def test_run_console_logger(tc: _MessageTestCase, capture_console):
         if stderr := step.expected_stderr:
             run_info: _RunInfo = console_logger.state.runs[id(tc.run)]
             assert run_info.stderr_str == stderr
+    assert not console_logger.state.runs, f"Runs should be empty after test: {tc.name}"

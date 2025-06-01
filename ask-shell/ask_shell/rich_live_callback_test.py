@@ -3,7 +3,6 @@ from unittest.mock import Mock
 
 import pytest
 
-from ask_shell.interactive_rich import Progress
 from ask_shell.models import (
     AfterRunMessage,
     BeforeRunMessage,
@@ -92,9 +91,7 @@ _test_cases = [
 
 @pytest.mark.parametrize("tc", _test_cases, ids=[tc.name for tc in _test_cases])
 def test_run_console_logger(tc: _MessageTestCase, capture_console):
-    console_logger = RunConsoleLogger(
-        progress=Progress(console=capture_console, auto_refresh=False)
-    )
+    console_logger = RunConsoleLogger()
 
     for step in tc.steps:
         message = step.message

@@ -24,6 +24,16 @@ def get_live() -> Live:
     return _live
 
 
+def reset_live() -> None:
+    global _live, _renderables
+    with _lock:
+        if _live is None:
+            return
+        if _live.is_started:
+            _live.stop()
+        _renderables = []
+
+
 T = TypeVar("T", bound=Callable)
 
 
@@ -35,15 +45,18 @@ def pause_live(func: T) -> T:
     def wrapper(*args, **kwargs):
         with _lock:
             live = get_live()
-            if live._started:
+            stopped = False
+            if live.is_started:
                 live.stop()
+                stopped = True
             try:
                 return func(*args, **kwargs)  # type: ignore
             except BaseException as e:
                 raise e
             finally:
-                live.console.print("")  # avoid last line being overwritten
-                live.start()
+                if stopped:
+                    live.console.print("")  # avoid last line being overwritten
+                    live.start()
 
     return wrapper  # type: ignore
 
@@ -61,7 +74,7 @@ class LivePart:
         return (self.order, self.name) < (other.order, other.name)
 
 
-def live_render() -> None:
+def render_live() -> None:
     global _renderables
     live = get_live()
     with _lock:
@@ -70,6 +83,7 @@ def live_render() -> None:
                 live.stop()
             return
         if not live.is_started:
+            live.console.print("")  # avoid last line being overwritten
             live.start()
         _renderables.sort()  # Ensure the renderables are sorted by order and name
         group = Group(*[part.renderable for part in _renderables])
@@ -87,7 +101,7 @@ def add_renderable(
     part = LivePart(name=name, renderable=renderable, order=order)
     with _lock:
         _renderables.append(part)
-        live_render()
+        render_live()
 
     def remove_renderable(*, print_after_removing: bool = False) -> None:
         global _renderables
@@ -95,6 +109,6 @@ def add_renderable(
             if print_after_removing:
                 get_live().console.print(part.renderable)
             _renderables = [part for part in _renderables if part.name != name]
-            live_render()
+            render_live()
 
     return remove_renderable

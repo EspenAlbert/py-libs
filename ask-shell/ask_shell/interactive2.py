@@ -19,7 +19,7 @@ from questionary import text as _text
 from zero_3rdparty.object_name import as_name, func_arg_names
 
 from ask_shell._run_env import ENV_NAME_FORCE_INTERACTIVE_SHELL, interactive_shell
-from ask_shell.interactive_rich import ensure_progress_stopped
+from ask_shell.rich_live import pause_live
 
 T = TypeVar("T")
 TypedAsk = Callable[[Question, type[T]], T]
@@ -57,7 +57,7 @@ def return_default_if_not_interactive(func: FuncT) -> FuncT:
     return return_default  # type: ignore
 
 
-@ensure_progress_stopped
+@pause_live
 @return_default_if_not_interactive
 def confirm(prompt_text: str, *, default: bool | None = None) -> bool:
     if default is None:
@@ -65,7 +65,7 @@ def confirm(prompt_text: str, *, default: bool | None = None) -> bool:
     return _question_asker(_confirm(prompt_text, default=default), bool)
 
 
-@ensure_progress_stopped
+@pause_live
 @return_default_if_not_interactive
 def select_list_multiple(
     prompt_text: str,
@@ -135,7 +135,7 @@ class SelectChosenOptions(BaseModel):
     use_jk_keys: bool
 
 
-@ensure_progress_stopped
+@pause_live
 @return_default_if_not_interactive
 def text(
     prompt_text: str,
@@ -147,7 +147,7 @@ def text(
 T = TypeVar("T")
 
 
-@ensure_progress_stopped
+@pause_live
 @return_default_if_not_interactive
 def select_dict(
     prompt_text: str,
@@ -173,7 +173,7 @@ def select_dict(
     return choices[selection]
 
 
-@ensure_progress_stopped
+@pause_live
 @return_default_if_not_interactive
 def select_list(
     prompt_text: str,

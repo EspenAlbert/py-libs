@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ask_shell.interactive_rich import Progress, get_progress
 from ask_shell.models import (
     AfterRunMessage,
     BeforeRunMessage,
@@ -11,6 +10,7 @@ from ask_shell.models import (
     StdStartedMessage,
 )
 from ask_shell.rich_live_state import _RunInfo, _RunState
+from ask_shell.rich_progress import Progress, get_progress
 
 
 def _get_or_create_progress() -> Progress:
@@ -101,7 +101,6 @@ class _NoRuns(_BaseCallback):
 
 @dataclass
 class RunConsoleLogger:
-    progress: Progress = field(default_factory=_get_or_create_progress)
     current_message_handler: _BaseCallback = field(init=False, default_factory=_NoRuns)
 
     @property
@@ -115,10 +114,6 @@ class RunConsoleLogger:
             state = self.current_message_handler.state
             self.current_message_handler = e.new_callback
             self.current_message_handler.state = state
-            if e.active_progress:
-                self.progress.__enter__()
-            else:
-                self.progress.__exit__(None, None, None)
             return self(message)
 
 

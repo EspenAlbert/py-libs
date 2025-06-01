@@ -3,7 +3,8 @@ from rich.console import Console
 from zero_3rdparty.file_utils import ensure_parents_write_text
 
 from ask_shell._run import stop_runs_and_pool
-from ask_shell.interactive_rich import reset_progress
+from ask_shell.rich_live import get_live, reset_live
+from ask_shell.rich_progress import reset_progress
 from ask_shell.settings import AskShellSettings
 
 
@@ -70,5 +71,8 @@ def capture_console() -> Console:  # type: ignore
     """
     console = create_capture_console()
     console.begin_capture()
+    live = get_live()
+    live.console = console
     yield console  # type: ignore
     console.end_capture()
+    reset_live()

@@ -13,11 +13,13 @@ def default_callbacks_funcs() -> list[str]:
     from ask_shell.global_callbacks import (
         wait_on_available_threads,
     )
+    from ask_shell.rich_live_callback import rich_live_callback
 
     return [
         as_name(call)
         for call in [
             wait_on_available_threads,
+            rich_live_callback,
         ]
     ]
 

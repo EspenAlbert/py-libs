@@ -13,11 +13,15 @@ from ask_shell._run import (
 )
 from ask_shell.global_callbacks import wait_on_available_threads
 from ask_shell.models import BeforeRunMessage, ShellRun
+from ask_shell.settings import AskShellSettings
 
 logger = logging.getLogger(__name__)
 
 
 def test_wait_on_available_threads(settings):
+    settings_args = settings.model_dump()
+    settings_args.pop("global_callback_strings")
+    settings = AskShellSettings(**settings_args)
     assert any(
         name.endswith(wait_on_available_threads.__name__)
         for name in settings.global_callback_strings
@@ -28,6 +32,7 @@ def test_wait_on_available_threads(settings):
 
 @pytest.mark.skipif(os.environ.get("SLOW", "") == "", reason="needs os.environ[SLOW]")
 def test_running_enough_scripts_to_wait(settings):
+    settings.message_callbacks.append(wait_on_available_threads)
     count = (
         settings.RUN_THREAD_COUNT // THREADS_PER_RUN + 2
     )  # at least 2 runs should be blocked

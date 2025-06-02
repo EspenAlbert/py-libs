@@ -3,7 +3,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from rich.progress import Progress
+from rich.progress import (
+    Progress,
+    TextColumn,
+    TimeElapsedColumn,
+)
 
 from ask_shell.models import (
     InternalMessageT,
@@ -14,6 +18,7 @@ from ask_shell.models import (
     StdReadErrorMessage,
     StdStartedMessage,
 )
+from ask_shell.rich_progress import ProgressManager, new_task
 
 
 def _deque_default() -> deque[str]:
@@ -34,13 +39,15 @@ class _RunInfo:
     started: bool = False
     attempt: int = 1
 
+    task: new_task | None = field(default=None, init=False)  # managed by _RunState
+
     @property
     def stdout_str(self) -> str:
-        return "\n".join(self.stdout)
+        return "".join(self.stdout)
 
     @property
     def stderr_str(self) -> str:
-        return "\n".join(self.stderr)
+        return "".join(self.stderr)
 
     def __call__(self, message: InternalMessageT) -> Any:
         match message:
@@ -64,20 +71,69 @@ class _RunInfo:
                 else:
                     self.error_read_stderr = error
 
-    def __post_init__(self) -> None:
-        self.run.config.message_callbacks.append(self)
+
+def progress_for_runs() -> Progress:
+    return Progress(
+        TextColumn("[bold purple]{task.description}"),
+        TimeElapsedColumn(),
+        TextColumn("{task.fields[stdout]}"),
+        TextColumn("{task.fields[stderr]}"),
+    )
+
+
+def manager_for_runs() -> ProgressManager:
+    return ProgressManager(title="Shell Runs", progress_constructor=progress_for_runs)
 
 
 @dataclass
 class _RunState:
-    runs: dict[int, _RunInfo] = field(default_factory=dict)
-    _progress: Progress | None = None
+    runs: dict[int, _RunInfo] = field(default_factory=dict, repr=False)
+    _progress_manager: ProgressManager = field(
+        init=False, repr=False, default_factory=manager_for_runs
+    )
 
     @property
-    def progress(self) -> Progress:
-        if self._progress is None:
-            self._progress = Progress()
-        return self._progress
+    def active_runs(self) -> list[ShellRun]:
+        return [info.run for info in self.runs.values()]
 
-    def __rich_console__(self, console, options):
-        raise NotImplementedError
+    @property
+    def no_user_input_runs(self) -> bool:
+        return not any(run.config.user_input for run in self.active_runs)
+
+    def add_run(self, run: ShellRun) -> None:
+        run_id = id(run)
+        if run_id in self.runs:
+            return  # Run already exists, no need to add it again
+        self.runs[id(run)] = run_info = _RunInfo(run=run)
+        task = new_task(
+            description=run.config.print_prefix,
+            total=1,
+            task_fields={
+                "stdout": run_info.stdout_str,
+                "stderr": run_info.stderr_str,
+            },
+            print_after_remove=False,
+            manager=self._progress_manager,
+        )
+        task.__enter__()
+        run_info.task = task
+
+        def task_callback(message: InternalMessageT) -> None:
+            run_info(message)
+            if not task.is_finished:
+                task.update(
+                    stdout=run_info.stdout_str,
+                    stderr=run_info.stderr_str,
+                )
+
+        run.config.message_callbacks.append(task_callback)
+
+    def remove_run(self, run: ShellRun, error: BaseException | None = None) -> None:
+        run_info = self.runs.pop(id(run), None)
+        assert run_info is not None, "Run info should not be None when removing run"
+        task = run_info.task
+        assert task is not None, "Task should not be None when removing run"
+        if error:
+            run_info.stderr.append(f"run error: {error}")
+            task.update(stderr=run_info.stderr_str)
+        task.__exit__(None, None, None)

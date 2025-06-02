@@ -87,6 +87,7 @@ class ProgressManager:
         *,
         advance: float | None = None,
         total: float | None = None,
+        skip_render: bool = False,
         **task_fields,
     ):
         assert task._task_id is not None, (
@@ -100,7 +101,8 @@ class ProgressManager:
                 total=total,
                 **task_fields,
             )
-            render_live()
+            if not skip_render:
+                render_live()
 
 
 progress_manager = ProgressManager()
@@ -126,7 +128,7 @@ class new_task:
     _completed: float = field(init=False, default=0.0)
 
     @property
-    def finished(self) -> bool:
+    def is_finished(self) -> bool:
         return self._completed >= self.total
 
     def __post_init__(self):

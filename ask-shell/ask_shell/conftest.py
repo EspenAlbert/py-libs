@@ -1,8 +1,11 @@
+from unittest.mock import Mock
+
 import pytest
 from rich.console import Console
 from zero_3rdparty.file_utils import ensure_parents_write_text
 
 from ask_shell._run import stop_runs_and_pool
+from ask_shell.models import ShellConfig, ShellRun
 from ask_shell.rich_live import get_live, reset_live
 from ask_shell.rich_progress import get_default_progress_manager
 from ask_shell.settings import AskShellSettings
@@ -16,7 +19,7 @@ def settings(tmp_path, monkeypatch) -> AskShellSettings:
     cache_dir.mkdir()
     monkeypatch.setenv("STATIC_DIR", str(tmp_path))
     monkeypatch.setenv("CACHE_DIR", str(tmp_path))
-    return AskShellSettings.from_env()
+    return AskShellSettings.from_env(global_callback_strings=[])
 
 
 tf_example = """\
@@ -77,3 +80,15 @@ def capture_console() -> Console:  # type: ignore
     yield console  # type: ignore
     console.end_capture()
     reset_live()
+
+
+def create_run_mocked_config(user_input: bool = False) -> ShellRun:
+    """avoid ShellConfig validation erro"""
+    return ShellRun(
+        config=Mock(
+            spec=ShellConfig,
+            message_callbacks=[],
+            user_input=user_input,
+            print_prefix="Mocked Run",
+        )
+    )

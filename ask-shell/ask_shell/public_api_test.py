@@ -54,19 +54,19 @@ def test_check_all_config_args_in_signatures(func):
 
 
 def test_normal_run():
-    result = run_and_wait(ShellConfig(shell_input="echo hello", skip_log_time=True))
+    result = run_and_wait(ShellConfig(shell_input="echo hello"))
     assert result.stdout == "hello"
     assert result.stderr == ""
 
 
 def test_stderr_run():
-    result = run_and_wait(ShellConfig(shell_input="echo hello >&2", skip_log_time=True))
+    result = run_and_wait(ShellConfig(shell_input="echo hello >&2"))
     assert result.stdout == ""
     assert result.stderr == "hello"
 
 
 def test_async_run():
-    result = run(ShellConfig(shell_input="sleep 1 && echo hello"), skip_log_time=True)
+    result = run(ShellConfig(shell_input="sleep 1 && echo hello"))
     assert result.is_running
     result.wait_until_complete(timeout=2)
     assert result.stdout == "hello"
@@ -189,9 +189,7 @@ def test_parse_json(tmp_path):
     filename = "example.json"
     json_path = tmp_path / filename
     json_path.write_text(_parse_json_stdout)
-    result = run_and_wait(
-        ShellConfig(shell_input=f"cat {filename}", cwd=tmp_path), skip_log_time=True
-    )
+    result = run_and_wait(ShellConfig(shell_input=f"cat {filename}", cwd=tmp_path))
     time.sleep(0.1)
     stdout = result.stdout
     logger.info(stdout)

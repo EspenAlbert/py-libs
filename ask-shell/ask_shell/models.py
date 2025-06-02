@@ -153,7 +153,7 @@ class ShellConfig(Entity):
     allow_non_zero_exit: bool = False
     skip_os_env: bool = False
     skip_binary_check: bool = False
-    skip_log_time: bool = False
+    include_log_time: bool = False
     skip_interactive_check: bool = (
         False  # can be useful for testing purposes, to skip the interactive shell check
     )
@@ -232,8 +232,8 @@ class ShellConfig(Entity):
             self.env = os.environ | self.env
         if self.ansi_content is None:
             self._infer_ansi_content(parsed_input)
-        if self.user_input and self.skip_log_time is None:
-            self.skip_log_time = True
+        if self.user_input and self.include_log_time is None:
+            self.include_log_time = False
         if self.user_input and not self.skip_interactive_check:
             assert interactive_shell(), ERROR_MESSAGE_INTERACTIVE_SHELL
         self.message_callbacks.extend(self.settings.message_callbacks)

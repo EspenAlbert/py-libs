@@ -18,6 +18,7 @@ from ask_shell.models import (
     StdReadErrorMessage,
     StdStartedMessage,
 )
+from ask_shell.rich_live import get_live_console
 from ask_shell.rich_progress import ProgressManager, new_task
 
 
@@ -137,3 +138,6 @@ class _RunState:
             run_info.stderr.append(f"run error: {error}")
             task.update(stderr=run_info.stderr_str)
         task.__exit__(None, None, None)
+        run = run_info.run
+        exit_comji = "✅" if run.clean_complete and not error else "❌"
+        get_live_console().log(f"{exit_comji} '{run.config.shell_input}'")

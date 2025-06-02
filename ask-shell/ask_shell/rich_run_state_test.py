@@ -35,4 +35,5 @@ def test_run_with_output_is_logged_to_console(settings, capture_console):
     assert "Hello, World!" in output
     assert "This is an error message." in output
     assert "Test error" in output
+    assert "❌ 'echo 'Hello, World!'" in output
     assert not get_live().is_started

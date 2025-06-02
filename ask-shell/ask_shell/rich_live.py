@@ -5,7 +5,7 @@ from functools import total_ordering, wraps
 from threading import RLock
 from typing import Any, Callable, Protocol, TypeVar
 
-from rich.console import Group, RenderableType
+from rich.console import Console, Group, RenderableType
 from rich.live import Live
 from zero_3rdparty.id_creator import simple_id
 
@@ -134,3 +134,7 @@ def add_renderable(
             render_live()
 
     return remove_renderable
+
+
+def get_live_console() -> Console:
+    return get_live().console

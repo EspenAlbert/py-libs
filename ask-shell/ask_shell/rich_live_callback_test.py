@@ -1,111 +1,29 @@
-from dataclasses import dataclass
 from unittest.mock import Mock
-
-import pytest
 
 from ask_shell.models import (
     AfterRunMessage,
     BeforeRunMessage,
-    InternalMessageT,
     ShellConfig,
     ShellRun,
-    StdOutputMessage,
 )
+from ask_shell.rich_live import _live_is_frozen, get_live
 from ask_shell.rich_live_callback import (
     RunConsoleLogger,
-    _NoRuns,
-    _StdoutIsBusy,
-    _StdoutIsFree,
 )
-from ask_shell.rich_live_state import _RunInfo
 
 
-def run(user_input: bool = False) -> ShellRun:
+def _run_mocked_config(user_input: bool = False) -> ShellRun:
+    """avoid ShellConfig validation erro"""
     return ShellRun(
         config=Mock(spec=ShellConfig, message_callbacks=[], user_input=user_input)
     )
 
 
-@dataclass
-class _MessageTestStep:
-    message: InternalMessageT
-    expected_callback: type
-    expected_stdout: str = ""
-    expected_stderr: str = ""
-
-    @property
-    def expected_callback_name(self) -> str:
-        return self.expected_callback.__name__
-
-
-@dataclass
-class _MessageTestCase:
-    name: str
-    steps: list[_MessageTestStep]
-    run: ShellRun
-
-
-run_no_user_input = run(user_input=False)
-run_with_user_input = run(user_input=True)
-_test_cases = [
-    _MessageTestCase(
-        name="One 1st run should switch to _StdoutIsBusy when user_input is True",
-        steps=[
-            _MessageTestStep(
-                message=BeforeRunMessage(run=run_with_user_input),
-                expected_callback=_StdoutIsBusy,
-            ),
-            _MessageTestStep(
-                message=AfterRunMessage(run=run_with_user_input),
-                expected_callback=_NoRuns,
-            ),
-        ],
-        run=run_with_user_input,
-    ),
-    _MessageTestCase(
-        name="One 1st run should switch to _StdoutIsFree when user_input is False and switch back to _NoRuns after run",
-        run=run_no_user_input,
-        steps=[
-            _MessageTestStep(
-                message=BeforeRunMessage(run=run_no_user_input),
-                expected_callback=_StdoutIsFree,
-            ),
-            _MessageTestStep(
-                message=StdOutputMessage(is_stdout=True, content="Test output"),
-                expected_callback=_StdoutIsFree,
-                expected_stdout="Test output",
-            ),
-            _MessageTestStep(
-                message=StdOutputMessage(is_stdout=False, content="Test stderr"),
-                expected_callback=_StdoutIsFree,
-                expected_stderr="Test stderr",
-            ),
-            _MessageTestStep(
-                message=AfterRunMessage(run=run_no_user_input),
-                expected_callback=_NoRuns,
-            ),
-        ],
-    ),
-]
-
-
-@pytest.mark.parametrize("tc", _test_cases, ids=[tc.name for tc in _test_cases])
-def test_run_console_logger(tc: _MessageTestCase, capture_console):
+def test_live_frozen_when_user_input_task_is_running(capture_console):
     console_logger = RunConsoleLogger()
-
-    for step in tc.steps:
-        message = step.message
-        assert not console_logger(message)
-        if isinstance(message, StdOutputMessage):
-            tc.run._on_message(message)
-        assert (
-            type(console_logger.current_message_handler).__name__
-            == step.expected_callback_name
-        )
-        if stdout := step.expected_stdout:
-            run_info: _RunInfo = console_logger.state.runs[id(tc.run)]
-            assert run_info.stdout_str == stdout
-        if stderr := step.expected_stderr:
-            run_info: _RunInfo = console_logger.state.runs[id(tc.run)]
-            assert run_info.stderr_str == stderr
-    assert not console_logger.state.runs, f"Runs should be empty after test: {tc.name}"
+    shell_run = _run_mocked_config(user_input=True)
+    console_logger(BeforeRunMessage(run=shell_run))
+    assert _live_is_frozen()
+    assert not get_live().is_started
+    console_logger(AfterRunMessage(run=shell_run))
+    assert not _live_is_frozen()

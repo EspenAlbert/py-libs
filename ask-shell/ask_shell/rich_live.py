@@ -12,6 +12,11 @@ from zero_3rdparty.id_creator import simple_id
 _live: Live | None = None
 _lock = RLock()
 _renderables: list[LivePart] = []
+_live_is_frozen_attr_name = "__live_is_frozen__"
+
+
+def _live_is_frozen() -> bool:
+    return getattr(get_live(), _live_is_frozen_attr_name, False)
 
 
 def get_live() -> Live:
@@ -34,6 +39,33 @@ def reset_live() -> None:
         _renderables = []
 
 
+class live_frozen:
+    def __enter__(self) -> None:
+        """Freeze the live updates, preventing any changes to the live renderables."""
+        assert not _live_is_frozen(), "Live is already frozen"
+        with _lock:
+            live = get_live()
+            if live.is_started:
+                live.stop()
+            setattr(live, _live_is_frozen_attr_name, True)
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        with _lock:
+            live = get_live()
+            setattr(live, _live_is_frozen_attr_name, False)
+            render_live()  # ensure live starts again
+
+
+def stop_live() -> bool:
+    """Returns was_running"""
+    global _live
+    with _lock:
+        if _live is None or not _live.is_started:
+            return False
+        _live.stop()
+        return True
+
+
 T = TypeVar("T", bound=Callable)
 
 
@@ -43,20 +75,8 @@ def pause_live(func: T) -> T:
 
     @wraps(func)  # type: ignore
     def wrapper(*args, **kwargs):
-        with _lock:
-            live = get_live()
-            stopped = False
-            if live.is_started:
-                live.stop()
-                stopped = True
-            try:
-                return func(*args, **kwargs)  # type: ignore
-            except BaseException as e:
-                raise e
-            finally:
-                if stopped:
-                    live.console.print("")  # avoid last line being overwritten
-                    live.start()
+        with live_frozen():
+            return func(*args, **kwargs)  # type: ignore
 
     return wrapper  # type: ignore
 
@@ -75,6 +95,8 @@ class LivePart:
 
 
 def render_live() -> None:
+    if _live_is_frozen():
+        return
     global _renderables
     live = get_live()
     with _lock:

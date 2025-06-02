@@ -4,7 +4,7 @@ from zero_3rdparty.file_utils import ensure_parents_write_text
 
 from ask_shell._run import stop_runs_and_pool
 from ask_shell.rich_live import get_live, reset_live
-from ask_shell.rich_progress import reset_progress
+from ask_shell.rich_progress import get_default_progress_manager
 from ask_shell.settings import AskShellSettings
 
 
@@ -47,7 +47,8 @@ def stop_consumer():
 
 @pytest.fixture(autouse=True)
 def reset_progress_fix():
-    reset_progress()
+    progress_manager = get_default_progress_manager()
+    progress_manager.reset_progress()
 
 
 # https://github.com/Textualize/rich/blob/8c4d3d1d50047e3aaa4140d0ffc1e0c9f1df5af4/tests/test_live.py#L11

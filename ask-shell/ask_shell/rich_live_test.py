@@ -18,8 +18,8 @@ def test_live_frozen_while_task_updates_console_after(capture_console):
     with new_task("Task 1", print_after_remove=False, total=4) as task:
         assert live.is_started
         with live_frozen():
-            task.advance(1)
-            task.advance(1)
+            task.update(advance=1)
+            task.update(advance=1)
             assert not live.is_started
         assert live.is_started
     output = capture_console.end_capture()

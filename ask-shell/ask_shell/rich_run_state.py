@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from rich.progress import Progress
+
 from ask_shell.models import (
     InternalMessageT,
     POpenStartedMessage,
@@ -69,6 +71,13 @@ class _RunInfo:
 @dataclass
 class _RunState:
     runs: dict[int, _RunInfo] = field(default_factory=dict)
+    _progress: Progress | None = None
+
+    @property
+    def progress(self) -> Progress:
+        if self._progress is None:
+            self._progress = Progress()
+        return self._progress
 
     def __rich_console__(self, console, options):
         raise NotImplementedError

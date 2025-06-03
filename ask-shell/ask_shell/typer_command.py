@@ -1,7 +1,10 @@
 import logging
+import os
 import sys
 import traceback
+from contextlib import suppress
 from functools import wraps
+from pathlib import Path
 from types import TracebackType
 from typing import Callable, TypeVar
 
@@ -74,6 +77,8 @@ def configure_logging(
         datefmt="[%X]",
         handlers=[handler],
     )
+    if settings.remove_os_secrets:
+        hide_secrets(handler, {**os.environ})
     app.pretty_exceptions_enable = app_pretty_exceptions_enable
     app.pretty_exceptions_show_locals = app_pretty_exceptions_show_locals
     return handler
@@ -99,3 +104,47 @@ def except_hook(
     )
     for line in standard_exception.format(chain=True):
         console.print(line, end="")
+
+
+def remove_secrets(message: str, secrets: list[str]) -> str:
+    for secret in secrets:
+        message = message.replace(secret, "***")
+    return message
+
+
+class SecretsHider(logging.Filter):
+    def __init__(self, secrets: list[str], name: str = "") -> None:
+        self.secrets = secrets
+        super().__init__(name)
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.msg = remove_secrets(record.msg, self.secrets)
+        return True
+
+
+dangerous_keys = ["key", "token", "secret"]
+safe_keys: list[str] = ["/"]
+
+
+def hide_secrets(handler: logging.Handler, secrets_dict: dict[str, str]) -> None:
+    secrets_to_hide = set()
+    for key, value in secrets_dict.items():
+        if not isinstance(value, str):
+            continue
+        key_lower = key.lower()
+        if (
+            key_lower in {"true", "false"}
+            or value.lower() in {"true", "false"}
+            or value.isdigit()
+        ):
+            continue
+        with suppress(Exception):
+            if Path(value).exists():
+                continue
+        if any(safe in key_lower for safe in safe_keys):
+            continue
+        if any(danger_key_part in key_lower for danger_key_part in dangerous_keys):
+            secrets_to_hide.add(value)
+    if not secrets_to_hide:
+        return
+    handler.addFilter(SecretsHider(list(secrets_to_hide), name="secrets-hider"))

@@ -34,6 +34,7 @@ class AskShellSettings(StaticSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     show_secrets: bool = Field(default_factory=interactive_shell)
     global_callback_strings: list[str] = Field(default_factory=default_callbacks_funcs)
+    remove_os_secrets: bool = Field(default_factory=lambda: not interactive_shell())
 
     @cached_property
     def message_callbacks(

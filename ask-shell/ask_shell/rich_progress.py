@@ -5,15 +5,49 @@ from dataclasses import dataclass, field
 from threading import RLock
 from typing import Callable, Self, TypeVar
 
-from rich.progress import Progress, TaskID
+from rich.progress import (
+    BarColumn,
+    Progress,
+    Task,
+    TaskID,
+    TaskProgressColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
 
-from ask_shell.rich_live import RemoveLivePart, add_renderable, get_live, render_live
+from ask_shell.rich_live import RemoveLivePart, add_renderable, render_live
 
 logger = logging.getLogger(__name__)
 
 
 def transient_progress() -> Progress:
-    return Progress(transient=True)
+    return Progress(
+        TextColumn("[cyan]{task.description}"),
+        TaskProgressColumn(),
+        BarColumn(),
+        TimeElapsedColumn(),
+        transient=True,
+    )
+
+
+def log_task_done(
+    task: new_task,
+    *,
+    force_error: bool = False,
+    error: BaseException | None = None,
+    description_override: str | None = None,
+    extra_parts: list[str] | None = None,
+):
+    exit_comji = "❌" if force_error or error is not None else "✅"
+    description = description_override or task.description
+    log_call = logger.info if exit_comji == "✅" else logger.error
+    message_parts = [f"{exit_comji} {description}"]
+    if rich_task := task._rich_task:
+        if finish_time := rich_task.finished_time:
+            message_parts.append(f"completed in {finish_time:.02f}s")
+    if extra_parts := extra_parts or []:
+        message_parts.append(" ".join(part for part in extra_parts if part))
+    log_call(" ".join(message_parts))
 
 
 @dataclass
@@ -44,21 +78,23 @@ class ProgressManager:
                 )
             self._progress = None
 
-    def add_task(self, task: new_task):
+    def add_task(self, task: new_task) -> None:
         with self._lock:
             progress = self.get_progress()
+            progress.tasks
             task._task_id = progress.add_task(
                 description=task.description,
                 total=task.total,
                 visible=task.visible,
                 **(task.task_fields or {}),
             )
+            task._rich_task = next(t for t in progress.tasks if t.id == task._task_id)
             if len(progress.tasks) == 1:
                 self._remove_progress = add_renderable(
                     progress, name=self.title, order=-100
                 )
 
-    def remove_task(self, task: new_task):
+    def remove_task(self, task: new_task, error: BaseException | None = None) -> None:
         with self._lock:
             progress = self.get_progress()
             task_id = task._task_id
@@ -71,9 +107,8 @@ class ProgressManager:
                     f"Task ID is None or not found in progress: {task._task_id} for task {task.description}"
                 )
             progress.remove_task(task_id)
-            if task.print_after_remove:
-                table = progress.make_tasks_table([progress_task])
-                get_live().console.print(table)
+            if task.log_after_remove:
+                log_task_done(task, error=error)
             task._task_id = None
             if not progress.tasks:
                 if self._remove_progress is not None:
@@ -121,10 +156,11 @@ class new_task:
     total: float = 1
     visible: bool = True
     task_fields: dict = field(default_factory=dict)
-    print_after_remove: bool = True
+    log_after_remove: bool = True
     manager: ProgressManager = field(default_factory=get_default_progress_manager)
 
     _task_id: TaskID | None = field(init=False, default=None)
+    _rich_task: Task | None = field(init=False, default=None)
     _completed: float = field(init=False, default=0.0)
 
     @property
@@ -140,7 +176,7 @@ class new_task:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.complete()  # Ensure we mark it as complete
-        self.manager.remove_task(self)
+        self.manager.remove_task(self, error=exc_val)
 
     def complete(self) -> None:
         self.update(advance=self.total, total=self.total)

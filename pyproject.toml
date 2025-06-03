@@ -68,4 +68,5 @@ dev = [
     "mkdocs-material>=9.5.50",
     "pillow>=11.1.0",
     "cairosvg>=2.7.1",
+    "GitPython>=3.1.44"
 ]

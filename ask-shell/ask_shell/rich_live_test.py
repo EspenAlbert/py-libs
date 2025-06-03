@@ -6,7 +6,7 @@ def test_live_frozen_task_when_frozen_dont_update_console(capture_console):
     live = get_live()
     assert not live.is_started
     with live_frozen():
-        with new_task("Task 1", print_after_remove=False):
+        with new_task("Task 1", log_after_remove=False):
             assert not live.is_started
     assert not live.is_started
     assert "Task 1" not in capture_console.end_capture()
@@ -15,7 +15,7 @@ def test_live_frozen_task_when_frozen_dont_update_console(capture_console):
 def test_live_frozen_while_task_updates_console_after(capture_console):
     live = get_live()
     assert not live.is_started
-    with new_task("Task 1", print_after_remove=False, total=4) as task:
+    with new_task("Task 1", log_after_remove=False, total=4) as task:
         assert live.is_started
         with live_frozen():
             task.update(advance=1)

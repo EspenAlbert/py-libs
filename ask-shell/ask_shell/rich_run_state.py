@@ -18,8 +18,7 @@ from ask_shell.models import (
     StdReadErrorMessage,
     StdStartedMessage,
 )
-from ask_shell.rich_live import get_live_console
-from ask_shell.rich_progress import ProgressManager, new_task
+from ask_shell.rich_progress import ProgressManager, log_task_done, new_task
 
 
 def _deque_default() -> deque[str]:
@@ -113,7 +112,7 @@ class _RunState:
                 "stdout": run_info.stdout_str,
                 "stderr": run_info.stderr_str,
             },
-            print_after_remove=False,
+            log_after_remove=False,
             manager=self._progress_manager,
         )
         task.__enter__()
@@ -139,5 +138,11 @@ class _RunState:
             task.update(stderr=run_info.stderr_str)
         task.__exit__(None, None, None)
         run = run_info.run
-        exit_comji = "✅" if run.clean_complete and not error else "❌"
-        get_live_console().log(f"{exit_comji} '{run.config.shell_input}'")
+        log_task_done(
+            task,
+            force_error=not run.clean_complete,
+            description_override=f"'{run.config.shell_input}'",
+            extra_parts=[
+                "" if run._current_attempt == 1 else f"attempt {run._current_attempt}",
+            ],
+        )

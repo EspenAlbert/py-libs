@@ -1,12 +1,14 @@
 from functools import cached_property
 from pathlib import Path
 from pydoc import locate
-from typing import Any, Callable, ClassVar
+from typing import Any, Callable, ClassVar, Literal
 
 from model_lib.static_settings import StaticSettings
 from pydantic import Field
 from zero_3rdparty.file_utils import clean_dir
 from zero_3rdparty.object_name import as_name
+
+from ask_shell._run_env import interactive_shell
 
 
 def default_callbacks_funcs() -> list[str]:
@@ -28,6 +30,9 @@ class AskShellSettings(StaticSettings):
     ENV_NAME_RUN_THREAD_COUNT: ClassVar[str] = "RUN_THREAD_COUNT"
     RUN_THREAD_COUNT_DEFAULT: ClassVar[int] = 50
     RUN_THREAD_COUNT: int = RUN_THREAD_COUNT_DEFAULT
+
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    show_secrets: bool = Field(default_factory=interactive_shell)
     global_callback_strings: list[str] = Field(default_factory=default_callbacks_funcs)
 
     @cached_property

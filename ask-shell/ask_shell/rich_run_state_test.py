@@ -3,9 +3,9 @@ from ask_shell.rich_live import get_live
 from ask_shell.rich_run_state import _RunState
 
 
-def test_run_with_output_is_logged_to_console(settings, capture_console):
+def test_run_with_output_is_logged_to_console(settings, capture_console, caplog):
     config = ShellConfig(
-        shell_input="echo 'Hello, World!'",
+        shell_input='echo "Hello, World!"',
         print_prefix="Test Run",
         settings=settings,
     )
@@ -35,5 +35,6 @@ def test_run_with_output_is_logged_to_console(settings, capture_console):
     assert "Hello, World!" in output
     assert "This is an error message." in output
     assert "Test error" in output
-    assert "❌ 'echo 'Hello, World!'" in output
+    log_output = caplog.text
+    assert "❌ 'echo \"Hello, World!\"'" in log_output
     assert not get_live().is_started

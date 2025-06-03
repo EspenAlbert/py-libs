@@ -78,3 +78,7 @@ class AskShellSettings(StaticSettings):
         """{XX}_{self.exec_name}"""
         next_counter = self.next_run_counter()
         return self.run_logs / f"{next_counter:02d}_{exec_name}"
+
+
+def default_rich_info_style() -> str:
+    return "[cyan]"

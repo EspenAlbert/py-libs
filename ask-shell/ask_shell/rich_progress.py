@@ -16,13 +16,14 @@ from rich.progress import (
 )
 
 from ask_shell.rich_live import RemoveLivePart, add_renderable, render_live
+from ask_shell.settings import default_rich_info_style
 
 logger = logging.getLogger(__name__)
 
 
 def transient_progress() -> Progress:
     return Progress(
-        TextColumn("[cyan]{task.description}"),
+        TextColumn("%s{task.description}", default_rich_info_style()),
         TaskProgressColumn(),
         BarColumn(),
         TimeElapsedColumn(),

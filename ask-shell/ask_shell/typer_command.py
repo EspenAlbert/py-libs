@@ -1,28 +1,53 @@
 import logging
+import sys
+import traceback
 from functools import wraps
+from types import TracebackType
 from typing import Callable, TypeVar
 
+import click
 import typer
 from rich.logging import RichHandler
+from rich.traceback import Traceback
 
+import ask_shell
 from ask_shell.rich_live import get_live_console
 from ask_shell.rich_progress import new_task
-from ask_shell.settings import AskShellSettings
+from ask_shell.settings import AskShellSettings, default_rich_info_style
 
 T = TypeVar("T", bound=Callable)
+original_excepthook = sys.excepthook
 
 
-def track_progress(
-    command: T,
-) -> T:
-    @wraps(command)
-    def wrapper(*args, **kwargs):
-        with new_task(
-            description=f"Running command: '{command.__name__}'",
-        ):
-            return command(*args, **kwargs)
+def track_progress_decorator(
+    *,
+    settings: AskShellSettings,
+    skip_except_hook: bool = False,
+) -> Callable[[T], T]:
+    def decorator(command: T) -> T:
+        @wraps(command)
+        def wrapper(*args, **kwargs):
+            if not skip_except_hook:  # this must be done inside of the call as the typer.main sets the except hook when the app is called
+                sys.excepthook = except_hook  # type: ignore
+            with new_task(
+                description=f"Running command: '{command.__name__}'",
+            ):
+                try:
+                    return command(*args, **kwargs)
+                except BaseException as e:
+                    raise e  # re-raise the exception to be handled by the except hook
+                finally:
+                    log_exit_summary(settings)
 
-    return wrapper  # type: ignore
+        return wrapper  # type: ignore
+
+    return decorator
+
+
+def log_exit_summary(settings: AskShellSettings):
+    get_live_console().print(
+        f"{default_rich_info_style()}You can find the run logs in {settings.run_logs} "
+    )
 
 
 def configure_logging(
@@ -31,10 +56,15 @@ def configure_logging(
     settings: AskShellSettings | None = None,
     app_pretty_exceptions_enable: bool = False,
     app_pretty_exceptions_show_locals: bool = False,
+    skip_except_hook: bool = False,
 ) -> logging.Handler:
-    for command in app.registered_commands:
-        command.callback = track_progress(command.callback)  # type: ignore
     settings = settings or AskShellSettings.from_env()
+    for command in app.registered_commands:
+        command.callback = track_progress_decorator(
+            skip_except_hook=skip_except_hook, settings=settings
+        )(
+            command.callback  # type: ignore
+        )
     handler = RichHandler(
         rich_tracebacks=False, level=settings.log_level, console=get_live_console()
     )
@@ -47,3 +77,25 @@ def configure_logging(
     app.pretty_exceptions_enable = app_pretty_exceptions_enable
     app.pretty_exceptions_show_locals = app_pretty_exceptions_show_locals
     return handler
+
+
+def except_hook(
+    exc_type: type[BaseException], exc_value: BaseException, tb: TracebackType | None
+) -> None:
+    """Similar to typer's except hook"""
+    internal_modules = [typer, click, ask_shell]
+    console = get_live_console()
+    rich_tb = Traceback.from_exception(
+        exc_type,
+        exc_value,
+        tb,
+        show_locals=True,
+        suppress=internal_modules,
+        width=console.width,
+    )
+    console.print(rich_tb)
+    standard_exception = traceback.TracebackException(
+        exc_type, exc_value, tb, limit=-7, compact=True
+    )
+    for line in standard_exception.format(chain=True):
+        console.print(line, end="")

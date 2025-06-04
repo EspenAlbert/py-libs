@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import logging
 import re
-import time
 from functools import cached_property, lru_cache
 from pathlib import Path
 from typing import Callable, ClassVar, Self
@@ -8,11 +9,15 @@ from typing import Callable, ClassVar, Self
 import git
 import typer
 from ask_shell._run import run_and_wait
+from ask_shell._run_env import interactive_shell
+from ask_shell.interactive2 import select_list_multiple
+from ask_shell.rich_live import print_to_live_console
 from ask_shell.rich_progress import new_task
 from ask_shell.typer_command import configure_logging
 from model_lib import Entity, parse_payload
-from pydantic import BaseModel, RootModel
+from pydantic import BaseModel, Field, RootModel
 from pydantic_core import Url
+from rich.markdown import Markdown
 from zero_3rdparty import dict_nested, file_utils, iter_utils
 
 
@@ -28,7 +33,7 @@ def find_owner_project(repo: git.Repo) -> str:
     return url_path.strip("/").removesuffix(".git")
 
 
-app = typer.Typer()
+app = typer.Typer(name="gh-ext", help="GitHub extension commands")
 logger = logging.getLogger(__name__)
 
 
@@ -96,16 +101,52 @@ def gh_vars_usage(
         "--print",
         help="Print the report to stdout",
     ),
+    delete_unused: bool = typer.Option(
+        False,
+        "--delete",
+        help="Delete unused variables and secrets (prompted if running interactively)",
+    ),
 ):
+    if delete_unused and not interactive_shell():
+        raise ValueError(
+            "Cannot delete unused variables and secrets in non-interactive shell"
+        )
     ctx = CreateVariableSecretReportContext.from_cli(
         path=path,
         show_unused_values=show_unused_values,
         report_path=report_path,
     )
-    report_md = create_variable_secret_report(ctx)
-    if print_report:
-        time.sleep(3)
-        logger.info(f"Markdown report:\n{report_md}")
+    result = create_variable_secret_report(ctx)
+    if print_report or delete_unused:
+        print_to_live_console(Markdown(result.report_or_ok))
+    if unused_vars := result.unused_vars:
+        vars_to_delete = select_list_multiple(
+            "Select unused variables to delete",
+            choices=unused_vars,
+            default=unused_vars,
+        )
+        delete_vars(vars_to_delete, ctx)
+    if unused_secrets := result.unused_secrets:
+        secrets_to_delete = select_list_multiple(
+            "Select unused secrets to delete",
+            choices=unused_secrets,
+            default=unused_secrets,
+        )
+        delete_secrets(secrets_to_delete, ctx)
+
+
+def delete_vars(vars_to_delete: list[str], ctx: CreateVariableSecretReportContext):
+    for var_name in vars_to_delete:
+        command = f"gh variable delete -R {ctx.owner_project} {var_name}"
+        run_and_wait(command, cwd=ctx.repo_path, user_input=True)
+
+
+def delete_secrets(
+    secrets_to_delete: list[str], ctx: CreateVariableSecretReportContext
+):
+    for secret_name in secrets_to_delete:
+        command = f"gh secret delete -R {ctx.owner_project} {secret_name}"
+        run_and_wait(command, cwd=ctx.repo_path, user_input=True)
 
 
 class CreateVariableSecretReportContext(Entity):
@@ -146,7 +187,21 @@ class CreateVariableSecretReportContext(Entity):
         )
 
 
-def create_variable_secret_report(ctx: CreateVariableSecretReportContext) -> str:
+class CreateVariableSecretReportContextOutput(BaseModel):
+    report_md: str = ""
+    unused_vars: list[str] = Field(default_factory=list)
+    unused_secrets: list[str] = Field(default_factory=list)
+
+    @property
+    def report_or_ok(self) -> str:
+        if self.report_md:
+            return self.report_md
+        return "No unused variables or secrets found 🎉"
+
+
+def create_variable_secret_report(
+    ctx: CreateVariableSecretReportContext,
+) -> CreateVariableSecretReportContextOutput:
     repo_dir = ctx.repo_path
     owner_project = ctx.owner_project
 
@@ -154,12 +209,15 @@ def create_variable_secret_report(ctx: CreateVariableSecretReportContext) -> str
     token = token_run.stdout
     assert token, "Token is empty"
     report_md: list[str] = []
+    out_event = CreateVariableSecretReportContextOutput()
 
     vars_out = run_and_wait(f"gh variable list -R {owner_project} --json name,value")
     vars_json = parse_payload(vars_out.stdout, "json")
     if vars_json:
         gh_vars = GhVars(root=vars_json)  # type: ignore
-        report_md.extend(create_md_usage_report(ctx, gh_vars, find_vars_usages))
+        vars_lines, unused_vars = create_md_usage_report(ctx, gh_vars, find_vars_usages)
+        out_event.unused_vars = unused_vars
+        report_md.extend(vars_lines)
     else:
         logger.warning("No variables found")
     secrets_out = run_and_wait(f"gh secret list -R {owner_project} --json name")
@@ -167,32 +225,38 @@ def create_variable_secret_report(ctx: CreateVariableSecretReportContext) -> str
         gh_secrets = GhSecrets(root=secrets_json)  # type: ignore
         if report_md:
             report_md.append("\n\n")  # add extra new lines between vars and secrets
-        report_md.extend(create_md_usage_report(ctx, gh_secrets, find_secrets_usages))
+        secret_lines, unused_secrets = create_md_usage_report(
+            ctx, gh_secrets, find_secrets_usages
+        )
+        report_md.extend(secret_lines)
+        out_event.unused_secrets = unused_secrets
     else:
         logger.warning("No secrets found")
-    report_content = "\n".join(report_md)
+    report_content = out_event.report_md = "\n".join(report_md)
     report_path = ctx.report_path_abs
     if not report_path or not report_content:
-        return report_content
+        return out_event
     report_md.append("")  # end with a new line
     file_utils.ensure_parents_write_text(report_path, report_content)
-    return report_content
+    return out_event
 
 
 def create_md_usage_report(
     event_in: CreateVariableSecretReportContext,
     gh_vars: GhVars | GhSecrets,
     find_usages: Callable[[str], set[str]],
-) -> list[str]:
+) -> tuple[list[str], list[str]]:
     repo_dir = event_in.repo_path
     repo = event_in.repo
     header = f"# GH {gh_vars.workflow_prefix.capitalize()}"
-    report_md: list[str] = [header]
+    report_md: list[str] = []
     used_vars, not_found_errors = collect_used_names(repo_dir, gh_vars, find_usages)
     if not_found_errors:
-        report_md.append("## Not Found")
+        report_md.extend((header, "## Not Found"))
         report_md.extend(sorted(not_found_errors))
     if unused_vars := gh_vars.names - used_vars:
+        if not report_md:
+            report_md.append(header)
         report_md.append("\n## Unused")
         if event_in.show_unused_values and isinstance(gh_vars, GhVars):
             unused_lines = sorted(
@@ -211,7 +275,8 @@ def create_md_usage_report(
         ):
             report_md.append("\n### Unused Usages In Repo")
             report_md.extend(sorted(usages))
-    return report_md
+        return report_md, sorted(unused_vars)
+    return report_md, []
 
 
 def collect_used_names(

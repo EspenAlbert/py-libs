@@ -281,7 +281,9 @@ if __name__ == "__main__":
     logger.info(confirm("Can you confirm?", default=False))
     logger.info(
         select_list_multiple(
-            "Select options:", ["Option 1", "Option 2", "Option 3"], ["Option 1"]
+            "Select options:",
+            ["Option 1", "Option 2", "Option 3"],
+            default=["Option 1"],
         )
     )
     logger.info(text("Enter your name:", default="John Doe"))

@@ -39,8 +39,9 @@ def track_progress_decorator(
                 settings.configure_run_logs_dir_if_unset(
                     new_relative_path=f"{app_name}/{command_name}"
                 )
+            sys_args = " ".join(sys.argv)
             with new_task(
-                description=f"Running command: '{command.__name__}'",
+                description=f"Running: '{sys_args}'",
             ):
                 try:
                     return command(*args, **kwargs)

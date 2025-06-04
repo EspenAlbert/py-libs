@@ -12,7 +12,7 @@ from typing import Callable, TypeVar
 from prompt_toolkit.input.defaults import create_pipe_input
 from prompt_toolkit.output import DummyOutput
 from pydantic import BaseModel, model_validator
-from questionary import Question, checkbox
+from questionary import Choice, Question, checkbox
 from questionary import confirm as _confirm
 from questionary import select as _select
 from questionary import text as _text
@@ -78,10 +78,11 @@ def select_list_multiple(
     options = options or SelectOptions()
     chosen = options.set_defaults(len(choices))
     default = default or []
+    default_choices = [Choice(option, checked=option in default) for option in choices]
     return _question_asker(
         checkbox(
             prompt_text,
-            choices=choices,
+            choices=default_choices,
             use_jk_keys=chosen.use_jk_keys,
             use_search_filter=chosen.use_search_filter,
         ),

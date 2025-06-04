@@ -50,6 +50,14 @@ def test_select_list_multiple(inputs, options, expected):
         assert select_list_multiple("Select options:", options) == expected
 
 
+def test_select_list_multiple_with_default():
+    with question_patcher([""]):
+        options = ["Option 1", "Option 2", "Option 3"]
+        assert (
+            select_list_multiple("Select options:", options, default=options) == options
+        )
+
+
 @pytest.mark.parametrize(
     "inputs, options, default, expected",
     [

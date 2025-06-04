@@ -17,8 +17,8 @@ def settings(tmp_path, monkeypatch) -> AskShellSettings:
     cache_dir = tmp_path / "cache"
     static_dir.mkdir()
     cache_dir.mkdir()
-    monkeypatch.setenv("STATIC_DIR", str(tmp_path))
-    monkeypatch.setenv("CACHE_DIR", str(tmp_path))
+    monkeypatch.setenv("STATIC_DIR", str(static_dir))
+    monkeypatch.setenv("CACHE_DIR", str(cache_dir))
     return AskShellSettings.from_env(global_callback_strings=[])
 
 

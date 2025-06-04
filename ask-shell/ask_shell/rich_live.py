@@ -3,10 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from functools import total_ordering, wraps
 from threading import RLock
-from typing import Any, Callable, Protocol, TypeVar
+from typing import Any, Callable, Optional, Protocol, TypeVar, Union
 
-from rich.console import Console, Group, RenderableType
+from rich.console import Console, Group, JustifyMethod, OverflowMethod, RenderableType
 from rich.live import Live
+from rich.style import Style
 from zero_3rdparty.id_creator import simple_id
 
 _live: Live | None = None
@@ -138,3 +139,65 @@ def add_renderable(
 
 def get_live_console() -> Console:
     return get_live().console
+
+
+def print_to_live_console(
+    *objects: Any,
+    sep: str = " ",
+    end: str = "\n",
+    style: Optional[Union[str, Style]] = None,
+    justify: Optional[JustifyMethod] = None,
+    overflow: Optional[OverflowMethod] = None,
+    no_wrap: Optional[bool] = None,
+    emoji: Optional[bool] = None,
+    markup: Optional[bool] = None,
+    highlight: Optional[bool] = None,
+    width: Optional[int] = None,
+    height: Optional[int] = None,
+    crop: bool = True,
+    soft_wrap: Optional[bool] = None,
+    new_line_start: bool = False,
+):
+    get_live_console().print(
+        *objects,
+        sep=sep,
+        end=end,
+        style=style,
+        justify=justify,
+        overflow=overflow,
+        no_wrap=no_wrap,
+        emoji=emoji,
+        markup=markup,
+        highlight=highlight,
+        width=width,
+        height=height,
+        crop=crop,
+        soft_wrap=soft_wrap,
+        new_line_start=new_line_start,
+    )
+
+
+def log_to_live_console(
+    *objects: Any,
+    sep: str = " ",
+    end: str = "\n",
+    style: Optional[Union[str, Style]] = None,
+    justify: Optional[JustifyMethod] = None,
+    emoji: Optional[bool] = None,
+    markup: Optional[bool] = None,
+    highlight: Optional[bool] = None,
+    log_locals: bool = False,
+    _stack_offset: int = 1,
+) -> None:
+    get_live_console().log(
+        *objects,
+        sep=sep,
+        end=end,
+        style=style,
+        justify=justify,
+        emoji=emoji,
+        markup=markup,
+        highlight=highlight,
+        log_locals=log_locals,
+        _stack_offset=_stack_offset + 1,  # +1 to skip this function in the stack trace
+    )

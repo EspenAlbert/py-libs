@@ -14,7 +14,7 @@ from rich.logging import RichHandler
 from rich.traceback import Traceback
 
 import ask_shell
-from ask_shell.rich_live import get_live_console
+from ask_shell.rich_live import get_live_console, log_to_live_console
 from ask_shell.rich_progress import new_task
 from ask_shell.settings import AskShellSettings, default_rich_info_style
 
@@ -26,12 +26,19 @@ def track_progress_decorator(
     *,
     settings: AskShellSettings,
     skip_except_hook: bool = False,
+    use_app_name_command_for_logs: bool = True,
+    app_name: str,
+    command_name: str,
 ) -> Callable[[T], T]:
     def decorator(command: T) -> T:
         @wraps(command)
         def wrapper(*args, **kwargs):
             if not skip_except_hook:  # this must be done inside of the call as the typer.main sets the except hook when the app is called
                 sys.excepthook = except_hook  # type: ignore
+            if use_app_name_command_for_logs:
+                settings.configure_run_logs_dir_if_unset(
+                    new_relative_path=f"{app_name}/{command_name}"
+                )
             with new_task(
                 description=f"Running command: '{command.__name__}'",
             ):
@@ -48,7 +55,7 @@ def track_progress_decorator(
 
 
 def log_exit_summary(settings: AskShellSettings):
-    get_live_console().print(
+    log_to_live_console(
         f"{default_rich_info_style()}You can find the run logs in {settings.run_logs} "
     )
 
@@ -60,11 +67,17 @@ def configure_logging(
     app_pretty_exceptions_enable: bool = False,
     app_pretty_exceptions_show_locals: bool = False,
     skip_except_hook: bool = False,
+    use_app_name_command_for_logs: bool = True,
 ) -> logging.Handler:
     settings = settings or AskShellSettings.from_env()
+    app_name = app.info.name or "typer_app"
     for command in app.registered_commands:
         command.callback = track_progress_decorator(
-            skip_except_hook=skip_except_hook, settings=settings
+            skip_except_hook=skip_except_hook,
+            settings=settings,
+            use_app_name_command_for_logs=use_app_name_command_for_logs,
+            app_name=app_name,
+            command_name=command.name or command.callback.__name__,  # type: ignore
         )(
             command.callback  # type: ignore
         )

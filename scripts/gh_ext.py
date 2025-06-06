@@ -558,7 +558,7 @@ def find_names_usage(
                 continue
             if name_uses := find_names_usages(unused_name_pattern, file_text):
                 unused_vars_name_usage.append(
-                    f"File: {rel_path}, used vars: {', '.join(sorted(name_uses))}"
+                    f"- File: {rel_path}, used vars: {', '.join(sorted(name_uses))}"
                 )
         return sorted(unused_vars_name_usage)
 

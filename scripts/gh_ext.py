@@ -66,6 +66,10 @@ class GhExtSettings(StaticSettings):
     def repo_export_path(self, owner_project: str) -> Path:
         return self.repo_files_dir(owner_project) / "gh-ext-export.yaml"
 
+    def repo_secrets_path(self, owner_project: str) -> Path:
+        """Dictionary of secrets with values, not encrypted, useful to validate you have a backup before deleting secrets."""
+        return self.repo_files_dir(owner_project) / "gh-secrets.dec.yaml"
+
 
 @total_ordering
 class GhVarOrSecret(BaseModel):
@@ -261,7 +265,14 @@ def gh_vars_usage(
         "--delete",
         help="Delete unused variables and secrets (prompted if running interactively)",
     ),
+    delete_safe: bool = typer.Option(
+        False,
+        "--delete-safe",
+        help="Will only delete secrets where a local value is available. This is useful to ensure you have a backup before deleting the secrets.",
+    ),
 ):
+    if delete_safe and not delete_unused:
+        delete_unused = True
     if delete_unused and not interactive_shell():
         raise ValueError(
             "Cannot delete unused variables and secrets in non-interactive shell"
@@ -270,6 +281,7 @@ def gh_vars_usage(
         path=path,
         show_unused_values=show_unused_values,
         report_path=report_path,
+        delete_safe=delete_safe,
     )
     result = create_variable_secret_report(ctx)
     if print_report or delete_unused:
@@ -301,10 +313,26 @@ def delete_vars(vars_to_delete: list[str], ctx: CreateVariableSecretReportContex
 def delete_secrets(
     secrets_to_delete: list[str], ctx: CreateVariableSecretReportContext
 ):
+    restorable_secrets = restoreable_secrets(ctx)
+    secrets_path = ctx.gh_ext_settings.repo_secrets_path(ctx.owner_project)
     for secret_name in secrets_to_delete:
         command = f"gh secret delete -R {ctx.owner_project} {secret_name}"
+        if ctx.delete_safe and secret_name not in restorable_secrets:
+            logger.warning(
+                f"Skipping deletion of secret {secret_name} as it is not restorable (not found in {secrets_path})"
+            )
+            continue
         run_and_wait(command, cwd=ctx.repo_path, user_input=True)
         ctx.export.mark_deleted_secret(secret_name)
+
+
+def restoreable_secrets(ctx: CreateVariableSecretReportContext) -> set[str]:
+    secret_disk_path = ctx.gh_ext_settings.repo_secrets_path(ctx.owner_project)
+    if not secret_disk_path.exists():
+        return set()
+    secrets = parse_payload(secret_disk_path)
+    assert isinstance(secrets, dict), "Secrets should be a dictionary"
+    return set(secrets.keys())
 
 
 class CreateVariableSecretReportContext(Entity):
@@ -316,6 +344,7 @@ class CreateVariableSecretReportContext(Entity):
     shell_settings: AskShellSettings = Field(default_factory=AskShellSettings.from_env)
     gh_ext_settings: GhExtSettings = Field(default_factory=GhExtSettings.from_env)
     export: GhExtExport = Field(init=False, default=None)  # type: ignore
+    delete_safe: bool = False
 
     @model_validator(mode="after")
     def read_or_create_export(self) -> Self:
@@ -340,7 +369,9 @@ class CreateVariableSecretReportContext(Entity):
         return self.repo_path / self.report_path
 
     @classmethod
-    def from_cli(cls, path: str, show_unused_values: bool, report_path: str) -> Self:
+    def from_cli(
+        cls, path: str, show_unused_values: bool, report_path: str, delete_safe: bool
+    ) -> Self:
         maybe_nested_dir = Path(path)
         assert maybe_nested_dir.exists(), f"Repo dir does not exist: {maybe_nested_dir}"
         repo = git.Repo(maybe_nested_dir, search_parent_directories=True)
@@ -355,6 +386,7 @@ class CreateVariableSecretReportContext(Entity):
             repo_path=repo_dir,
             call_path=repo_dir,
             owner_project=owner_project,
+            delete_safe=delete_safe,
         )
 
 

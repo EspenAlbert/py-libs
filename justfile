@@ -49,3 +49,8 @@ pkg-version pkg_name command='read': # use m for model-lib and z for zero-3rdpar
   @uv run scripts/pkg_version.py {{pkg_name}} {{command}}
 pkg-find tag_name:
   @uv run scripts/pkg_version.py {{tag_name}} decode-tag
+
+
+[positional-arguments]
+gh-ext *args:
+  @uv run scripts/gh_ext.py {{args}}

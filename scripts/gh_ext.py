@@ -417,7 +417,7 @@ def create_variable_secret_report(
     vars_out = run_and_wait(
         f"gh variable list -R {owner_project} --json name,value,updatedAt"
     )
-    vars_json = parse_payload(vars_out.stdout, "json")
+    vars_json = vars_out.stdout_json()
     if vars_json:
         gh_vars = GhVars(root=vars_json)  # type: ignore
         ctx.export.update_variables(gh_vars.root)
@@ -429,7 +429,7 @@ def create_variable_secret_report(
     secrets_out = run_and_wait(
         f"gh secret list -R {owner_project} --json name,updatedAt"
     )
-    if secrets_json := parse_payload(secrets_out.stdout, "json"):
+    if secrets_json := secrets_out.stdout_json():
         gh_secrets = GhSecrets(root=secrets_json)  # type: ignore
         ctx.export.update_secrets(gh_secrets.root)
         if report_md:

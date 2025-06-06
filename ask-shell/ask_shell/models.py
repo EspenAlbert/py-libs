@@ -14,6 +14,7 @@ from threading import RLock
 from typing import Any, Callable, NamedTuple, Self, TypeAlias, Union
 
 from model_lib.model_base import Entity
+from model_lib.serialize.parse import parse_payload
 from pydantic import Field, model_validator
 from rich.console import Console
 from zero_3rdparty.closable_queue import ClosableQueue
@@ -429,6 +430,10 @@ class ShellRun:
         if self._stdout_log_path is None:
             return ""
         return self._stdout_log_path.read_text().strip()
+
+    def stdout_json(self) -> dict | list | str | None:
+        all_stdout = "".join(self.stdout.splitlines())
+        return parse_payload(all_stdout, "json") if all_stdout else None
 
     @property
     def stderr(self) -> str:

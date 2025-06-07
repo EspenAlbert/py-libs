@@ -98,7 +98,7 @@ class AskShellSettings(StaticSettings):
         )
 
     def next_run_counter(self) -> int:
-        from ask_shell.interactive2 import confirm
+        from ask_shell.interactive import confirm
 
         last_counter = self._last_run_counter()
         if last_counter == 0:

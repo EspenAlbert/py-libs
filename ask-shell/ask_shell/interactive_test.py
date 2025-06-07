@@ -1,6 +1,6 @@
 import pytest
 
-from ask_shell.interactive2 import (
+from ask_shell.interactive import (
     SEARCH_ENABLED_AFTER_CHOICES,
     KeyInput,
     SelectOptions,

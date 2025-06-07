@@ -11,10 +11,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from shutil import which
 from threading import RLock
-from typing import Any, Callable, NamedTuple, Self, TypeAlias, Union
+from typing import Any, Callable, Literal, NamedTuple, Self, TypeAlias, TypeVar, Union
 
+from model_lib import parse_dict, parse_list, parse_model
+from model_lib.constants import FileFormat, FileFormatT
 from model_lib.model_base import Entity
-from model_lib.serialize.parse import parse_payload
 from pydantic import Field, model_validator
 from rich.console import Console
 from zero_3rdparty.closable_queue import ClosableQueue
@@ -269,6 +270,9 @@ class ShellConfig(Entity):
         return kwargs
 
 
+OutputT = TypeVar("OutputT")
+
+
 @dataclass
 class ShellRun:
     """Stores dynamic behavior. Only created by this file never outside.
@@ -434,16 +438,38 @@ class ShellRun:
             return ""
         return self._stdout_log_path.read_text().strip()
 
-    def stdout_json(self) -> dict | list | str | None:
-        all_stdout = "".join(self.stdout.splitlines())
-        parse_fmt = "json"
-        return parse_payload(all_stdout, parse_fmt) if all_stdout else None
+    @property
+    def stdout_one_line(self) -> str:
+        return "".join(self.stdout.splitlines()).strip()
+
+    def parse_output(
+        self,
+        output_t: type[OutputT],
+        *,
+        output_format: FileFormatT = FileFormat.json,
+        stream: Literal["stdout", "stderr"] = "stdout",
+    ) -> OutputT:
+        """Raises EmptyOutputError if the output is empty."""
+        stream_content = (
+            self.stdout_one_line if stream == "stdout" else self.stderr_one_line
+        )
+        if not stream_content:
+            raise EmptyOutputError(self, stream=stream)
+        elif output_t is list:
+            return parse_list(stream_content, output_format)  # type: ignore
+        elif output_t is dict:
+            return parse_dict(stream_content, output_format)  # type: ignore
+        return parse_model(stream_content, t=output_t, format=output_format)
 
     @property
     def stderr(self) -> str:
         if self._stderr_log_path is None:
             return ""
         return self._stderr_log_path.read_text().strip()
+
+    @property
+    def stderr_one_line(self) -> str:
+        return "".join(self.stderr.splitlines()).strip()
 
     @property
     def clean_complete(self):
@@ -505,3 +531,12 @@ class ShellError(Exception):
 class RunIncompleteError(Exception):
     def __init__(self, run: ShellRun):
         self.run = run
+
+
+class EmptyOutputError(Exception):
+    def __init__(self, run: ShellRun, stream: Literal["stdout", "stderr"] = "stdout"):
+        self.run = run
+        self.stream = stream
+
+    def __str__(self) -> str:
+        return f"No output in {self.stream} for {self.run}"

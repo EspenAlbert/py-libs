@@ -12,7 +12,7 @@ import git
 import typer
 from ask_shell._run import run_and_wait
 from ask_shell._run_env import interactive_shell
-from ask_shell.interactive2 import select_list_multiple
+from ask_shell.interactive import select_list_multiple
 from ask_shell.rich_live import print_to_live_console
 from ask_shell.rich_progress import new_task
 from ask_shell.settings import AskShellSettings
@@ -216,8 +216,7 @@ class GhExtExport(BaseModel):
         raise ValueError(f"Variable with name {name} not found in the export.")
 
 
-class GhVars(RootModel):
-    root: list[GhVar]
+class GhVars(RootModel[list[GhVar]]):
     workflow_prefix: ClassVar[str] = "vars"
 
     @cached_property
@@ -229,8 +228,7 @@ class GhVars(RootModel):
         return {var.name: var.value for var in self.root if var.name in unused}
 
 
-class GhSecrets(RootModel):
-    root: list[GhSecret]
+class GhSecrets(RootModel[list[GhSecret]]):
     workflow_prefix: ClassVar[str] = "secrets"
 
     @cached_property
@@ -417,20 +415,19 @@ def create_variable_secret_report(
     vars_out = run_and_wait(
         f"gh variable list -R {owner_project} --json name,value,updatedAt"
     )
-    vars_json = vars_out.stdout_json()
-    if vars_json:
-        gh_vars = GhVars(root=vars_json)  # type: ignore
+    if vars_json := vars_out.parse_output(list):
+        gh_vars = GhVars(root=vars_json)
         ctx.export.update_variables(gh_vars.root)
         vars_lines, unused_vars = create_md_usage_report(ctx, gh_vars, find_vars_usages)
         out_event.unused_vars = gh_vars.unused_dict(unused_vars)
         report_md.extend(vars_lines)
     else:
-        logger.warning("No variables found")
+        logger.warning("No variables found in the repository")
     secrets_out = run_and_wait(
         f"gh secret list -R {owner_project} --json name,updatedAt"
     )
-    if secrets_json := secrets_out.stdout_json():
-        gh_secrets = GhSecrets(root=secrets_json)  # type: ignore
+    if secrets_json := secrets_out.parse_output(list):
+        gh_secrets = GhSecrets(root=secrets_json)
         ctx.export.update_secrets(gh_secrets.root)
         if report_md:
             report_md.append("\n\n")  # add extra new lines between vars and secrets
@@ -440,7 +437,7 @@ def create_variable_secret_report(
         report_md.extend(secret_lines)
         out_event.unused_secrets = unused_secrets
     else:
-        logger.warning("No secrets found")
+        logger.warning("No secrets found in the repository")
     report_content = out_event.report_md = "\n".join(report_md)
     report_path = ctx.report_path_abs
     if not report_path or not report_content:

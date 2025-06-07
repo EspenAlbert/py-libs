@@ -26,18 +26,18 @@ from rich.ansi import AnsiDecoder
 from rich.console import Console
 
 from ask_shell.models import (
-    AfterRunMessage,
-    BeforeRunMessage,
-    InternalMessageT,
-    POpenStartedMessage,
-    RetryAttemptMessage,
     RunIncompleteError,
     ShellConfig,
     ShellRun,
+    ShellRunAfter,
+    ShellRunBefore,
+    ShellRunEvent,
+    ShellRunPOpenStarted,
     ShellRunQueueT,
-    StdOutputMessage,
-    StdReadErrorMessage,
-    StdStartedMessage,
+    ShellRunRetryAttempt,
+    ShellRunStdOutput,
+    ShellRunStdReadError,
+    ShellRunStdStarted,
 )
 from ask_shell.settings import AskShellSettings
 
@@ -84,7 +84,7 @@ def run(
     env: dict[str, str] | None = None,
     extra_popen_kwargs: dict | None = None,
     is_binary_call: bool | None = None,
-    message_callbacks: list[Callable[[InternalMessageT], bool]] | None = None,
+    message_callbacks: list[Callable[[ShellRunEvent], bool]] | None = None,
     print_prefix: str | None = None,
     run_log_stem_prefix: str | None = None,
     run_output_dir: Path | None | None = None,
@@ -140,7 +140,7 @@ def run_and_wait(
     env: dict[str, str] | None = None,
     extra_popen_kwargs: dict | None = None,
     is_binary_call: bool | None = None,
-    message_callbacks: list[Callable[[InternalMessageT], bool]] | None = None,
+    message_callbacks: list[Callable[[ShellRunEvent], bool]] | None = None,
     print_prefix: str | None = None,
     run_log_stem_prefix: str | None = None,
     run_output_dir: Path | None | None = None,
@@ -301,14 +301,14 @@ def _execute_run(shell_run: ShellRun) -> ShellRun:
     def queue_consumer():
         for message in queue:
             try:
-                shell_run._on_message(message)
+                shell_run._on_event(message)
             except BaseException as e:
                 logger.warning(f"Error processing message for {shell_run}: {e!r}")
                 logger.exception(e)
 
     try:
-        shell_run._on_message(
-            BeforeRunMessage(run=shell_run)
+        shell_run._on_event(
+            ShellRunBefore(run=shell_run)
         )  # can block, for example if the thread pool doesn't have enough threads free
     except BaseException as e:
         logger.warning(f"Error before starting run {shell_run}: {e!r}")
@@ -321,7 +321,7 @@ def _execute_run(shell_run: ShellRun) -> ShellRun:
     error: BaseException | None = None
     for attempt in range(1, config.attempts + 1):
         if attempt > 1:
-            queue.put_nowait(RetryAttemptMessage(attempt=attempt))
+            queue.put_nowait(ShellRunRetryAttempt(attempt=attempt))
             logger.warning(
                 f"Retrying run {shell_run} attempt {attempt} of {config.attempts}"
             )
@@ -334,7 +334,7 @@ def _execute_run(shell_run: ShellRun) -> ShellRun:
             case BaseException():
                 error = result
                 break
-    queue.put_nowait(AfterRunMessage(run=shell_run, error=error))
+    queue.put_nowait(ShellRunAfter(run=shell_run, error=error))
     shell_run._complete(error=error, queue_consumer=consumer_future)
     return shell_run
 
@@ -380,17 +380,17 @@ def _run(
         | config.popen_kwargs
     )
     with subprocess.Popen(config.shell_input, shell=True, **kwargs) as proc:  # type: ignore
-        queue.put_nowait(POpenStartedMessage(proc))
+        queue.put_nowait(ShellRunPOpenStarted(proc))
 
         def stdout_started(is_stdout: bool, console: Console, log_path: Path):
             queue.put_nowait(
-                StdStartedMessage(
+                ShellRunStdStarted(
                     is_stdout=is_stdout, console=console, log_path=log_path
                 )
             )
 
         def add_stdout_line(line: str):
-            queue.put_nowait(StdOutputMessage(is_stdout=True, content=line))
+            queue.put_nowait(ShellRunStdOutput(is_stdout=True, content=line))
 
         def read_stdout():
             output_path = output_dir / f"{file_name}.stdout.log"
@@ -405,10 +405,10 @@ def _run(
                     config=config,
                 )
             except BaseException as e:
-                queue.put_nowait(StdReadErrorMessage(is_stdout=True, error=e))
+                queue.put_nowait(ShellRunStdReadError(is_stdout=True, error=e))
 
         def add_stderr_line(line: str):
-            queue.put_nowait(StdOutputMessage(is_stdout=False, content=line))
+            queue.put_nowait(ShellRunStdOutput(is_stdout=False, content=line))
 
         def read_stderr():
             output_path = output_dir / f"{file_name}.stderr.log"
@@ -423,7 +423,7 @@ def _run(
                     config=config,
                 )
             except BaseException as e:
-                queue.put_nowait(StdReadErrorMessage(is_stdout=False, error=e))
+                queue.put_nowait(ShellRunStdReadError(is_stdout=False, error=e))
 
         fut_stdout = _pool.submit(read_stdout)
         fut_stderr = _pool.submit(read_stderr)

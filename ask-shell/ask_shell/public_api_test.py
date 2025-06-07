@@ -20,11 +20,11 @@ from ask_shell import (
     wait_on_ok_errors,
 )
 from ask_shell.models import (
-    AfterRunMessage,
-    BeforeRunMessage,
-    POpenStartedMessage,
-    StdOutputMessage,
-    StdStartedMessage,
+    ShellRunAfter,
+    ShellRunBefore,
+    ShellRunPOpenStarted,
+    ShellRunStdOutput,
+    ShellRunStdStarted,
 )
 
 PYTHON_EXEC = sys.executable
@@ -342,10 +342,10 @@ def test_message_callbacks():
 
     run_and_wait("echo ok", message_callbacks=[message_callback])  # type: ignore
     assert message_class_names == [
-        BeforeRunMessage.__name__,
-        POpenStartedMessage.__name__,
-        StdStartedMessage.__name__,  # stdout/stderr
-        StdStartedMessage.__name__,  # stderr/stdout
-        StdOutputMessage.__name__,
-        AfterRunMessage.__name__,
+        ShellRunBefore.__name__,
+        ShellRunPOpenStarted.__name__,
+        ShellRunStdStarted.__name__,  # stdout/stderr
+        ShellRunStdStarted.__name__,  # stderr/stdout
+        ShellRunStdOutput.__name__,
+        ShellRunAfter.__name__,
     ], f"Unexpected message class names: {message_class_names}"

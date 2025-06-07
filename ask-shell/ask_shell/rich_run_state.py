@@ -10,13 +10,13 @@ from rich.progress import (
 )
 
 from ask_shell.models import (
-    InternalMessageT,
-    POpenStartedMessage,
-    RetryAttemptMessage,
     ShellRun,
-    StdOutputMessage,
-    StdReadErrorMessage,
-    StdStartedMessage,
+    ShellRunEvent,
+    ShellRunPOpenStarted,
+    ShellRunRetryAttempt,
+    ShellRunStdOutput,
+    ShellRunStdReadError,
+    ShellRunStdStarted,
 )
 from ask_shell.rich_progress import ProgressManager, log_task_done, new_task
 
@@ -49,23 +49,23 @@ class _RunInfo:
     def stderr_str(self) -> str:
         return "".join(self.stderr)
 
-    def __call__(self, message: InternalMessageT) -> Any:
+    def __call__(self, message: ShellRunEvent) -> Any:
         match message:
-            case StdOutputMessage(is_stdout=is_stdout, content=content):
+            case ShellRunStdOutput(is_stdout=is_stdout, content=content):
                 if is_stdout:
                     self.stdout.append(content)
                 else:
                     self.stderr.append(content)
-            case StdStartedMessage(is_stdout=is_stdout, log_path=log_path):
+            case ShellRunStdStarted(is_stdout=is_stdout, log_path=log_path):
                 if is_stdout:
                     self.log_path_stdout = log_path
                 else:
                     self.log_path_stderr = log_path
-            case POpenStartedMessage():
+            case ShellRunPOpenStarted():
                 self.started = True
-            case RetryAttemptMessage(attempt=attempt):
+            case ShellRunRetryAttempt(attempt=attempt):
                 self.attempt = attempt
-            case StdReadErrorMessage(is_stdout=is_stdout, error=error):
+            case ShellRunStdReadError(is_stdout=is_stdout, error=error):
                 if is_stdout:
                     self.error_read_stdout = error
                 else:
@@ -118,7 +118,7 @@ class _RunState:
         task.__enter__()
         run_info.task = task
 
-        def task_callback(message: InternalMessageT) -> None:
+        def task_callback(message: ShellRunEvent) -> None:
             run_info(message)
             if not task.is_finished:
                 task.update(

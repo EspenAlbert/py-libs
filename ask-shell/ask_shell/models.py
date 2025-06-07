@@ -79,41 +79,41 @@ class ShellInput(NamedTuple):
 
 
 @dataclass
-class StdStartedMessage:
+class ShellRunStdStarted:
     is_stdout: bool
     console: Console
     log_path: Path
 
 
 @dataclass
-class StdOutputMessage:
+class ShellRunStdOutput:
     is_stdout: bool
     content: str
 
 
 @dataclass
-class POpenStartedMessage:
+class ShellRunPOpenStarted:
     p_open: subprocess.Popen
 
 
 @dataclass
-class StdReadErrorMessage:
+class ShellRunStdReadError:
     is_stdout: bool
     error: BaseException
 
 
 @dataclass
-class RetryAttemptMessage:
+class ShellRunRetryAttempt:
     attempt: int
 
 
 @dataclass
-class BeforeRunMessage:
+class ShellRunBefore:
     run: ShellRun
 
 
 @dataclass
-class AfterRunMessage:
+class ShellRunAfter:
     run: ShellRun
     error: BaseException | None = None
 
@@ -121,17 +121,17 @@ class AfterRunMessage:
 OutputCallbackT: TypeAlias = Callable[
     [str], bool | None
 ]  # returns True if the callback is done and should be removed
-InternalMessageT: TypeAlias = Union[
-    BeforeRunMessage,
-    POpenStartedMessage,
-    StdStartedMessage,
-    StdReadErrorMessage,
-    StdOutputMessage,
-    RetryAttemptMessage,  # only on retries
-    AfterRunMessage,
+ShellRunEvent: TypeAlias = Union[
+    ShellRunBefore,
+    ShellRunPOpenStarted,
+    ShellRunStdStarted,
+    ShellRunStdReadError,
+    ShellRunStdOutput,
+    ShellRunRetryAttempt,  # only on retries
+    ShellRunAfter,
 ]
-MessageCallbackT: TypeAlias = Callable[[InternalMessageT], bool | None]
-ShellRunQueueT: TypeAlias = ClosableQueue[InternalMessageT]
+ShellRunCallbackT: TypeAlias = Callable[[ShellRunEvent], bool | None]
+ShellRunQueueT: TypeAlias = ClosableQueue[ShellRunEvent]
 
 
 class ShellConfig(Entity):
@@ -178,7 +178,7 @@ class ShellConfig(Entity):
         default=False,
         description="Skip HTML log files, by default dumps HTML logs to support viewing colored output in browsers",
     )
-    message_callbacks: list[MessageCallbackT] = Field(
+    message_callbacks: list[ShellRunCallbackT] = Field(
         default_factory=list,
         description="Callbacks for run messages, useful for custom handling of stdout/stderr",
     )
@@ -330,8 +330,11 @@ class ShellRun:
 
         """
 
-        def only_on_output_callback(message: InternalMessageT) -> bool | None:
-            if isinstance(message, StdOutputMessage) and message.is_stdout == is_stdout:
+        def only_on_output_callback(message: ShellRunEvent) -> bool | None:
+            if (
+                isinstance(message, ShellRunStdOutput)
+                and message.is_stdout == is_stdout
+            ):
                 return call(message.content)
             return False
 
@@ -353,25 +356,25 @@ class ShellRun:
                 return None
         return remove_callback
 
-    def _on_message(self, message: InternalMessageT):
+    def _on_event(self, message: ShellRunEvent):
         with self._lock:
             for callback in list(self.config.message_callbacks):
                 if callback(message):  # todo: call safely?
                     self.config.message_callbacks.remove(callback)
             match message:
-                case StdStartedMessage(
+                case ShellRunStdStarted(
                     is_stdout=True, console=console, log_path=log_path
                 ):
                     self._stdout = console
                     self._stdout_log_path = log_path
-                case StdStartedMessage(
+                case ShellRunStdStarted(
                     is_stdout=False, console=console, log_path=log_path
                 ):
                     self._stderr = console
                     self._stderr_log_path = log_path
-                case POpenStartedMessage(p_open=p_open):
+                case ShellRunPOpenStarted(p_open=p_open):
                     self.p_open = p_open
-                case RetryAttemptMessage(attempt=attempt):
+                case ShellRunRetryAttempt(attempt=attempt):
                     if not self.config.skip_html_log_files:
                         self._dump_html_logs()
                     self._reset_read_state(attempt)
@@ -433,7 +436,8 @@ class ShellRun:
 
     def stdout_json(self) -> dict | list | str | None:
         all_stdout = "".join(self.stdout.splitlines())
-        return parse_payload(all_stdout, "json") if all_stdout else None
+        parse_fmt = "json"
+        return parse_payload(all_stdout, parse_fmt) if all_stdout else None
 
     @property
     def stderr(self) -> str:

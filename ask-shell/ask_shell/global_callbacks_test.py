@@ -12,7 +12,7 @@ from ask_shell._run import (
     wait_on_ok_errors,
 )
 from ask_shell.global_callbacks import wait_on_available_threads
-from ask_shell.models import BeforeRunMessage, ShellRun
+from ask_shell.models import ShellRun, ShellRunBefore
 from ask_shell.settings import AskShellSettings
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ def test_wait_on_available_threads(settings):
         for name in settings.global_callback_strings
     )
     assert settings.message_callbacks
-    assert wait_on_available_threads(BeforeRunMessage(run=Mock(spec=ShellRun)))
+    assert wait_on_available_threads(ShellRunBefore(run=Mock(spec=ShellRun)))
 
 
 @pytest.mark.skipif(os.environ.get("SLOW", "") == "", reason="needs os.environ[SLOW]")

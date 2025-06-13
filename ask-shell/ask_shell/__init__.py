@@ -11,6 +11,7 @@ from ask_shell._run import (
     wait_on_ok_errors,
 )
 from ask_shell._run_env import interactive_shell
+from ask_shell.rich_progress import new_task
 
 __all__ = (
     "ShellConfig",
@@ -23,6 +24,7 @@ __all__ = (
     "kill_all_runs",
     "kill",
     "log_exception",
+    "new_task",
     "print_with_override",
     "run",
     "run_and_wait",

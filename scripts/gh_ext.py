@@ -237,7 +237,56 @@ class GhSecrets(RootModel[list[GhSecret]]):
 
 
 @app.command()
-def gh_vars_usage(
+def list_vars(
+    path: str = typer.Argument(
+        ..., help="Path to a repository, use $(pwd) to get current path"
+    ),
+    only_deleted: bool = typer.Option(
+        False,
+        "--only-deleted",
+        "-od",
+        help="List only deleted variables and secrets",
+    ),
+    print_values: bool = typer.Option(
+        False,
+        "--print-values",
+        "-pv",
+        help="Print values of variables and secrets",
+    ),
+):
+    ctx = CreateVariableSecretReportContext.from_cli(
+        path=path, show_unused_values=False, report_path="", delete_safe=False
+    )
+
+    def skip_var(var: GhVarOrSecret) -> bool:
+        return not var.deleted if only_deleted else False
+
+    export = ctx.export
+    values = [
+        v for v in sorted(export.variables + ctx.export.secrets) if not skip_var(v)
+    ]
+    if not values:
+        print("No variables or secrets found matching the criteria.")
+        return
+
+    def format_value(var: GhVarOrSecret) -> str:
+        prefix = "(Deleted) " if var.deleted else ""
+        if isinstance(var, GhVar):
+            return prefix + f"{var.name}=`{var.value}`" if print_values else var.name
+        return prefix + var.name
+
+    md = [
+        "# GH Variables and Secrets",
+        *[
+            f"- {format_value(v)} (updated at {v.updated_at.isoformat()})"
+            for v in values
+        ],
+    ]
+    print_to_live_console(Markdown("\n".join(md)))
+
+
+@app.command()
+def vars_usage(
     path: str = typer.Argument(
         ..., help="Path to a repository, use $(pwd) to get current path"
     ),

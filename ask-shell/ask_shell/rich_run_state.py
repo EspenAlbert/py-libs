@@ -11,7 +11,7 @@ from rich.progress import (
 
 from ask_shell.models import (
     ShellRun,
-    ShellRunEvent,
+    ShellRunEventT,
     ShellRunPOpenStarted,
     ShellRunRetryAttempt,
     ShellRunStdOutput,
@@ -49,7 +49,7 @@ class _RunInfo:
     def stderr_str(self) -> str:
         return "".join(self.stderr)
 
-    def __call__(self, message: ShellRunEvent) -> Any:
+    def __call__(self, message: ShellRunEventT) -> Any:
         match message:
             case ShellRunStdOutput(is_stdout=is_stdout, content=content):
                 if is_stdout:
@@ -118,7 +118,7 @@ class _RunState:
         task.__enter__()
         run_info.task = task
 
-        def task_callback(message: ShellRunEvent) -> None:
+        def task_callback(message: ShellRunEventT) -> None:
             run_info(message)
             if not task.is_finished:
                 task.update(

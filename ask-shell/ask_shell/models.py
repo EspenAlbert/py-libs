@@ -122,7 +122,7 @@ class ShellRunAfter:
 OutputCallbackT: TypeAlias = Callable[
     [str], bool | None
 ]  # returns True if the callback is done and should be removed
-ShellRunEvent: TypeAlias = Union[
+ShellRunEventT: TypeAlias = Union[
     ShellRunBefore,
     ShellRunPOpenStarted,
     ShellRunStdStarted,
@@ -131,8 +131,8 @@ ShellRunEvent: TypeAlias = Union[
     ShellRunRetryAttempt,  # only on retries
     ShellRunAfter,
 ]
-ShellRunCallbackT: TypeAlias = Callable[[ShellRunEvent], bool | None]
-ShellRunQueueT: TypeAlias = ClosableQueue[ShellRunEvent]
+ShellRunCallbackT: TypeAlias = Callable[[ShellRunEventT], bool | None]
+ShellRunQueueT: TypeAlias = ClosableQueue[ShellRunEventT]
 
 
 class ShellConfig(Entity):
@@ -334,7 +334,7 @@ class ShellRun:
 
         """
 
-        def only_on_output_callback(message: ShellRunEvent) -> bool | None:
+        def only_on_output_callback(message: ShellRunEventT) -> bool | None:
             if (
                 isinstance(message, ShellRunStdOutput)
                 and message.is_stdout == is_stdout
@@ -360,7 +360,7 @@ class ShellRun:
                 return None
         return remove_callback
 
-    def _on_event(self, message: ShellRunEvent):
+    def _on_event(self, message: ShellRunEventT):
         with self._lock:
             for callback in list(self.config.message_callbacks):
                 if callback(message):  # todo: call safely?

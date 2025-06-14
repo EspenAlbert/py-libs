@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from ask_shell.models import (
     ShellRunAfter,
     ShellRunBefore,
-    ShellRunEvent,
+    ShellRunEventT,
 )
 from ask_shell.rich_live import live_frozen
 from ask_shell.rich_run_state import _RunState
@@ -16,7 +16,7 @@ class RunConsoleLogger:
     state: _RunState = field(default_factory=_RunState, init=False)
     frozen: live_frozen | None = field(default=None, init=False)
 
-    def __call__(self, message: ShellRunEvent) -> bool:
+    def __call__(self, message: ShellRunEventT) -> bool:
         match message:
             case ShellRunBefore(run=run):
                 self.state.add_run(run)
@@ -34,5 +34,5 @@ class RunConsoleLogger:
 _logger = RunConsoleLogger()
 
 
-def rich_live_callback(message: ShellRunEvent) -> bool:
+def rich_live_callback(message: ShellRunEventT) -> bool:
     return _logger(message)

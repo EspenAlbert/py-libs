@@ -14,7 +14,6 @@ from ask_shell import (
     ShellError,
     ShellRun,
     kill,
-    print_with_override,
     run,
     run_and_wait,
     wait_on_ok_errors,
@@ -292,20 +291,6 @@ def test_parallel_runs():
     for result in results:
         result.wait_until_complete()
     assert time.time() - start < 4
-
-
-@pytest.mark.skip("refactored, print_with not used by default yet")
-@pytest.mark.parametrize("call_old", [False, True])
-def test_print_with_override(call_old):
-    called = False
-
-    def overrider(*args, **kwargs):
-        nonlocal called
-        called = True
-
-    with print_with_override(overrider, call_old=call_old):
-        run_and_wait("echo ok")
-    assert called
 
 
 def test_wait_safely_on_ok_failures_all_ok():

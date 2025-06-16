@@ -36,6 +36,7 @@ from zero_3rdparty.iter_utils import flat_map, group_by_once
 
 app = Typer(name="pkg-ext", help="Generate public API for a package and more!")
 logger = logging.getLogger(__name__)
+ACTION_FILE_SPLIT = "---\n"
 
 
 def ref_id(rel_path: str, symbol_name: str) -> str:
@@ -204,17 +205,16 @@ class RefSymbol(Entity):
         return f"{pkg_import_name}.{self.local_id}"
 
     def as_choice(self, checked: bool) -> ChoiceTyped:
-        src_usages_str = (
-            ", ".join(self.src_usages) if self.src_usages else "No source usages"
-        )
         test_usages_str = (
             ", ".join(self.test_usages) if self.test_usages else "No test usages"
+        )
+        src_usages_str = (
+            ", ".join(self.src_usages) if self.src_usages else "No source usages"
         )
         return ChoiceTyped(
             name=f"{self.name} {self.type} {len(self.src_usages)} src usages {len(self.test_usages)} test usages",
             value=self.name,
-            description=self.docstring
-            + f"\nSource usages: {src_usages_str}\nTest usages: {test_usages_str}",
+            description=f"{self.docstring}\nSource usages: {src_usages_str}\nTest usages: {test_usages_str}",
             checked=checked,
         )
 
@@ -379,10 +379,35 @@ class ChangelogAction(Entity):
 def parse_changelog_actions(changelog_dir_path: Path) -> list[ChangelogAction]:
     actions: list[ChangelogAction] = []
     for path in changelog_dir_path.glob("*.yaml"):
-        name = path.stem
-        ts = parse_date_filename_with_seconds(name)
-        actions.append(parse_model(path, t=ChangelogAction, extra_kwargs={"ts": ts}))
+        actions.extend(parse_changelog_action(path))
     return sorted(actions)
+
+
+def parse_changelog_action(path: Path) -> list[ChangelogAction]:
+    ts = parse_date_filename_with_seconds(path.stem)
+    return [
+        parse_model(
+            action_raw,
+            t=ChangelogAction,
+            extra_kwargs={"ts": ts},
+            format="yaml",
+        )
+        for action_raw in path.read_text().split(ACTION_FILE_SPLIT)
+        if action_raw.strip()
+    ]
+
+
+def dump_changelog_action(path: Path, action: ChangelogAction) -> None:
+    if not path.exists():
+        path.write_text(action.file_content)
+        return
+    existing_actions = parse_changelog_action(path)
+    existing_actions.append(action)
+    existing_actions.sort()
+    yaml_content = ACTION_FILE_SPLIT.join(
+        action.file_content for action in existing_actions
+    )
+    path.write_text(yaml_content)
 
 
 class RefStateType(StrEnum):
@@ -450,7 +475,7 @@ class PkgRefState(Entity):
             and ref_name not in active_refs
         }
 
-    def added_refs(self, active_refs: dict[str, RefSymbol]) -> dict[str, RefSymbol]:
+    def added_refs(self, active_refs: dict[str, RefState]) -> dict[str, RefState]:
         """Get references that were added to the package."""
         return {
             ref_name: ref_symbol
@@ -462,7 +487,7 @@ class PkgRefState(Entity):
     def add_action(self, action: ChangelogAction) -> None:
         self.update_state(action)
         path = self.changelog_dir / action.filename
-        path.write_text(action.file_content)
+        dump_changelog_action(path, action)
 
 
 def create_ref_state(pkg_path: Path, changelog_dir: Path) -> PkgRefState:
@@ -503,7 +528,7 @@ def generate_api(
     state = create_ref_state(pkg_path, changelog_dir_path)
     handle_removed_refs(state, active_refs)
     # Todo: Handle changed refs by inspecting signatures
-    handle_added_refs(state, import_id_refs)
+    handle_added_refs(state, active_refs)
 
 
 def named_refs(import_id_refs: dict[str, RefSymbol]) -> dict[str, RefState]:
@@ -572,33 +597,36 @@ def handle_removed_refs(
         )
 
 
-def handle_added_refs(
-    pkg_state: PkgRefState, active_refs: dict[str, RefSymbol]
-) -> None:
+def handle_added_refs(pkg_state: PkgRefState, active_refs: dict[str, RefState]) -> None:
     added_refs = pkg_state.added_refs(active_refs)
     if not added_refs:
         logger.info("No new references found in the package")
         return
-    file_added_refs = group_by_once(
-        added_refs.items(), key=lambda item: item[1].rel_path
-    )
-    for file_name, ref_symbols in file_added_refs.items():
+
+    def group_by_file(state: RefState) -> str:
+        assert state.symbol, "State should have a symbol"
+        return state.symbol.rel_path
+
+    file_added_refs = group_by_once(added_refs.values(), key=group_by_file)
+    for file_name, file_states in file_added_refs.items():
         run_and_wait(f"{get_editor()} {pkg_state.pkg_path / file_name}")
         choices = {
-            name: symbol.as_choice(checked=False) for name, symbol in ref_symbols
+            state.name: symbol.as_choice(checked=False)
+            for state in file_states
+            if (symbol := state.symbol)
         }
         expose_refs = select_list_multiple_choices(
             f"Select references to expose from {file_name} (if any):",
             choices=list(choices.values()),
             default=[],
         )
-        for ref, _ in ref_symbols:
+        for state in file_states:
             action = (
                 ChangelogActionType.EXPOSE
-                if ref in expose_refs
+                if state.name in expose_refs
                 else ChangelogActionType.HIDE
             )
-            pkg_state.add_action(ChangelogAction(name=ref, action=action))
+            pkg_state.add_action(ChangelogAction(name=state.name, action=action, details=f"Created in {file_name}"))
 
 
 def create_refs(

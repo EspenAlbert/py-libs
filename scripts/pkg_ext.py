@@ -421,17 +421,23 @@ class RefStateType(StrEnum):
 class RefState(Entity):
     name: str
     type: RefStateType = RefStateType.UNSET
-    symbol: RefSymbol | None = Field(
-        default=None, description="Reference symbol, if available"
+
+    def as_choice(self) -> ChoiceTyped:
+        return ChoiceTyped(
+            name=self.name, value=self.name, description=f"State: {self.type.value}"
+        )
+
+
+class RefStateWithSymbol(RefState):
+    symbol: RefSymbol = Field(
+        description="Reference symbol, should be set for this state"
     )
 
     def as_choice(self) -> ChoiceTyped:
-        if symbol := self.symbol:
-            return ChoiceTyped(
-                name=symbol.local_id, value=self.name, description=symbol.docstring
-            )
         return ChoiceTyped(
-            name=self.name, value=self.name, description=f"State: {self.type.value}"
+            name=self.symbol.local_id,
+            value=self.name,
+            description=self.symbol.docstring,
         )
 
 
@@ -467,7 +473,9 @@ class PkgRefState(Entity):
                     old_state.type = RefStateType.DELETED
                     state.type = RefStateType.EXPOSED
 
-    def removed_refs(self, active_refs: dict[str, RefState]) -> dict[str, str]:
+    def removed_refs(
+        self, active_refs: dict[str, RefStateWithSymbol]
+    ) -> dict[str, str]:
         return {
             ref_name: f"{state.type.value} -> removed"
             for ref_name, state in self.refs.items()
@@ -475,7 +483,9 @@ class PkgRefState(Entity):
             and ref_name not in active_refs
         }
 
-    def added_refs(self, active_refs: dict[str, RefState]) -> dict[str, RefState]:
+    def added_refs(
+        self, active_refs: dict[str, RefStateWithSymbol]
+    ) -> dict[str, RefStateWithSymbol]:
         """Get references that were added to the package."""
         return {
             ref_name: ref_symbol
@@ -488,6 +498,9 @@ class PkgRefState(Entity):
         self.update_state(action)
         path = self.changelog_dir / action.filename
         dump_changelog_action(path, action)
+
+    def dump_to_init(self, active_refs: dict[str, RefState]) -> None:
+        raise NotImplementedError
 
 
 def create_ref_state(pkg_path: Path, changelog_dir: Path) -> PkgRefState:
@@ -521,17 +534,17 @@ def generate_api(
         for path, rel_path in pkg_py_files
         if (parsed := parse_symbols(path, rel_path, pkg_import_name))
     )
-    import_id_refs = create_refs(parsed_files, pkg_import_name)
-    active_refs = named_refs(import_id_refs)
+    import_id_symbols = create_refs(parsed_files, pkg_import_name)
+    active_states = named_refs(import_id_symbols)
     changelog_dir_path = init_file.parent.parent / ".changelog"
     changelog_dir_path.mkdir(parents=True, exist_ok=True)
     state = create_ref_state(pkg_path, changelog_dir_path)
-    handle_removed_refs(state, active_refs)
+    handle_removed_refs(state, active_states)
     # Todo: Handle changed refs by inspecting signatures
-    handle_added_refs(state, active_refs)
+    handle_added_refs(state, active_states)
 
 
-def named_refs(import_id_refs: dict[str, RefSymbol]) -> dict[str, RefState]:
+def named_refs(import_id_refs: dict[str, RefSymbol]) -> dict[str, RefStateWithSymbol]:
     active_refs = group_by_once(import_id_refs.values(), key=lambda ref: ref.name)
     duplicated_refs = [
         f"duplicated refs for {name}: " + ", ".join(str(ref) for ref in duplicated_refs)
@@ -541,12 +554,13 @@ def named_refs(import_id_refs: dict[str, RefSymbol]) -> dict[str, RefState]:
     duplicated_refs_lines = "\n".join(duplicated_refs)
     assert not duplicated_refs, f"Found duplicated references: {duplicated_refs_lines}"
     return {
-        ref.name: RefState(name=ref.name, symbol=ref) for ref in import_id_refs.values()
+        ref.name: RefStateWithSymbol(name=ref.name, symbol=ref)
+        for ref in import_id_refs.values()
     }
 
 
 def handle_removed_refs(
-    pkg_state: PkgRefState, active_refs: dict[str, RefState]
+    pkg_state: PkgRefState, active_refs: dict[str, RefStateWithSymbol]
 ) -> None:
     removed_refs = pkg_state.removed_refs(active_refs)
     if not removed_refs:
@@ -597,23 +611,22 @@ def handle_removed_refs(
         )
 
 
-def handle_added_refs(pkg_state: PkgRefState, active_refs: dict[str, RefState]) -> None:
+def handle_added_refs(
+    pkg_state: PkgRefState, active_refs: dict[str, RefStateWithSymbol]
+) -> None:
     added_refs = pkg_state.added_refs(active_refs)
     if not added_refs:
         logger.info("No new references found in the package")
         return
 
-    def group_by_file(state: RefState) -> str:
-        assert state.symbol, "State should have a symbol"
+    def group_by_file(state: RefStateWithSymbol) -> str:
         return state.symbol.rel_path
 
     file_added_refs = group_by_once(added_refs.values(), key=group_by_file)
     for file_name, file_states in file_added_refs.items():
         run_and_wait(f"{get_editor()} {pkg_state.pkg_path / file_name}")
         choices = {
-            state.name: symbol.as_choice(checked=False)
-            for state in file_states
-            if (symbol := state.symbol)
+            state.name: state.symbol.as_choice(checked=False) for state in file_states
         }
         expose_refs = select_list_multiple_choices(
             f"Select references to expose from {file_name} (if any):",
@@ -626,7 +639,11 @@ def handle_added_refs(pkg_state: PkgRefState, active_refs: dict[str, RefState]) 
                 if state.name in expose_refs
                 else ChangelogActionType.HIDE
             )
-            pkg_state.add_action(ChangelogAction(name=state.name, action=action, details=f"Created in {file_name}"))
+            pkg_state.add_action(
+                ChangelogAction(
+                    name=state.name, action=action, details=f"Created in {file_name}"
+                )
+            )
 
 
 def create_refs(

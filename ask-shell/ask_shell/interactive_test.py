@@ -2,13 +2,16 @@ import pytest
 
 from ask_shell.interactive import (
     SEARCH_ENABLED_AFTER_CHOICES,
+    ChoiceTyped,
     KeyInput,
     SelectOptions,
     confirm,
     question_patcher,
     select_dict,
     select_list,
+    select_list_choice,
     select_list_multiple,
+    select_list_multiple_choices,
     text,
 )
 
@@ -148,3 +151,30 @@ def test_return_default_if_not_interactive_should_raise_error_when_not_interacti
         match="Function called in non-interactive shell, but no default value provided",
     ):
         text("Are you sure?")
+
+
+def test_select_list_multiple_choices_one_selection():
+    choices = [
+        ChoiceTyped(name="Option 1", value=1),
+        ChoiceTyped(name="Option 2", value=2),
+    ]
+    with question_patcher([" "]):
+        assert select_list_multiple_choices("Select options:", choices) == [1]
+
+
+def test_select_list_multiple_choices_two_selections():
+    choices = [
+        ChoiceTyped(name="Option 1", value=1, description="First option"),
+        ChoiceTyped(name="Option 2", value=2, description="Second option"),
+    ]
+    with question_patcher([f" {KeyInput.DOWN} "]):
+        assert select_list_multiple_choices("Select options:", choices) == [1, 2]
+
+
+def test_select_list_typed():
+    choices = [
+        ChoiceTyped(name="Option 1", value=1, description="First option"),
+        ChoiceTyped(name="Option 2", value=2, description="Second option"),
+    ]
+    with question_patcher([""]):
+        assert select_list_choice("Select an option", choices) == 1

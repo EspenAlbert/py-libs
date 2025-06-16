@@ -7,7 +7,7 @@ import os
 from dataclasses import dataclass, field
 from functools import wraps
 from os import getenv
-from typing import Callable, TypeVar
+from typing import Callable, Generic, TypeVar
 
 from prompt_toolkit.input.defaults import create_pipe_input
 from prompt_toolkit.output import DummyOutput
@@ -87,6 +87,52 @@ def select_list_multiple(
             use_search_filter=chosen.use_search_filter,
         ),
         list[str],
+    )
+
+
+@dataclass
+class ChoiceTyped(Generic[T]):
+    name: str
+    value: T
+    description: str | None = None
+    checked: bool = False
+
+    @classmethod
+    def from_descriptions(cls, descriptions: dict[str, str]) -> list[ChoiceTyped[str]]:
+        return [
+            cls(name=name, value=name, description=description)  # type: ignore
+            for name, description in descriptions.items()
+        ]  # type: ignore
+
+
+@pause_live
+@return_default_if_not_interactive
+def select_list_multiple_choices(
+    prompt_text: str,
+    choices: list[ChoiceTyped[T]],
+    default: list[T] | None = None,  # return if not interactive and not None
+    *,
+    options: SelectOptions | None = None,
+) -> list[T]:
+    assert choices, "choices must not be empty"
+    options = options or SelectOptions()
+    chosen = options.set_defaults(len(choices))
+    return _question_asker(
+        checkbox(
+            prompt_text,
+            choices=[
+                Choice(
+                    typed_choice.name,
+                    value=typed_choice.value,
+                    description=typed_choice.description,
+                    checked=typed_choice.checked,
+                )
+                for typed_choice in choices
+            ],
+            use_jk_keys=chosen.use_jk_keys,
+            use_search_filter=chosen.use_search_filter,
+        ),
+        list[T],
     )
 
 
@@ -199,6 +245,38 @@ def select_list(
     )
 
 
+@pause_live
+@return_default_if_not_interactive
+def select_list_choice(
+    prompt_text: str,
+    choices: list[ChoiceTyped[T]],
+    *,
+    default: T | None = None,
+    options: SelectOptions | None = None,
+) -> T:
+    assert choices, "choices must not be empty"
+    options = options or SelectOptions()
+    chosen = options.set_defaults(len(choices))
+    return _question_asker(
+        _select(
+            prompt_text,
+            default=default,  # type: ignore
+            choices=[
+                Choice(
+                    typed_choice.name,
+                    value=typed_choice.value,
+                    description=typed_choice.description,
+                )
+                for typed_choice in choices
+            ],
+            use_jk_keys=chosen.use_jk_keys,
+            use_shortcuts=chosen.use_shortcuts,
+            use_search_filter=chosen.use_search_filter,
+        ),
+        T,
+    )
+
+
 class KeyInput:
     DOWN = "\x1b[B"
     UP = "\x1b[A"
@@ -267,6 +345,13 @@ class question_patcher:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
+    choices_typed = [
+        ChoiceTyped(name="Option 1", value=1, description="First option"),
+        ChoiceTyped(name="Option 2", value=2, description="Second option"),
+    ]
+    logger.info(
+        select_list_multiple_choices("Select options:", choices_typed, default=[1])
+    )
     logger.info(select_list("Choose a letter", list("abcdefghijklmnopqrstuvwxyz")))
     logger.info(
         select_dict(

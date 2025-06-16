@@ -54,3 +54,7 @@ pkg-find tag_name:
 [positional-arguments]
 gh-ext *args:
   @uv run scripts/gh_ext.py {{args}}
+
+[positional-arguments]
+pkg-ext *args:
+  @uv run scripts/pkg_ext.py {{args}}

@@ -49,7 +49,7 @@ from model_lib.serialize import (
 from model_lib.static_settings import StaticSettings
 
 UNKNOWN = "_UNKNOWN_"
-VERSION = "1.0.0b4"
+VERSION = "1.0.0b5"
 __all__ = (
     "Entity",
     "Event",

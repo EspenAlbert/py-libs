@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import atexit
 import logging
+import os
 import signal
 import subprocess
 import sys
@@ -280,7 +281,7 @@ def kill(
     logger.warning(f"killing starting: {run} {reason}")
     try:
         if immediate:
-            proc.terminate()
+            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
         else:
             proc.send_signal(signal.SIGINT)
         proc.wait(timeout=abort_timeout)
@@ -289,7 +290,7 @@ def kill(
         logger.warning(
             f"killing timeout after {abort_timeout}s! forcing a kill: {run} {reason}"
         )
-        proc.terminate()
+        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
         with suppress(subprocess.TimeoutExpired):
             proc.wait(timeout=1)
     except (OSError, ValueError) as e:

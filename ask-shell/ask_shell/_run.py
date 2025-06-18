@@ -280,10 +280,11 @@ def kill(
 
     logger.warning(f"killing starting: {run} {reason}")
     try:
+        pgid = os.getpgid(proc.pid)
         if immediate:
-            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+            os.killpg(pgid, signal.SIGTERM)
         else:
-            proc.send_signal(signal.SIGINT)
+            os.killpg(pgid, signal.SIGINT)
         proc.wait(timeout=abort_timeout)
         logger.info(f"killing completed: {run} {reason}")
     except subprocess.TimeoutExpired:

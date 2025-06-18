@@ -394,9 +394,16 @@ class ShellRun:
     def wait_on_started(self, timeout: float | None = None) -> ShellRun:
         return self._start_flag.result(timeout)
 
-    def wait_until_complete(self, timeout: float | None = None):
+    def wait_until_complete(
+        self, timeout: float | None = None, *, no_raise: bool = False
+    ) -> ShellRun:
         """Raises: ShellError"""
-        self._complete_flag.result(timeout)
+        if no_raise:
+            try:
+                return self._complete_flag.result(timeout)
+            except Exception:
+                return self
+        return self._complete_flag.result(timeout)
 
     def add_done_callback(self, call: Callable[[], Any]):
         def inner(_):

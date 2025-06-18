@@ -286,11 +286,13 @@ def kill(
         logger.info(f"killing completed: {run} {reason}")
     except subprocess.TimeoutExpired:
         logger.warning(
-            f"killingtimeout after {abort_timeout}s! forcing a kill: {run} {reason}"
+            f"killing timeout after {abort_timeout}s! forcing a kill: {run} {reason}"
         )
         proc.terminate()
     except (OSError, ValueError) as e:
         logger.warning(f"unable to get output when shutting down: {run} {e!r}")
+    finally:
+        run.wait_until_complete(timeout=abort_timeout, no_raise=True)
 
 
 def _execute_run(shell_run: ShellRun) -> ShellRun:

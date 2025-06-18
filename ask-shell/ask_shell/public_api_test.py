@@ -222,11 +222,14 @@ def test_kill_process(tmp_path, immediate):
         reason="test-kill",
     )
     duration = time.monotonic() - start
+    assert not started.is_running, "process should not be running"
     assert duration < 4
-    assert "start_sleep" in started.stdout
+    run_stdout = started.stdout
+    assert "start_sleep" in run_stdout
     assert "sleep_done" not in started.stdout
     if not immediate:
-        assert "KeyboardInterrupt" in started.stderr
+        run_stderr = started.stderr
+        assert "KeyboardInterrupt" in run_stderr
 
 
 _continue_after_abort = """

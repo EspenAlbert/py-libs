@@ -14,7 +14,7 @@ from ask_shell.interactive import (
     select_list_multiple_choices,
     text,
 )
-from ask_shell.rich_live import log_to_live, print_to_live
+from ask_shell.rich_live import print_to_live
 from ask_shell.rich_progress import new_task
 from ask_shell.settings import AskShellSettings
 from ask_shell.typer_command import configure_logging
@@ -30,7 +30,6 @@ __all__ = [
     "confirm",
     "interactive_shell",
     "kill",
-    "log_to_live",
     "new_task",
     "print_to_live",
     "run",

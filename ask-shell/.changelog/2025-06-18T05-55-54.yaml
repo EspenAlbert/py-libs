@@ -1,0 +1,19 @@
+name: ProgressManager
+action: hide
+details: Created in rich_progress.py
+---
+name: get_default_progress_manager
+action: hide
+details: Created in rich_progress.py
+---
+name: log_task_done
+action: hide
+details: Created in rich_progress.py
+---
+name: transient_progress
+action: hide
+details: Created in rich_progress.py
+---
+name: new_task
+action: expose
+details: Created in rich_progress.py

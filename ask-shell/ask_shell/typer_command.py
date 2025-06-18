@@ -14,7 +14,7 @@ from rich.logging import RichHandler
 from rich.traceback import Traceback
 
 import ask_shell
-from ask_shell.rich_live import get_live_console, log_to_live_console
+from ask_shell.rich_live import get_live_console, log_to_live
 from ask_shell.rich_progress import new_task
 from ask_shell.settings import AskShellSettings, default_rich_info_style
 
@@ -56,7 +56,7 @@ def track_progress_decorator(
 
 
 def log_exit_summary(settings: AskShellSettings):
-    log_to_live_console(
+    log_to_live(
         f"{default_rich_info_style()}You can find the run logs in {settings.run_logs} "
     )
 

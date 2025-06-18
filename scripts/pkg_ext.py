@@ -231,8 +231,14 @@ class SymbolParser(ast.NodeTransformer):
     classes: list[str] = field(init=False, default_factory=list)
     exceptions: list[str] = field(init=False, default_factory=list)
 
+    def name_is_imported(self, name: str) -> bool:
+        """Check if the name is imported from the package."""
+        return any(ref.endswith(f":{name}") for ref in self.local_imports)
+
     def visit_Name(self, node: ast.Name) -> ast.AST:
         node_name = node.id
+        if self.name_is_imported(node_name):
+            return node
         if node_name.isupper():
             self.global_vars.append(node.id)
         elif node.id.endswith("T"):
@@ -636,7 +642,9 @@ def handle_removed_refs(
         "Select references thas has been renamed (if any):",
         choices=ChoiceTyped.from_descriptions(removed_refs),
     ):
-        with new_task("Renaming references", total=len(renames)) as task:
+        with new_task(
+            "Renaming references", total=len(renames), log_updates=True
+        ) as task:
             renamed_refs = process_reference_renames(
                 pkg_state, active_refs, renames, task
             )
@@ -701,7 +709,7 @@ def handle_added_refs(
 
     file_added_refs = group_by_once(added_refs.values(), key=group_by_file)
     with new_task(
-        "New References expose decisions", total=len(file_added_refs)
+        "New References expose decisions", total=len(file_added_refs), log_updates=True
     ) as task:
         for file_name, file_states in file_added_refs.items():
             run_and_wait(f"{get_editor()} {pkg_state.pkg_path / file_name}")

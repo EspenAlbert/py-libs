@@ -38,7 +38,7 @@ class AskShellSettings(StaticSettings):
     )
     THREAD_POOL_FULL_WAIT_TIME_SECONDS_DEFAULT: ClassVar[int] = 5
     ENV_NAME_SEARCH_ENABLED_AFTER_CHOICES: ClassVar[str] = (
-        f"{ENV_PREFIX}SEARCH_ENABLED_AFTER_CHOICES" # How many choices to show before enabling search
+        f"{ENV_PREFIX}SEARCH_ENABLED_AFTER_CHOICES"  # How many choices to show before enabling search
     )
     SEARCH_ENABLED_AFTER_CHOICES_DEFAULT: ClassVar[int] = 7
     RUN_THREAD_COUNT: int = RUN_THREAD_COUNT_DEFAULT

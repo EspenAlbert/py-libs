@@ -76,3 +76,4 @@ def test_parse_symbols_run_env():
     assert len(symbols) == len(all_symbols)
     assert "interactive_shell" in symbols
     assert symbols["interactive_shell"].type == "function"
+    assert "ENV_PREFIX" not in symbols

@@ -60,3 +60,13 @@ def test_task_should_update_progress(capture_console):
     assert "Test Task" in out
     for i in range(1, 6):
         assert f"{20 * i}%" in out
+
+
+def test_task_should_update_progress_with_logging(capture_console):
+    with new_task("Test Task", total=5, log_updates=True) as task:
+        for _ in range(5):
+            task.update(advance=1)
+    out = capture_console.end_capture()
+    assert "Test Task" in out
+    assert "20%" in out
+    assert "60%" in out

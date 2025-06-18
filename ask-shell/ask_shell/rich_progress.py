@@ -51,6 +51,10 @@ def log_task_done(
     log_call(" ".join(message_parts))
 
 
+def log_task_progress(task: new_task):
+    logger.info(f"Progress: {task.description} - {task.progress_str}")
+
+
 @dataclass
 class ProgressManager:
     """Class that can manage progress tasks and add/remove the renderable progress to the live console when there are no more tasks."""
@@ -124,6 +128,7 @@ class ProgressManager:
         advance: float | None = None,
         total: float | None = None,
         skip_render: bool = False,
+        log_update: bool = False,
         **task_fields,
     ):
         assert task._task_id is not None, (
@@ -139,6 +144,8 @@ class ProgressManager:
             )
             if not skip_render:
                 render_live()
+            if log_update:
+                log_task_progress(task)
 
 
 progress_manager = ProgressManager()
@@ -157,16 +164,21 @@ class new_task:
     total: float = 1
     visible: bool = True
     task_fields: dict = field(default_factory=dict)
-    log_after_remove: bool = True
+    log_after_remove: bool = True  # Adds a log message when the task is removed. Useful for tracking task completion.
+    log_updates: bool = False  # Adds a log message every time update is called. Useful if you are doing an interactive loop, to show progress updates.
     manager: ProgressManager = field(default_factory=get_default_progress_manager)
 
     _task_id: TaskID | None = field(init=False, default=None)
     _rich_task: Task | None = field(init=False, default=None)
-    _completed: float = field(init=False, default=0.0)
+    completed: float = field(init=False, default=0.0)
 
     @property
     def is_finished(self) -> bool:
-        return self._completed >= self.total
+        return self.completed >= self.total
+
+    @property
+    def progress_str(self) -> str:
+        return f"{self.completed / self.total:.0%}"
 
     def __post_init__(self):
         assert self.total > 0, "Total must be greater than 0"
@@ -180,10 +192,15 @@ class new_task:
         self.manager.remove_task(self, error=exc_val)
 
     def complete(self) -> None:
-        self.update(advance=self.total, total=self.total)
+        self.update(advance=self.total, total=self.total, log_update=False)
 
     def update(
-        self, *, advance: float | None = None, total: float | None = None, **task_fields
+        self,
+        *,
+        advance: float | None = None,
+        total: float | None = None,
+        log_update: bool | None = None,
+        **task_fields,
     ) -> None:
         """
         total: In case the task has increased in size, this is the new total.
@@ -192,7 +209,12 @@ class new_task:
         Or 0.01 if total = 1
         """
         if advance is not None:
-            self._completed += advance
+            self.completed += advance
+            self.completed = min(self.completed, self.total)
         if total is not None:
             self.total = total
-        self.manager.update_task(self, advance=advance, total=total, **task_fields)
+        if log_update is None:
+            log_update = self.log_updates
+        self.manager.update_task(
+            self, advance=advance, total=total, log_update=log_update, **task_fields
+        )

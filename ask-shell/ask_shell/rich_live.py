@@ -141,7 +141,7 @@ def get_live_console() -> Console:
     return get_live().console
 
 
-def print_to_live_console(
+def print_to_live(
     *objects: Any,
     sep: str = " ",
     end: str = "\n",
@@ -177,7 +177,7 @@ def print_to_live_console(
     )
 
 
-def log_to_live_console(
+def log_to_live(
     *objects: Any,
     sep: str = " ",
     end: str = "\n",

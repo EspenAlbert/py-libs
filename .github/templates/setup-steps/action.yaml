@@ -18,3 +18,7 @@ runs:
     - uses: extractions/setup-just@v2
       with:
         just-version: "1.38.0"
+    - uses: hashicorp/setup-terraform@5a8481b19f9c306e74569d1641e269bc213b9f94
+      name: configure terraform
+      with:
+        terraform_version: "1.12.2"

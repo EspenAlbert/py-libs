@@ -9,6 +9,7 @@ from typing import Any, Callable, Dict, Mapping, Optional, Tuple, Type, TypeVar,
 
 from model_lib.constants import (
     FileFormat,
+    FileFormatT,
     ModelRawT,
     PayloadParser,
     PayloadT,
@@ -119,6 +120,20 @@ def parse_model_name_kwargs_list(payload: Any) -> list:
         cls = model_name_to_t(cls_name)
         parsed_events.append(cls(**kwargs))
     return parsed_events
+
+
+def parse_list(payload: PayloadT, format: FileFormatT = FileFormat.json) -> list:
+    raw_list = parse_payload(payload, format)
+    if not isinstance(raw_list, list):
+        raise PayloadError(payload, message="not a list")
+    return raw_list
+
+
+def parse_dict(payload: PayloadT, format: FileFormatT = FileFormat.json) -> dict:
+    raw_dict = parse_payload(payload, format)
+    if not isinstance(raw_dict, dict):
+        raise PayloadError(payload, message="not a dictionary")
+    return raw_dict
 
 
 @singledispatch

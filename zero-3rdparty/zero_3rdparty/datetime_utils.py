@@ -166,7 +166,9 @@ def date_filename(dt: datetime | None = None) -> str:
     )
 
 
-def date_filename_with_seconds(dt: datetime | None = None) -> str:
+def date_filename_with_seconds(
+    dt: datetime | None = None, *, force_utc: bool = False
+) -> str:
     """
     >>> from datetime import timezone
     >>> date_filename_with_seconds(datetime(year=2023, month=5, day=2, hour=9, minute=4, tzinfo=timezone.utc))
@@ -175,6 +177,8 @@ def date_filename_with_seconds(dt: datetime | None = None) -> str:
     '2023-05-02T09-04-00'
     """
     dt = dt or utc_now()
+    if force_utc:
+        dt.astimezone(timezone.utc)  # Ensure UTC timezone
     seconds = dt.second
     filename = date_filename(dt)
     return filename.removesuffix("Z") + f"-{seconds:02}"

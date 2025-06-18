@@ -15,6 +15,8 @@ from model_lib.serialize.dump import (
     dump_with_metadata,
 )
 from model_lib.serialize.parse import (
+    parse_dict,
+    parse_list,
     parse_model,
     parse_model_metadata,
     parse_model_name_kwargs_list,
@@ -36,4 +38,6 @@ __all__ = (
     "parse_model_metadata",
     "parse_model_name_kwargs_list",
     "parse_payload",
+    "parse_dict",
+    "parse_list",
 )

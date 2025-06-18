@@ -1,0 +1,87 @@
+name: ERROR_MESSAGE_INTERACTIVE_SHELL
+action: hide
+details: Created in models.py
+---
+name: OutputCallbackT
+action: hide
+details: Created in models.py
+---
+name: OutputT
+action: hide
+details: Created in models.py
+---
+name: RunIncompleteError
+action: hide
+details: Created in models.py
+---
+name: ShellConfig
+action: expose
+details: Created in models.py
+---
+name: ShellError
+action: expose
+details: Created in models.py
+---
+name: ShellInput
+action: hide
+details: Created in models.py
+---
+name: ShellRun
+action: expose
+details: Created in models.py
+---
+name: ShellRunAfter
+action: hide
+details: Created in models.py
+---
+name: ShellRunBefore
+action: hide
+details: Created in models.py
+---
+name: ShellRunCallbackT
+action: hide
+details: Created in models.py
+---
+name: ShellRunEventT
+action: hide
+details: Created in models.py
+---
+name: ShellRunPOpenStarted
+action: hide
+details: Created in models.py
+---
+name: ShellRunQueueT
+action: hide
+details: Created in models.py
+---
+name: ShellRunRetryAttempt
+action: hide
+details: Created in models.py
+---
+name: ShellRunStdOutput
+action: hide
+details: Created in models.py
+---
+name: ShellRunStdReadError
+action: hide
+details: Created in models.py
+---
+name: ShellRunStdStarted
+action: hide
+details: Created in models.py
+---
+name: always_retry
+action: hide
+details: Created in models.py
+---
+name: install_instructions
+action: hide
+details: Created in models.py
+---
+name: is_executable
+action: hide
+details: Created in models.py
+---
+name: EmptyOutputError
+action: hide
+details: Created in models.py

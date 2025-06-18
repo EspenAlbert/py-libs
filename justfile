@@ -1,7 +1,9 @@
 alias b := build
 alias t := test
-mversion := "1.0.0b4"
-zversion := "1.0.0b2"
+mversion := "1.0.0b5"
+zversion := "1.0.0b3"
+quick: fmt fix lint
+  @echo "Quick checks passed"
 pre-push: lint fmt-check test
   @echo "All checks passed"
 build-only pkg_name:
@@ -19,8 +21,8 @@ lint:
   uv run ruff check .
 type:
   uv run pyright
-test version='3.11':
-  uv run --python {{version}} pytest
+test version='3.11' test-path='':
+  uv run --python {{version}} pytest {{test-path}}
 test-all:
   just test 3.10
   just test 3.11
@@ -47,3 +49,14 @@ pkg-version pkg_name command='read': # use m for model-lib and z for zero-3rdpar
   @uv run scripts/pkg_version.py {{pkg_name}} {{command}}
 pkg-find tag_name:
   @uv run scripts/pkg_version.py {{tag_name}} decode-tag
+changes-ask-shell:
+  just pkg-ext ./ask-shell/ask_shell
+
+
+[positional-arguments]
+gh-ext *args:
+  @uv run scripts/gh_ext.py {{args}}
+
+[positional-arguments]
+pkg-ext *args:
+  @uv run scripts/pkg_ext.py {{args}}

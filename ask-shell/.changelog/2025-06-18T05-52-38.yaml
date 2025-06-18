@@ -1,0 +1,43 @@
+name: THREADS_PER_RUN
+action: hide
+details: Created in _run.py
+---
+name: THREAD_POOL_FULL_WAIT_TIME_SECONDS
+action: hide
+details: Created in _run.py
+---
+name: current_run_count
+action: hide
+details: Created in _run.py
+---
+name: kill
+action: expose
+details: Created in _run.py
+---
+name: kill_all_runs
+action: hide
+details: Created in _run.py
+---
+name: run
+action: expose
+details: Created in _run.py
+---
+name: run_and_wait
+action: expose
+details: Created in _run.py
+---
+name: run_error
+action: expose
+details: Created in _run.py
+---
+name: stop_runs_and_pool
+action: hide
+details: Created in _run.py
+---
+name: wait_on_ok_errors
+action: expose
+details: Created in _run.py
+---
+name: handle_interrupt_wait
+action: hide
+details: Created in _run.py

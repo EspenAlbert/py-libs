@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Self
 
 from pydantic import DirectoryPath
@@ -13,6 +14,17 @@ class StaticSettings(BaseSettings):
     @classmethod
     def app_name(cls) -> str:
         return humps.snake_case(cls.__qualname__.removesuffix("Settings"))
+
+    @classmethod
+    def for_testing(cls, tmp_path: Path, **kwargs) -> Self:
+        """
+        Create a StaticSettings instance for testing purposes.
+        """
+        static = tmp_path / "static"
+        cache = tmp_path / "cache"
+        static.mkdir(parents=True, exist_ok=True)
+        cache.mkdir(parents=True, exist_ok=True)
+        return cls(STATIC_DIR=static, CACHE_DIR=cache, **kwargs)
 
     @classmethod
     def from_env(cls, **kwargs) -> Self:

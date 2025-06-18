@@ -13,7 +13,7 @@ import typer
 from ask_shell._run import run_and_wait
 from ask_shell._run_env import interactive_shell
 from ask_shell.interactive import select_list_multiple
-from ask_shell.rich_live import print_to_live_console
+from ask_shell.rich_live import print_to_live
 from ask_shell.rich_progress import new_task
 from ask_shell.settings import AskShellSettings
 from ask_shell.typer_command import configure_logging
@@ -282,7 +282,7 @@ def list_vars(
             for v in values
         ],
     ]
-    print_to_live_console(Markdown("\n".join(md)))
+    print_to_live(Markdown("\n".join(md)))
 
 
 @app.command()
@@ -332,7 +332,7 @@ def vars_usage(
     )
     result = create_variable_secret_report(ctx)
     if print_report or delete_unused:
-        print_to_live_console(Markdown(result.report_or_ok))
+        print_to_live(Markdown(result.report_or_ok))
     if unused_vars := result.unused_vars:
         unused_var_names = list(unused_vars)
         vars_to_delete = select_list_multiple(

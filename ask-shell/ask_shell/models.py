@@ -185,6 +185,9 @@ class ShellConfig(Entity):
     )
     terminal_width: int | None = 999
 
+    def __repr__(self) -> str:
+        return f"ShellConfig({self.shell_input!r}, cwd={self.cwd!r}, attempts={self.attempts})"
+
     @property
     def exec_name(self) -> str:
         return self.binary_file_args.name
@@ -298,6 +301,9 @@ class ShellRun:
     @property
     def has_started(self) -> bool:
         return self._stdout is not None and self._stderr is not None
+
+    def __repr__(self) -> str:
+        return f"ShellRun(config={self.config!r}, __str__={self})"
 
     def __str__(self) -> str:
         return " ".join(

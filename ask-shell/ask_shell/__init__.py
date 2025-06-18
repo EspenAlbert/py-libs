@@ -19,6 +19,7 @@ from ask_shell.rich_progress import new_task
 from ask_shell.settings import AskShellSettings
 from ask_shell.typer_command import configure_logging
 
+VERSION = "0.0.1"
 __all__ = [
     "AskShellSettings",
     "ChoiceTyped",

@@ -6,6 +6,7 @@ on:
     branches: 
     - "main"
     paths:
+    - "ask-shell/ask_shell/__init__.py"
     - "model-lib/model_lib/__init__.py"
     - "zero-3rdparty/zero_3rdparty/__init__.py"
 
@@ -14,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pkg: ["model-lib", "zero-3rdparty"]
+        pkg: ["ask-shell", "model-lib", "zero-3rdparty"]
 
     runs-on: ubuntu-latest
     permissions:

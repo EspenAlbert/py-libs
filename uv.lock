@@ -21,19 +21,23 @@ wheels = [
 
 [[package]]
 name = "ask-shell"
-version = "1.0.0+rc1"
+version = "0.0.1"
 source = { editable = "ask-shell" }
 dependencies = [
+    { name = "model-lib", extra = ["toml"] },
     { name = "questionary" },
     { name = "rich" },
     { name = "typer" },
+    { name = "zero-3rdparty" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "model-lib", extras = ["toml"], editable = "model-lib" },
     { name = "questionary", specifier = ">=2.1.0" },
     { name = "rich", specifier = ">=13.9.4" },
     { name = "typer", specifier = ">=0.16.0" },
+    { name = "zero-3rdparty", editable = "zero-3rdparty" },
 ]
 
 [[package]]

@@ -49,6 +49,8 @@ pkg-version pkg_name command='read': # use m for model-lib and z for zero-3rdpar
   @uv run scripts/pkg_version.py {{pkg_name}} {{command}}
 pkg-find tag_name:
   @uv run scripts/pkg_version.py {{tag_name}} decode-tag
+changes-ask-shell:
+  just pkg-ext ./ask-shell/ask_shell
 
 
 [positional-arguments]

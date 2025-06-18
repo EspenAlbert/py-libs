@@ -9,6 +9,7 @@ from pathlib import Path
 REPO_PATH = Path(__file__).parents[1]
 MODEL_LIB = "model-lib"
 _pkg_names = {
+    "a": "ask-shell",
     "m": MODEL_LIB,
     "z": "zero-3rdparty",
 }

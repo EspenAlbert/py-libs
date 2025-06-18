@@ -16,6 +16,7 @@ import signal
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, wait
+from contextlib import suppress
 from dataclasses import dataclass
 from os import getenv, setsid
 from pathlib import Path
@@ -289,10 +290,12 @@ def kill(
             f"killing timeout after {abort_timeout}s! forcing a kill: {run} {reason}"
         )
         proc.terminate()
+        with suppress(subprocess.TimeoutExpired):
+            proc.wait(timeout=1)
     except (OSError, ValueError) as e:
         logger.warning(f"unable to get output when shutting down: {run} {e!r}")
     finally:
-        run.wait_until_complete(timeout=abort_timeout, no_raise=True)
+        run.wait_until_complete(timeout=1, no_raise=True)
 
 
 def _execute_run(shell_run: ShellRun) -> ShellRun:

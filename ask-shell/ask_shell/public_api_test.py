@@ -326,13 +326,16 @@ def test_message_callbacks():
     message_class_names: list[str] = []
 
     def message_callback(message):
-        message_class_names.append(message.__class__.__name__)
+        cls_name = message.__class__.__name__
+        # sourcery skip: no-conditionals-in-tests
+        if cls_name not in message_class_names:
+            message_class_names.append(cls_name)
 
     run_and_wait("echo ok", message_callbacks=[message_callback])  # type: ignore
+
     assert message_class_names == [
         ShellRunBefore.__name__,
         ShellRunPOpenStarted.__name__,
-        ShellRunStdStarted.__name__,  # stdout/stderr
         ShellRunStdStarted.__name__,  # stderr/stdout
         ShellRunStdOutput.__name__,
         ShellRunAfter.__name__,

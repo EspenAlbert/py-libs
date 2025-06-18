@@ -281,6 +281,7 @@ def kill(
     logger.warning(f"killing starting: {run} {reason}")
     try:
         pgid = os.getpgid(proc.pid)
+        # proc.terminate() and proc.send_signal() doesn't work across platforms.
         if immediate:
             os.killpg(pgid, signal.SIGTERM)
         else:

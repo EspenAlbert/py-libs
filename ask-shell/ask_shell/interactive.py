@@ -20,11 +20,14 @@ from zero_3rdparty.object_name import as_name, func_arg_names
 
 from ask_shell._run_env import ENV_NAME_FORCE_INTERACTIVE_SHELL, interactive_shell
 from ask_shell.rich_live import pause_live
+from ask_shell.settings import AskShellSettings
 
 T = TypeVar("T")
 TypedAsk = Callable[[Question, type[T]], T]
 logger = logging.getLogger(__name__)
-SEARCH_ENABLED_AFTER_CHOICES = 7
+SEARCH_ENABLED_AFTER_CHOICES = int(
+    getenv(AskShellSettings.ENV_NAME_SEARCH_ENABLED_AFTER_CHOICES, "7")
+)
 
 
 def _default_asker(q: Question, _: type[T]) -> T:

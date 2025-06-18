@@ -11,6 +11,7 @@ from zero_3rdparty.datetime_utils import utc_now
 from zero_3rdparty.file_utils import clean_dir
 from zero_3rdparty.object_name import as_name
 
+from ask_shell._constants import ENV_PREFIX
 from ask_shell._run_env import interactive_shell
 
 
@@ -30,8 +31,18 @@ def default_callbacks_funcs() -> list[str]:
 
 
 class AskShellSettings(StaticSettings):
-    ENV_NAME_RUN_THREAD_COUNT: ClassVar[str] = "RUN_THREAD_COUNT"
+    ENV_NAME_RUN_THREAD_COUNT: ClassVar[str] = f"{ENV_PREFIX}RUN_THREAD_COUNT"
     RUN_THREAD_COUNT_DEFAULT: ClassVar[int] = 50
+    ENV_NAME_THREAD_POOL_FULL_WAIT_TIME_SECONDS: ClassVar[str] = (
+        f"{ENV_PREFIX}THREAD_POOL_FULL_WAIT_TIME_SECONDS"
+    )
+    THREAD_POOL_FULL_WAIT_TIME_SECONDS_DEFAULT: ClassVar[int] = (
+        5  # How long to wait when the thread pools is full before trying again
+    )
+    ENV_NAME_SEARCH_ENABLED_AFTER_CHOICES: ClassVar[str] = (
+        f"{ENV_PREFIX}SEARCH_ENABLED_AFTER_CHOICES"
+    )
+    SEARCH_ENABLED_AFTER_CHOICES_DEFAULT: ClassVar[int] = 7
     RUN_THREAD_COUNT: int = RUN_THREAD_COUNT_DEFAULT
 
     global_callback_strings: list[str] = Field(default_factory=default_callbacks_funcs)

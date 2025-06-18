@@ -43,9 +43,13 @@ from ask_shell.settings import AskShellSettings
 
 logger = logging.getLogger(__name__)
 THREADS_PER_RUN = 4  # Each run will take 4 threads: 1 for stdout, 1 for stderr, 1 for consuming queue messages and 1 for popen wait.
-THREAD_POOL_FULL_WAIT_TIME_SECONDS = (
-    5  # How long to wait when the thread pools is full before trying again
+THREAD_POOL_FULL_WAIT_TIME_SECONDS = float(
+    getenv(
+        AskShellSettings.ENV_NAME_THREAD_POOL_FULL_WAIT_TIME_SECONDS,
+        AskShellSettings.THREAD_POOL_FULL_WAIT_TIME_SECONDS_DEFAULT,
+    )
 )
+
 _pool = ThreadPoolExecutor(
     max_workers=int(
         getenv(

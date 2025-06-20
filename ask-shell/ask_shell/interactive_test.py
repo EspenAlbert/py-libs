@@ -178,3 +178,9 @@ def test_select_list_typed():
     ]
     with question_patcher([""]):
         assert select_list_choice("Select an option", choices) == 1
+
+
+@pytest.mark.asyncio()
+async def test_confirm_async():
+    with question_patcher([""]):
+        assert confirm("Confirm from async", default=True)

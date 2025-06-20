@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from dataclasses import dataclass, field
@@ -18,6 +19,7 @@ from questionary import select as _select
 from questionary import text as _text
 from zero_3rdparty.object_name import as_name, func_arg_names
 
+from ask_shell._run import get_pool
 from ask_shell._run_env import ENV_NAME_FORCE_INTERACTIVE_SHELL, interactive_shell
 from ask_shell.rich_live import pause_live
 from ask_shell.settings import AskShellSettings
@@ -31,7 +33,13 @@ SEARCH_ENABLED_AFTER_CHOICES = int(
 
 
 def _default_asker(q: Question, _: type[T]) -> T:
-    return q.unsafe_ask()
+    try:
+        asyncio.get_event_loop()
+    except RuntimeError:
+        return q.unsafe_ask()
+
+    # Run blocking call in separate thread to avoid error: # RuntimeError: This event loop is already running
+    return get_pool().submit(q.unsafe_ask).result()
 
 
 _question_asker: TypedAsk = _default_asker
@@ -340,7 +348,7 @@ class question_patcher:
             inp.send_text(input_response + KeyInput.ENTER + "\r")
             q.application.output = DummyOutput()
             q.application.input = inp
-            return q.unsafe_ask()
+            return _default_asker(q, response_type)
 
         with create_pipe_input() as inp:
             return run(inp)
@@ -348,6 +356,13 @@ class question_patcher:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
+
+    async def async_main():
+        logger.info(
+            f"Async confirm: {confirm('Can you confirm from async?', default=True)}"
+        )
+
+    asyncio.run(async_main())
     choices_typed = [
         ChoiceTyped(name="Option 1", value=1, description="First option"),
         ChoiceTyped(name="Option 2", value=2, description="Second option"),

@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 def transient_progress() -> Progress:
     return Progress(
-        TextColumn("%s{task.description}", default_rich_info_style()),
+        TextColumn("%s{task.description}" % default_rich_info_style()),  # noqa: UP031 # a special template string for rich
         TaskProgressColumn(),
         BarColumn(),
         TimeElapsedColumn(),

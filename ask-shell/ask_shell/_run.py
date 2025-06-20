@@ -60,6 +60,13 @@ _pool = ThreadPoolExecutor(
         )
     )
 )
+
+
+def get_pool() -> ThreadPoolExecutor:
+    """Get the thread pool executor used for running shell commands."""
+    return _pool
+
+
 _runs: dict[
     int, ShellRun
 ] = {}  # internal to store running ShellRuns to support stopping them on exit

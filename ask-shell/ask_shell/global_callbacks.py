@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 def wait_on_available_threads(message: ShellRunEventT) -> bool:
     if isinstance(message, ShellRunBefore):
-        max_workers = ask_shell._run._pool._max_workers
+        max_workers = ask_shell._run.get_pool()._max_workers
         max_count = max_workers // ask_shell._run.THREADS_PER_RUN - 1
         while ask_shell._run.current_run_count() > max_count:
             logger.warning(

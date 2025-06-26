@@ -388,6 +388,10 @@ class ShellRun:
                     if not self.config.skip_html_log_files:
                         self._dump_html_logs()
                     self._reset_read_state(attempt)
+                case ShellRunStdReadError(is_stdout=is_stdout, error=error):
+                    logger.error(
+                        f"Error reading {'stdout' if is_stdout else 'stderr'} foro {self}: {error!r}"
+                    )
             if not self._start_flag.done() and self.has_started:
                 self._start_flag.set_result(self)
 

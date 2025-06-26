@@ -9,7 +9,7 @@ from ask_shell.rich_live_callback import (
 )
 
 
-def test_live_frozen_when_user_input_task_is_running(capture_console):
+def test_live_frozen_when_user_input_task_is_running():
     console_logger = RunConsoleLogger()
     shell_run = create_run_mocked_config(user_input=True)
     console_logger(ShellRunBefore(run=shell_run))

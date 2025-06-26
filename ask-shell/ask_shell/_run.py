@@ -26,6 +26,7 @@ from typing import IO, Any, Callable
 from model_lib.pydantic_utils import copy_and_validate
 from rich.ansi import AnsiDecoder
 from rich.console import Console
+from rich.errors import MarkupError
 
 from ask_shell.models import (
     RunIncompleteError,
@@ -424,6 +425,7 @@ def _run(
                     config=config,
                 )
             except BaseException as e:
+                logger.exception(e)
                 queue.put_nowait(ShellRunStdReadError(is_stdout=True, error=e))
 
         def add_stderr_line(line: str):
@@ -442,6 +444,7 @@ def _run(
                     config=config,
                 )
             except BaseException as e:
+                logger.exception(e)
                 queue.put_nowait(ShellRunStdReadError(is_stdout=False, error=e))
 
         fut_stdout = _pool.submit(read_stdout)
@@ -465,6 +468,7 @@ def _read_until_complete(
             soft_wrap=True,
             log_time=config.include_log_time,
             width=config.terminal_width,
+            markup=config.ansi_content,
         )
         on_console_ready(console)
         old_write = f.write
@@ -476,9 +480,13 @@ def _read_until_complete(
         decoder = AnsiDecoder()
 
         def write_hook_ansi(text: str):
-            plain_text = "\n".join(
-                decoder.decode_line(line).plain.strip() for line in text.splitlines()
-            )
+            try:
+                plain_text = "\n".join(
+                    decoder.decode_line(line).plain.strip()
+                    for line in text.splitlines()
+                )
+            except MarkupError:
+                return old_write(text)
             return old_write(plain_text)
 
         f.write = write_hook_ansi if config.ansi_content else write_hook

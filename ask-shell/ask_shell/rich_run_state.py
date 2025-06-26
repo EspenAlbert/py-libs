@@ -76,8 +76,12 @@ def progress_for_runs() -> Progress:
     return Progress(
         TextColumn("[bold purple]{task.description}"),
         TimeElapsedColumn(),
-        TextColumn("{task.fields[stdout]}"),
-        TextColumn("{task.fields[stderr]}"),
+        TextColumn(
+            "{task.fields[stdout]}", markup=False
+        ),  # Risks getting hard to debug logs as we don't control the stdout/stderr if markup is enabled
+        TextColumn(
+            "{task.fields[stderr]}", markup=False
+        ),  # Risks getting hard to debug logs as we don't control the stdout/stderr if markup is enabled
     )
 
 

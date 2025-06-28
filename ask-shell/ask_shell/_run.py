@@ -323,7 +323,9 @@ def _execute_run(shell_run: ShellRun) -> ShellRun:
             try:
                 shell_run._on_event(message)
             except BaseException as e:
-                logger.warning(f"Error processing message for {shell_run}: {e!r}")
+                logger.warning(
+                    f"Error processing message '{type(message).__name__}' for {shell_run}: {e!r}"
+                )
                 logger.exception(e)
 
     try:

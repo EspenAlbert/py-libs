@@ -16,6 +16,7 @@ import os
 import signal
 import subprocess
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor, wait
 from contextlib import suppress
 from dataclasses import dataclass
@@ -75,6 +76,29 @@ _runs: dict[
 
 def current_run_count() -> int:
     return len(_runs)
+
+
+def wait_if_many_runs(
+    max_run_count: int,
+    *,
+    sleep_time: float = THREAD_POOL_FULL_WAIT_TIME_SECONDS,
+    sleep_callback: Callable[[], None] | None = None,
+):
+    with handle_interrupt_wait(
+        interrupt_message="interrupt when waiting for runs to finish",
+        immediate_kill=False,
+    ):
+        while current_run_count() > max_run_count:
+            if sleep_callback:
+                sleep_callback()
+            time.sleep(sleep_time)
+
+
+def max_run_count_for_workers(worker_count: int | None = None) -> int:
+    """Calculate the maximum number of runs that can be executed concurrently based on the number of workers."""
+    if worker_count is None:
+        worker_count = _pool._max_workers  # type: ignore
+    return max(1, worker_count // THREADS_PER_RUN)  # leave some threads for other tasks
 
 
 def stop_runs_and_pool(reason: str = "atexit", immediate: bool = False):

@@ -287,15 +287,30 @@ def wait_on_ok_errors(
 
 
 def kill_all_runs(
-    immediate: bool = False, reason: str = "", abort_timeout: float = 3.0
+    immediate: bool = False,
+    reason: str = "",
+    abort_timeout: float = 3.0,
+    *,
+    skip_retry: bool = False,
 ):
-    for run in _runs.values():
+    for run in list(_runs.values()):
         kill(
             run,
             immediate=immediate,
             reason=reason,
             abort_timeout=abort_timeout,
         )
+    if len(_runs) > 0:
+        logger.warning(
+            f"still {_runs} runs left after killing, maybe some were started again, will try to kill them again"
+        )
+        if not skip_retry:
+            kill_all_runs(
+                immediate=True,
+                reason=f"try-again kill all: {reason}",
+                abort_timeout=abort_timeout,
+                skip_retry=True,  # avoid infinite recursion if some runs are still running after this kill attempt
+            )
 
 
 def kill(

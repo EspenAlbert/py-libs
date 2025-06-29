@@ -130,6 +130,7 @@ def run(
     should_retry: Callable[[ShellRun], bool] | None = None,
     skip_binary_check: bool | None = None,
     skip_html_log_files: bool | None = None,
+    skip_progress_output: bool | None = None,
     include_log_time: bool | None = None,
     skip_os_env: bool | None = None,
     start_timeout: float | None = None,
@@ -153,6 +154,7 @@ def run(
         should_retry=should_retry,
         skip_binary_check=skip_binary_check,
         skip_html_log_files=skip_html_log_files,
+        skip_progress_output=skip_progress_output,
         include_log_time=include_log_time,
         skip_os_env=skip_os_env,
         terminal_width=terminal_width,
@@ -185,6 +187,7 @@ def run_and_wait(
     settings: AskShellSettings | None = None,
     should_retry: Callable[[ShellRun], bool] | None = None,
     skip_binary_check: bool | None = None,
+    skip_progress_output: bool | None = None,
     skip_html_log_files: bool | None = None,
     include_log_time: bool | None = None,
     skip_os_env: bool | None = None,
@@ -214,6 +217,7 @@ def run_and_wait(
         user_input=user_input,
         terminal_width=terminal_width,
         skip_interactive_check=skip_interactive_check,
+        skip_progress_output=skip_progress_output,
     )
     run = ShellRun(config)
     _pool.submit(_execute_run, run)

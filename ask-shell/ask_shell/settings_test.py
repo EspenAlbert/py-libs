@@ -4,7 +4,9 @@ import pytest
 
 
 @pytest.mark.skipif(os.environ.get("SLOW", "") == "", reason="needs os.environ[SLOW]")
-def test_using_run_logs_dir_and_adding_1000_dirs_should_not_clean_it(tmp_path, settings):
+def test_using_run_logs_dir_and_adding_1000_dirs_should_not_clean_it(
+    tmp_path, settings
+):
     run_logs_dir = settings.run_logs_dir = tmp_path / "run_logs"
     assert (
         settings.configure_run_logs_dir_if_unset(

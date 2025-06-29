@@ -155,35 +155,44 @@ class ShellConfig(Entity):
     allow_non_zero_exit: bool = False
     skip_os_env: bool = False
     skip_binary_check: bool = False
-    include_log_time: bool = False
     skip_interactive_check: bool = (
         False  # can be useful for testing purposes, to skip the interactive shell check
     )
     cwd: Path = Field(default=None, description="Set to Path.cwd() if not provided")  # type: ignore
-    user_input: bool = False
+    user_input: bool = False  # whether to use user input for the script, if True, will use stdin for input and write character by character
 
+    # retry args
     attempts: int = 1
+    should_retry: Callable[[ShellRun], bool] = always_retry
+
+    # logging/output
     print_prefix: str = Field(
         default=None, description="Use cwd+binary_name+first_arg if not provided"
     )  # type: ignore
-    should_retry: Callable[[ShellRun], bool] = always_retry
+    include_log_time: bool = False
     ansi_content: bool = Field(default=None, description="Inferred if not provided")  # type: ignore
-    is_binary_call: bool = Field(default=None, description="Inferred if not provided")  # type: ignore
-    settings: AskShellSettings = field(default_factory=AskShellSettings.from_env)
     run_output_dir: Path | None = Field(
         default=None,
         description="Directory to store run logs, defaults to settings.run_logs /{XX}_{self.exec_name}",
     )
     run_log_stem_prefix: str = Field(default="", description="Prefix for run log stem")
-    skip_html_log_files: bool = Field(
+    skip_html_log_files: bool = Field(  # todo: not fully implemented yet
         default=False,
         description="Skip HTML log files, by default dumps HTML logs to support viewing colored output in browsers",
     )
+    skip_progress_output: bool = Field(
+        default=False,
+        description="Skip transitive std out/err output, useful for large outputs that are not needed in the logs when running parallel scripts",
+    )
+    terminal_width: int | None = 999
+
+    # advanced settings
+    is_binary_call: bool = Field(default=None, description="Inferred if not provided")  # type: ignore
+    settings: AskShellSettings = field(default_factory=AskShellSettings.from_env)
     message_callbacks: list[ShellRunCallbackT] = Field(
         default_factory=list,
         description="Callbacks for run messages, useful for custom handling of stdout/stderr",
     )
-    terminal_width: int | None = 999
 
     def __repr__(self) -> str:
         return f"ShellConfig({self.shell_input!r}, cwd={self.cwd!r}, attempts={self.attempts})"

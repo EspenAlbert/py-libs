@@ -1,23 +1,43 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from functools import total_ordering, wraps
+from sys import stderr
 from threading import RLock
 from typing import Any, Callable, Optional, Protocol, TypeVar, Union
 
 from rich.console import Console, Group, JustifyMethod, OverflowMethod, RenderableType
 from rich.live import Live
 from rich.style import Style
+from zero_3rdparty.error import error_and_traceback
 from zero_3rdparty.id_creator import simple_id
 
 _live: Live | None = None
 _lock = RLock()
 _renderables: list[LivePart] = []
 _live_is_frozen_attr_name = "__live_is_frozen__"
+logger = logging.getLogger(__name__)
 
 
 def _live_is_frozen() -> bool:
     return getattr(get_live(), _live_is_frozen_attr_name, False)
+
+
+def _console_hook(func: Callable) -> Callable:
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            yield from func(*args, **kwargs)
+        except BaseException as e:
+            # Ensure that the live console is reset if an error occurs
+            # We cannot do any logging here as it will cause a deadlock if the RichHandler is being used
+            error_with_tb = error_and_traceback(e)
+            stderr.write(f"Error in live console: {error_with_tb}\n")
+            reset_live()
+            raise e
+
+    return wrapper
 
 
 def get_live() -> Live:
@@ -27,6 +47,9 @@ def get_live() -> Live:
     with _lock:
         if _live is None:
             _live = Live(transient=True)
+            live_render = _live._live_render
+            old_console = live_render.__rich_console__
+            live_render.__rich_console__ = _console_hook(old_console)
     return _live
 
 

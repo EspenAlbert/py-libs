@@ -113,8 +113,8 @@ class _RunState:
             description=run.config.print_prefix,
             total=1,
             task_fields={
-                "stdout": run_info.stdout_str,
-                "stderr": run_info.stderr_str,
+                "stdout": "",
+                "stderr": "",
             },
             log_after_remove=False,
             manager=self._progress_manager,
@@ -122,12 +122,14 @@ class _RunState:
         task.__enter__()
         run_info.task = task
 
+        output_skipped = run.config.skip_progress_output
+
         def task_callback(message: ShellRunEventT) -> None:
             run_info(message)
             if not task.is_finished:
                 task.update(
-                    stdout=run_info.stdout_str,
-                    stderr=run_info.stderr_str,
+                    stdout="..." if output_skipped else run_info.stdout_str,
+                    stderr="" if output_skipped else run_info.stderr_str,
                 )
 
         run.config.message_callbacks.append(task_callback)

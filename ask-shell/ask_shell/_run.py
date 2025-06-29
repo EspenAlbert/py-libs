@@ -16,6 +16,7 @@ import os
 import signal
 import subprocess
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor, wait
 from contextlib import suppress
 from dataclasses import dataclass
@@ -77,6 +78,29 @@ def current_run_count() -> int:
     return len(_runs)
 
 
+def wait_if_many_runs(
+    max_run_count: int,
+    *,
+    sleep_time: float = THREAD_POOL_FULL_WAIT_TIME_SECONDS,
+    sleep_callback: Callable[[], None] | None = None,
+):
+    with handle_interrupt_wait(
+        interrupt_message="interrupt when waiting for runs to finish",
+        immediate_kill=False,
+    ):
+        while current_run_count() > max_run_count:
+            if sleep_callback:
+                sleep_callback()
+            time.sleep(sleep_time)
+
+
+def max_run_count_for_workers(worker_count: int | None = None) -> int:
+    """Calculate the maximum number of runs that can be executed concurrently based on the number of workers."""
+    if worker_count is None:
+        worker_count = _pool._max_workers  # type: ignore
+    return max(1, worker_count // THREADS_PER_RUN)  # leave some threads for other tasks
+
+
 def stop_runs_and_pool(reason: str = "atexit", immediate: bool = False):
     if _runs:
         logger.warning("STOPPING stop_runs_and_pool")
@@ -106,6 +130,7 @@ def run(
     should_retry: Callable[[ShellRun], bool] | None = None,
     skip_binary_check: bool | None = None,
     skip_html_log_files: bool | None = None,
+    skip_progress_output: bool | None = None,
     include_log_time: bool | None = None,
     skip_os_env: bool | None = None,
     start_timeout: float | None = None,
@@ -129,6 +154,7 @@ def run(
         should_retry=should_retry,
         skip_binary_check=skip_binary_check,
         skip_html_log_files=skip_html_log_files,
+        skip_progress_output=skip_progress_output,
         include_log_time=include_log_time,
         skip_os_env=skip_os_env,
         terminal_width=terminal_width,
@@ -161,6 +187,7 @@ def run_and_wait(
     settings: AskShellSettings | None = None,
     should_retry: Callable[[ShellRun], bool] | None = None,
     skip_binary_check: bool | None = None,
+    skip_progress_output: bool | None = None,
     skip_html_log_files: bool | None = None,
     include_log_time: bool | None = None,
     skip_os_env: bool | None = None,
@@ -190,6 +217,7 @@ def run_and_wait(
         user_input=user_input,
         terminal_width=terminal_width,
         skip_interactive_check=skip_interactive_check,
+        skip_progress_output=skip_progress_output,
     )
     run = ShellRun(config)
     _pool.submit(_execute_run, run)
@@ -263,15 +291,30 @@ def wait_on_ok_errors(
 
 
 def kill_all_runs(
-    immediate: bool = False, reason: str = "", abort_timeout: float = 3.0
+    immediate: bool = False,
+    reason: str = "",
+    abort_timeout: float = 3.0,
+    *,
+    skip_retry: bool = False,
 ):
-    for run in _runs.values():
+    for run in list(_runs.values()):
         kill(
             run,
             immediate=immediate,
             reason=reason,
             abort_timeout=abort_timeout,
         )
+    if len(_runs) > 0:
+        logger.warning(
+            f"still {_runs} runs left after killing, maybe some were started again, will try to kill them again"
+        )
+        if not skip_retry:
+            kill_all_runs(
+                immediate=True,
+                reason=f"try-again kill all: {reason}",
+                abort_timeout=abort_timeout,
+                skip_retry=True,  # avoid infinite recursion if some runs are still running after this kill attempt
+            )
 
 
 def kill(
@@ -323,7 +366,9 @@ def _execute_run(shell_run: ShellRun) -> ShellRun:
             try:
                 shell_run._on_event(message)
             except BaseException as e:
-                logger.warning(f"Error processing message for {shell_run}: {e!r}")
+                logger.warning(
+                    f"Error processing message '{type(message).__name__}' for {shell_run}: {e!r}"
+                )
                 logger.exception(e)
 
     try:

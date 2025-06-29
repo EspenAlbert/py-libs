@@ -15,11 +15,12 @@ from ask_shell.interactive import (
     text,
 )
 from ask_shell.rich_live import print_to_live
-from ask_shell.rich_progress import new_task
 from ask_shell.settings import AskShellSettings
+from ask_shell.rich_progress import new_task
+from ask_shell.run_pool import run_pool
 from ask_shell.typer_command import configure_logging
 
-VERSION = "0.0.3"
+VERSION = "0.0.4"
 __all__ = [
     "AskShellSettings",
     "ChoiceTyped",
@@ -36,6 +37,7 @@ __all__ = [
     "run",
     "run_and_wait",
     "run_error",
+    "run_pool",
     "select_dict",
     "select_list",
     "select_list_choice",

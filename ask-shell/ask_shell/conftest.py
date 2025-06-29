@@ -91,5 +91,6 @@ def create_run_mocked_config(user_input: bool = False) -> ShellRun:
             user_input=user_input,
             print_prefix="Mocked Run",
             shell_input="echo 'Mocked Run Output'",
+            skip_progress_output=False,
         )
     )

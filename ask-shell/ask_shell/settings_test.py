@@ -1,4 +1,5 @@
 import os
+
 import pytest
 
 
@@ -30,8 +31,6 @@ def test_using_run_logs_dir_and_adding_100_files_should_clean_it(tmp_path, setti
         run_dir.mkdir(parents=True, exist_ok=True)
         if i == 999:
             assert run_dir.name == "1101_test-999"
-    
-
 
 
 def test_configure_run_logs_dir_if_unset(tmp_path, settings):

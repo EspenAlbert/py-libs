@@ -1,3 +1,8 @@
+import os
+import pytest
+
+
+@pytest.mark.skipif(os.environ.get("SLOW", "") == "", reason="needs os.environ[SLOW]")
 def test_using_run_logs_dir_and_adding_100_files_should_clean_it(tmp_path, settings):
     run_logs_dir = settings.run_logs_dir = tmp_path / "run_logs"
     assert (
@@ -20,6 +25,13 @@ def test_using_run_logs_dir_and_adding_100_files_should_clean_it(tmp_path, setti
     assert len(list(run_logs_dir.iterdir())) == 101, (
         "Run logs directory should be cleaned up"
     )
+    for i in range(1_000):
+        run_dir = settings.next_run_logs_dir(f"test-{i}")
+        run_dir.mkdir(parents=True, exist_ok=True)
+        if i == 999:
+            assert run_dir.name == "1101_test-999"
+    
+
 
 
 def test_configure_run_logs_dir_if_unset(tmp_path, settings):

@@ -8,6 +8,7 @@ import sys
 from concurrent.futures import Future
 from contextlib import suppress
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from shutil import which
 from threading import RLock
@@ -228,16 +229,12 @@ class ShellConfig(Entity):
     def post_init(self) -> Self:
         if self.cwd is None:
             self.cwd = Path.cwd().resolve()
+        if not self.cwd.exists():
+            raise ValueError(f"cwd {self.cwd} does not exist")
         parsed_input = self.binary_file_args
-        if (
-            not self.skip_binary_check
-            and parsed_input.is_binary_call
-            and not which(parsed_input.binary_name)
-        ):
-            install = install_instructions(parsed_input.binary_name)
-            raise ValueError(
-                f"Binary or non-executable '{parsed_input.binary_name}' not found. {install}"
-            )
+        if not self.skip_binary_check and parsed_input.is_binary_call:
+            binary_path = _resolve_binary(parsed_input.binary_name, self.cwd)
+            self.shell_input = f"{binary_path} {' '.join(parsed_input.args)}"
         if self.is_binary_call is None:
             self.is_binary_call = parsed_input.is_binary_call
         if self.print_prefix is None:
@@ -566,3 +563,41 @@ class EmptyOutputError(Exception):
 
     def __str__(self) -> str:
         return f"No output in {self.stream} for {self.run}"
+
+
+@lru_cache
+def _mise_binary() -> Path | None:
+    if found := which("mise"):
+        return Path(found)
+    return None
+
+
+@lru_cache
+def _mise_which(binary_name: str, cwd: Path) -> Path | None:
+    from ask_shell._run import run_and_wait
+
+    logger.warning(f"Trying to find {binary_name} using 'mise which' in cwd {cwd}")
+    response = run_and_wait(
+        f"mise which {binary_name}",
+        allow_non_zero_exit=True,
+        cwd=cwd,
+        print_prefix="mise which in cwd",
+    )
+    if response.exit_code == 0:
+        return Path(response.stdout_one_line)
+    response = run_and_wait(
+        f"mise which {binary_name}",
+        allow_non_zero_exit=True,
+        cwd=Path.home(),
+        print_prefix="mise which in home",
+    )
+    return Path(response.stdout_one_line) if response.exit_code == 0 else None
+
+
+def _resolve_binary(binary_name: str, cwd: Path) -> Path:
+    if path := which(binary_name):
+        return Path(path)
+    if _mise_binary() and (found := _mise_which(binary_name, cwd)):
+        return found
+    install = install_instructions(binary_name)
+    raise ValueError(f"Binary or non-executable '{binary_name}' not found. {install}")

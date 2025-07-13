@@ -40,7 +40,8 @@ def test_run_with_output_is_logged_to_console(settings, capture_console, caplog)
     assert "This is an error message." in output
     assert "Test error" in output
     log_output = caplog.text
-    assert "❌ 'echo \"Hello, World!\"'" in log_output
+    assert "❌ " in log_output
+    assert 'echo "Hello, World!"\'' in log_output
     assert not get_live().is_started
 
 

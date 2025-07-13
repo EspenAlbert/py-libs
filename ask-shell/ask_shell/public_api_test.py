@@ -24,6 +24,7 @@ from ask_shell.models import (
     ShellRunPOpenStarted,
     ShellRunStdOutput,
     ShellRunStdStarted,
+    _mise_binary,
 )
 
 PYTHON_EXEC = sys.executable
@@ -340,3 +341,11 @@ def test_message_callbacks():
         ShellRunStdOutput.__name__,
         ShellRunAfter.__name__,
     ], f"Unexpected message class names: {message_class_names}"
+
+
+def test_mise_resolve(tmp_path):
+    mise = _mise_binary()
+    if not mise:
+        pytest.skip("mise binary not found")
+    result = run_and_wait("terraform version", cwd=tmp_path)
+    assert "not found" not in result.stdout_one_line

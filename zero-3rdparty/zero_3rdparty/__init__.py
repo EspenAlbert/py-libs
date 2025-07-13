@@ -1,3 +1,3 @@
 """Files with zero 3rd party dependencies."""
 
-VERSION = "1.0.0b3"
+VERSION = "1.0.0b4"

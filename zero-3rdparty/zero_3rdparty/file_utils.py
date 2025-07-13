@@ -67,7 +67,8 @@ def clean_dir(
         assert len(Path(path).parents) > expected_parents, (
             f"rm root by accident {path}?"
         )
-    rm_tree_logged(str(path), logger, ignore_errors=ignore_errors)
+    if path.exists():
+        rm_tree_logged(str(path), logger, ignore_errors=ignore_errors)
     if recreate:
         path.mkdir(parents=True, exist_ok=True)
 

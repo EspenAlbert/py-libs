@@ -21,7 +21,7 @@ wheels = [
 
 [[package]]
 name = "ask-shell"
-version = "0.0.4"
+version = "0.0.5"
 source = { editable = "ask-shell" }
 dependencies = [
     { name = "model-lib", extra = ["toml"] },
@@ -1425,5 +1425,5 @@ wheels = [
 
 [[package]]
 name = "zero-3rdparty"
-version = "1.0.0b3"
+version = "1.0.0b4"
 source = { editable = "zero-3rdparty" }

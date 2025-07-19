@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import shutil
 from logging import Logger
 from pathlib import Path
-from typing import Iterable, TypeAlias
+from typing import Iterable, NamedTuple, TypeAlias
 
 from zero_3rdparty.run_env import running_in_container_environment
 
@@ -154,32 +155,55 @@ def iter_paths_and_relative(
         yield path, str(path.relative_to(base_dir))
 
 
+class UpdateMarkerResult(NamedTuple):
+    before: str
+    after: str
+
+
 def update_between_markers(
     path: PathLike,
     content: str,
     start_marker: str,
     end_marker: str,
     *,
+    error_if_not_found: bool = False,
     append_if_not_found: bool = False,
-):
+    marker_content_separator: str = "\n",
+) -> UpdateMarkerResult:
     path = Path(path)
+    new_content = f"{start_marker}{marker_content_separator}{content}{marker_content_separator}{end_marker}"
     if not path.exists():
-        ensure_parents_write_text(path, f"{start_marker}\n{content}\n{end_marker}\n")
-        return
+        if error_if_not_found:
+            raise ValueError(f"File {path} does not exist, cannot update markers")
+        ensure_parents_write_text(path, new_content)
+        return UpdateMarkerResult("", new_content)
 
     old_text = path.read_text()
-    if append_if_not_found:
-        try:
-            old_content = read_between_markers(old_text, start_marker, end_marker)
-        except MarkerNotFoundError:
-            path.write_text(
-                old_text + f"\n\n{start_marker}\n{content}\n\n{end_marker}\n"
-            )
-            return
-    else:
+    try:
         old_content = read_between_markers(old_text, start_marker, end_marker)
-    content = old_text.replace(old_content, content)
-    path.write_text(content)
+    except MarkerNotFoundError as e:
+        if append_if_not_found:
+            new_content = (
+                f"{marker_content_separator}{new_content}{marker_content_separator}"
+            )
+            path.write_text(old_text + new_content)
+            return UpdateMarkerResult("", new_content)
+        raise e
+    if f"{marker_content_separator}{old_content}{marker_content_separator}" == content:
+        return UpdateMarkerResult(old_content, old_content)
+    updated = markers_pattern(start_marker, end_marker).sub(
+        new_content,
+        old_text,
+    )
+    path.write_text(updated)
+    return UpdateMarkerResult(old_content, content)
+
+
+def markers_pattern(start_marker: str, end_marker: str) -> re.Pattern:
+    return re.compile(
+        rf"(?P<start_marker>{re.escape(start_marker)})(?P<between_markers>.*?)(?P<end_marker>{re.escape(end_marker)})",
+        re.DOTALL,
+    )
 
 
 class MarkerNotFoundError(ValueError):
@@ -187,14 +211,39 @@ class MarkerNotFoundError(ValueError):
         self.marker_name = marker_name
 
 
-def read_between_markers(text: str, start_marker: str, end_marker: str) -> str:
-    start, end = text.find(start_marker), text.find(end_marker)
-    if start == -1:
-        raise MarkerNotFoundError(start_marker)
-    if end == -1:
-        raise MarkerNotFoundError(end_marker)
-    if end < start:
-        raise ValueError(f"end marker {end_marker} before start marker {start_marker}")
-    between_markers = text[start + len(start_marker) : end].strip("\n")
-    assert text.count(between_markers) == 1, "content between markers exists elsewhere!"
-    return between_markers
+class MultipleMarkersError(ValueError):
+    def __init__(self, marker_name: str, matches: list[re.Match]) -> None:
+        self.marker_name = marker_name
+        self.matches = matches
+
+
+def read_between_markers_multiple(
+    text: str, start_marker: str, end_marker: str
+) -> list[str]:
+    try:
+        single_response = read_between_markers(text, start_marker, end_marker)
+        return [single_response]
+    except MultipleMarkersError as e:
+        return [match.group("between_markers") for match in e.matches]
+
+
+def read_between_markers(
+    text: str,
+    start_marker: str,
+    end_marker: str,
+) -> str:
+    matches = list(markers_pattern(start_marker, end_marker).finditer(text))
+    if len(matches) == 0:
+        start, end = text.find(start_marker), text.find(end_marker)
+        if start == -1:
+            raise MarkerNotFoundError(start_marker)
+        if end == -1:
+            raise MarkerNotFoundError(end_marker)
+        if end < start:
+            raise ValueError(
+                f"end marker {end_marker} before start marker {start_marker}"
+            )
+        raise ValueError("No markers found in text")
+    if len(matches) == 1:
+        return matches[0].group("between_markers")
+    raise MultipleMarkersError(start_marker, matches)

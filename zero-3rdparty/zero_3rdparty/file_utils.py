@@ -189,7 +189,6 @@ def update_between_markers(
             path.write_text(old_text + new_content)
             return UpdateMarkerResult("", new_content)
         raise e
-    assert isinstance(old_content, str)
     if f"{marker_content_separator}{old_content}{marker_content_separator}" == content:
         return UpdateMarkerResult(old_content, old_content)
     updated = markers_pattern(start_marker, end_marker).sub(
@@ -218,9 +217,21 @@ class MultipleMarkersError(ValueError):
         self.matches = matches
 
 
+def read_between_markers_multiple(
+    text: str, start_marker: str, end_marker: str
+) -> list[str]:
+    try:
+        single_response = read_between_markers(text, start_marker, end_marker)
+        return [single_response]
+    except MultipleMarkersError as e:
+        return [match.group("between_markers") for match in e.matches]
+
+
 def read_between_markers(
-    text: str, start_marker: str, end_marker: str, *, allow_multiple: bool = False
-) -> str | list[str]:
+    text: str,
+    start_marker: str,
+    end_marker: str,
+) -> str:
     matches = list(markers_pattern(start_marker, end_marker).finditer(text))
     if len(matches) == 0:
         start, end = text.find(start_marker), text.find(end_marker)
@@ -235,6 +246,4 @@ def read_between_markers(
         raise ValueError("No markers found in text")
     if len(matches) == 1:
         return matches[0].group("between_markers")
-    if allow_multiple:
-        return [match.group("between_markers") for match in matches]
     raise MultipleMarkersError(start_marker, matches)

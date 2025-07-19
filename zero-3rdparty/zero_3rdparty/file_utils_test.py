@@ -14,6 +14,7 @@ from zero_3rdparty.file_utils import (
     iter_paths,
     iter_paths_and_relative,
     join_if_not_absolute,
+    read_between_markers_multiple,
     update_between_markers,
 )
 
@@ -196,3 +197,29 @@ def test_update_between_markers_leave_file_unchanged(tmp_path):
 
     update_between_markers(path, "4th content\n", start_marker, end_marker)
     assert read_lines() == file_lines
+
+
+def test_update_between_markers_with_content_separator_empty(tmp_path):
+    start_marker = "# start"
+    end_marker = "# end"
+    path = tmp_path / "file.txt"
+    original = f"{start_marker}some-content{end_marker}"
+    path.write_text(original)
+    replaced = update_between_markers(
+        path, "new-text", start_marker, end_marker, marker_content_separator=""
+    )
+    assert replaced.before == "some-content"
+    assert replaced.after == "new-text"
+
+
+def test_read_between_markers_multiple():
+    start_marker = "# start"
+    end_marker = "# end"
+    content = "\n".join([f"{start_marker}content-{i}{end_marker}" for i in range(5)])
+    assert read_between_markers_multiple(content, start_marker, end_marker) == [
+        "content-0",
+        "content-1",
+        "content-2",
+        "content-3",
+        "content-4",
+    ]

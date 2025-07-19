@@ -149,6 +149,18 @@ def iter_paths(
 def iter_paths_and_relative(
     base_dir: Path, *globs: str, rglob=True, only_files: bool = False
 ) -> Iterable[tuple[Path, str]]:
+    """
+    Yields tuples of paths and their relative paths under a base directory, matching specified glob patterns.
+    
+    Parameters:
+        base_dir (Path): The root directory to search within.
+        *globs (str): Glob patterns to match files or directories.
+        rglob (bool): If True, uses recursive globbing.
+        only_files (bool): If True, yields only files (not directories).
+    
+    Returns:
+        Iterable[tuple[Path, str]]: Tuples containing the absolute path and its relative path from base_dir.
+    """
     for path in iter_paths(base_dir, *globs, rglob=rglob):
         if only_files and not path.is_file():
             continue
@@ -170,6 +182,23 @@ def update_between_markers(
     append_if_not_found: bool = False,
     marker_content_separator: str = "\n",
 ) -> UpdateMarkerResult:
+    """
+    Update the text between specified start and end markers in a file, replacing or appending content as needed.
+    
+    If the file does not exist, it is created with the markers and content unless `error_if_not_found` is True. If the markers are not found in an existing file, the content is appended if `append_if_not_found` is True; otherwise, an error is raised. Returns a named tuple containing the previous and new content between the markers.
+    
+    Parameters:
+        path: Path to the file to update.
+        content: The text to insert between the markers.
+        start_marker: The marker indicating the start of the section to update.
+        end_marker: The marker indicating the end of the section to update.
+        error_if_not_found: If True, raises an error if the file does not exist.
+        append_if_not_found: If True, appends the markers and content if they are not found in the file.
+        marker_content_separator: String to separate markers from the content.
+    
+    Returns:
+        UpdateMarkerResult: A named tuple with the content before and after the update.
+    """
     path = Path(path)
     new_content = f"{start_marker}{marker_content_separator}{content}{marker_content_separator}{end_marker}"
     if not path.exists():
@@ -200,6 +229,11 @@ def update_between_markers(
 
 
 def markers_pattern(start_marker: str, end_marker: str) -> re.Pattern:
+    """
+    Compile a regular expression pattern to match text between specified start and end markers.
+    
+    The returned pattern captures the start marker, the content between markers, and the end marker as named groups.
+    """
     return re.compile(
         rf"(?P<start_marker>{re.escape(start_marker)})(?P<between_markers>.*?)(?P<end_marker>{re.escape(end_marker)})",
         re.DOTALL,
@@ -208,11 +242,24 @@ def markers_pattern(start_marker: str, end_marker: str) -> re.Pattern:
 
 class MarkerNotFoundError(ValueError):
     def __init__(self, marker_name: str) -> None:
+        """
+        Initialize the exception with the name of the marker associated with the error.
+        
+        Parameters:
+            marker_name (str): The name or identifier of the marker involved in the error.
+        """
         self.marker_name = marker_name
 
 
 class MultipleMarkersError(ValueError):
     def __init__(self, marker_name: str, matches: list[re.Match]) -> None:
+        """
+        Initialize a MultipleMarkersError with the marker name and list of regex matches.
+        
+        Parameters:
+            marker_name (str): The name or identifier of the marker associated with the error.
+            matches (list[re.Match]): List of regex match objects representing all found marker occurrences.
+        """
         self.marker_name = marker_name
         self.matches = matches
 
@@ -220,6 +267,19 @@ class MultipleMarkersError(ValueError):
 def read_between_markers_multiple(
     text: str, start_marker: str, end_marker: str
 ) -> list[str]:
+    """
+    Extracts all text segments found between multiple occurrences of the specified start and end markers.
+    
+    If only one marker pair is present, returns a single-item list containing the content between them. If multiple marker pairs are found, returns a list of all matched segments in order of appearance.
+    
+    Parameters:
+        text (str): The input text to search for marker-delimited segments.
+        start_marker (str): The marker indicating the start of a segment.
+        end_marker (str): The marker indicating the end of a segment.
+    
+    Returns:
+        list[str]: A list of all text segments found between each pair of markers.
+    """
     try:
         single_response = read_between_markers(text, start_marker, end_marker)
         return [single_response]
@@ -232,6 +292,17 @@ def read_between_markers(
     start_marker: str,
     end_marker: str,
 ) -> str:
+    """
+    Extracts the text between the first occurrence of the specified start and end markers in the input string.
+    
+    Raises:
+        MarkerNotFoundError: If either marker is missing from the text.
+        MultipleMarkersError: If multiple marker pairs are found.
+        ValueError: If the end marker appears before the start marker or if no valid marker pair is found.
+    
+    Returns:
+        The text found between the first matching pair of markers.
+    """
     matches = list(markers_pattern(start_marker, end_marker).finditer(text))
     if len(matches) == 0:
         start, end = text.find(start_marker), text.find(end_marker)

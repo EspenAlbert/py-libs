@@ -90,7 +90,7 @@ def test_iter_paths_and_relative(tmp_path, subtests):
         assert len(list(iter_paths(tmp_path, "*.ini"))) == 0
 
 
-def test_update_between_markers(tmp_path, subtests):
+def test_update_between_markers_update_non_existing_file(tmp_path):
     start_marker = "# start"
     end_marker = "# end"
     path: Path = tmp_path / "file.txt"
@@ -98,58 +98,101 @@ def test_update_between_markers(tmp_path, subtests):
     def read_lines() -> list[str]:
         return path.read_text().splitlines()
 
-    with subtests.test("update non existing file"):
-        update_between_markers(path, "1st content", start_marker, end_marker)
-        assert read_lines() == [start_marker, "1st content", end_marker]
-    with subtests.test("not touching existing content before"):
-        path.write_text(f"original\n{start_marker}\nold\n{end_marker}\n")
-        update_between_markers(path, "2nd content", start_marker, end_marker)
-        assert read_lines() == [
-            "original",
-            start_marker,
-            "2nd content",
-            end_marker,
-        ]
-    with subtests.test("not touching existing content after"):
-        path.write_text(f"some-start\n{start_marker}\nold\n{end_marker}\nsome-end")
-        update_between_markers(path, "3rd content", start_marker, end_marker)
-        assert read_lines() == [
-            "some-start",
-            start_marker,
-            "3rd content",
-            end_marker,
-            "some-end",
-        ]
-    with subtests.test("markers missing raises error"):
-        path.write_text("some-start-no-marker")
-        with pytest.raises(MarkerNotFoundError, match=start_marker):
-            update_between_markers(path, "error", start_marker, end_marker)
-        path.write_text(f"some-start-no-marker\n{start_marker}\ncontent")
-        with pytest.raises(MarkerNotFoundError, match=end_marker):
-            update_between_markers(path, "error", start_marker, end_marker)
-        path.write_text(f"some-start-no-marker\n{end_marker}\ncontent\n{start_marker}")
-        with pytest.raises(ValueError, match=f"end marker {end_marker} before start"):
-            update_between_markers(path, "error", start_marker, end_marker)
-    with subtests.test("append_if_not_found"):
-        path.write_text("original text")
-        update_between_markers(
-            path, "4th content", start_marker, end_marker, append_if_not_found=True
-        )
-        assert read_lines() == [
-            "original text",
-            "",
-            start_marker,
-            "4th content",
-            "",
-            end_marker,
-        ]
-    with subtests.test("leave file unchanged"):
-        update_between_markers(path, "4th content", start_marker, end_marker)
-        assert read_lines() == [
-            "original text",
-            "",
-            start_marker,
-            "4th content",
-            "",
-            end_marker,
-        ]
+    update_between_markers(path, "1st content", start_marker, end_marker)
+    assert read_lines() == [start_marker, "1st content", end_marker]
+
+
+def test_update_between_markers_not_touching_existing_content_before(tmp_path):
+    start_marker = "# start"
+    end_marker = "# end"
+    path: Path = tmp_path / "file.txt"
+
+    def read_lines() -> list[str]:
+        return path.read_text().splitlines()
+
+    path.write_text(f"original\n{start_marker}\nold\n{end_marker}\n")
+    update_between_markers(path, "2nd content", start_marker, end_marker)
+    assert read_lines() == [
+        "original",
+        start_marker,
+        "2nd content",
+        end_marker,
+    ]
+
+
+def test_update_between_markers_not_touching_existing_content_after(tmp_path):
+    start_marker = "# start"
+    end_marker = "# end"
+    path: Path = tmp_path / "file.txt"
+
+    def read_lines() -> list[str]:
+        return path.read_text().splitlines()
+
+    path.write_text(f"some-start\n{start_marker}\nold\n{end_marker}\nsome-end")
+    update_between_markers(path, "3rd content", start_marker, end_marker)
+    assert read_lines() == [
+        "some-start",
+        start_marker,
+        "3rd content",
+        end_marker,
+        "some-end",
+    ]
+
+
+def test_update_between_markers_markers_missing_raises_error(tmp_path):
+    start_marker = "# start"
+    end_marker = "# end"
+    path: Path = tmp_path / "file.txt"
+    path.write_text("some-start-no-marker")
+    with pytest.raises(MarkerNotFoundError, match=start_marker):
+        update_between_markers(path, "error", start_marker, end_marker)
+    path.write_text(f"some-start-no-marker\n{start_marker}\ncontent")
+    with pytest.raises(MarkerNotFoundError, match=end_marker):
+        update_between_markers(path, "error", start_marker, end_marker)
+    path.write_text(f"some-start-no-marker\n{end_marker}\ncontent\n{start_marker}")
+    with pytest.raises(ValueError, match=f"end marker {end_marker} before start"):
+        update_between_markers(path, "error", start_marker, end_marker)
+
+
+def test_update_between_markers_append_if_not_found(tmp_path):
+    start_marker = "# start"
+    end_marker = "# end"
+    path: Path = tmp_path / "file.txt"
+
+    def read_lines() -> list[str]:
+        return path.read_text().splitlines()
+
+    path.write_text("original text")
+    update_between_markers(
+        path, "4th content", start_marker, end_marker, append_if_not_found=True
+    )
+    assert read_lines() == [
+        "original text",
+        start_marker,
+        "4th content",
+        end_marker,
+    ]
+
+
+def test_update_between_markers_leave_file_unchanged(tmp_path):
+    start_marker = "# start"
+    end_marker = "# end"
+    path: Path = tmp_path / "file.txt"
+
+    def read_lines() -> list[str]:
+        return path.read_text().splitlines()
+
+    file_lines = [
+        "original text",
+        "",
+        "",
+        start_marker,
+        "4th content",
+        "",  # empty line should be preserved
+        end_marker,
+    ]
+
+    path.write_text("\n".join(file_lines))
+
+    update_between_markers(path, "4th content\n", start_marker, end_marker)
+    assert read_lines() == file_lines

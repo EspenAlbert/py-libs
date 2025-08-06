@@ -17,7 +17,7 @@ import signal
 import subprocess
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor, wait
+from concurrent.futures import Future, ThreadPoolExecutor, wait
 from contextlib import suppress
 from dataclasses import dataclass
 from os import getenv, setsid
@@ -28,6 +28,7 @@ from model_lib.pydantic_utils import copy_and_validate
 from rich.ansi import AnsiDecoder
 from rich.console import Console
 from rich.errors import MarkupError
+from zero_3rdparty.error import as_str_traceback
 
 from ask_shell._internal.models import (
     RunIncompleteError,
@@ -164,7 +165,7 @@ def run(
         "run() does not support user_input (only 1 should be active at a time), use run_and_wait() instead"
     )
     run = ShellRun(config)
-    _pool.submit(_execute_run, run)
+    _pool.submit(_execute_run, run)  # todo: never do a submit without checking
     with handle_interrupt_wait(f"interrupt when starting {run}"):
         return run.wait_on_started(start_timeout)
 
@@ -352,6 +353,26 @@ def kill(
         run.wait_until_complete(timeout=1, no_raise=True)
 
 
+@dataclass
+class _run_completer:
+    """contextmanager to catch any unexpected errors"""
+
+    run: ShellRun
+    consumer_future: Future
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_type is None:
+            return
+        run = self.run
+        tb = as_str_traceback(traceback)
+        logger.error(f"shell run failed unexpectedly with error {exc_value}, tb={tb}")
+        run._queue.put_nowait(ShellRunAfter(run=run, error=exc_value))
+        run._complete(error=exc_value, queue_consumer=self.consumer_future)
+
+
 def _execute_run(shell_run: ShellRun) -> ShellRun:
     """
     Principles:
@@ -381,24 +402,27 @@ def _execute_run(shell_run: ShellRun) -> ShellRun:
         return shell_run
 
     consumer_future = _pool.submit(queue_consumer)
-    output_dir = config.run_output_dir_resolved()
-    output_dir.mkdir(parents=True, exist_ok=True)
-    error: BaseException | None = None
-    for attempt in range(1, config.attempts + 1):
-        if attempt > 1:
-            queue.put_nowait(ShellRunRetryAttempt(attempt=attempt))
-            logger.warning(
-                f"Retrying run {shell_run} attempt {attempt} of {config.attempts}"
-            )
-        attempt_log_prefix = config.run_log_stem(attempt)
+    with _run_completer(shell_run, consumer_future):
+        output_dir = config.run_output_dir_resolved()
+        output_dir.mkdir(parents=True, exist_ok=True)
+        error: BaseException | None = None
+        for attempt in range(1, config.attempts + 1):
+            if attempt > 1:
+                queue.put_nowait(ShellRunRetryAttempt(attempt=attempt))
+                logger.warning(
+                    f"Retrying run {shell_run} attempt {attempt} of {config.attempts}"
+                )
+            attempt_log_prefix = config.run_log_stem(attempt)
 
-        result = _attempt_run(shell_run, output_dir, attempt_log_prefix)
-        match result:
-            case ShellRun() if result.clean_complete or not config.should_retry(result):
-                break
-            case BaseException():
-                error = result
-                break
+            result = _attempt_run(shell_run, output_dir, attempt_log_prefix)
+            match result:
+                case ShellRun() if result.clean_complete or not config.should_retry(
+                    result
+                ):
+                    break
+                case BaseException():
+                    error = result
+                    break
     queue.put_nowait(ShellRunAfter(run=shell_run, error=error))
     shell_run._complete(error=error, queue_consumer=consumer_future)
     return shell_run

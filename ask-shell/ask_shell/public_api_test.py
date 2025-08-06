@@ -82,9 +82,7 @@ def test_error_run():
 
 def test_invalid_popen_args():
     with pytest.raises(ShellError) as exc:
-        run_and_wait(
-            ShellConfig(shell_input="echo ok", extra_popen_kwargs=dict(unknown=True))
-        )
+        run_and_wait("echo ok", extra_popen_kwargs=dict(unknown=True))
     assert "unexpected keyword" in str(exc.value.base_error)
 
 

@@ -134,7 +134,12 @@ def named_refs(import_id_refs: dict[str, RefSymbol]) -> dict[str, RefStateWithSy
     }
 
 
-def process_reference_renames(pkg_state, active_refs, renames, task) -> set[str]:
+def process_reference_renames(
+    pkg_state: PkgRefState,
+    active_refs: dict[str, RefStateWithSymbol],
+    renames: list[str],
+    task: new_task,
+) -> set[str]:
     renamed_refs = set()
     used_active: set[str] = set()
     for ref_name in renames:
@@ -173,7 +178,7 @@ def handle_removed_refs(
         logger.info("No removed references found in the package")
         return
     if renames := select_list_multiple_choices(
-        "Select references thas has been renamed (if any):",
+        "Select references that have been renamed (if any):",
         choices=ChoiceTyped.from_descriptions(removed_refs),
     ):
         with new_task(

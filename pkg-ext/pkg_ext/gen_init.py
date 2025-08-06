@@ -1,4 +1,5 @@
 import logging
+import os
 from collections import defaultdict
 from pathlib import Path
 
@@ -23,7 +24,7 @@ def write_init(
             logger.info(f"Exposed references found in {file.relative_path}: {names}")
             file_import_names[
                 f"{init_file.parent.name}."
-                + file.relative_path.replace("/", ".").removesuffix(".py")
+                + file.relative_path.replace(os.path.sep, ".").removesuffix(".py")
             ] = names
         else:
             logger.info(f"No exposed references found in {file.relative_path}")

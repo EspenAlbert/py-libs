@@ -1,8 +1,11 @@
 import ast
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from pkg_ext.models import PkgSrcFile, PkgTestFile, is_dunder_file, is_test_file, ref_id
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -20,6 +23,11 @@ class SymbolParser(ast.NodeTransformer):
         return any(ref.endswith(f":{name}") for ref in self.local_imports)
 
     def visit_Name(self, node: ast.Name) -> ast.AST:
+        """TODO: revisit this logic
+        For type aliases: Check for TypeAlias annotations or assignments to typing constructs
+        For global variables: Track the context (module-level vs local scope)
+        Use sets instead of lists to avoid duplicates
+        """
         node_name = node.id
         if self.name_is_imported(node_name):
             return node
@@ -30,6 +38,7 @@ class SymbolParser(ast.NodeTransformer):
         return node
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST:
+        """TODO: Consider parsing function with generic_visit in case I want to look for raise statements and inspect signature."""
         if node.name.startswith("_"):
             # Skip private functions
             return node
@@ -40,6 +49,8 @@ class SymbolParser(ast.NodeTransformer):
         if node.name.startswith("_"):
             # Skip private classes
             return node
+        # TODO: Consider importing actual cls and using __mro__ for more robust exception detection
+        # Consider self.generic_visit
         bases = {base.id for base in node.bases if isinstance(base, ast.Name)}
         if "Exception" in bases or "BaseException" in bases:
             self.exceptions.append(node.name)
@@ -59,6 +70,8 @@ class SymbolParser(ast.NodeTransformer):
         module_name = node.module or ""
         if not module_name.startswith(self.pkg_import_name):
             return node
+        if node.level > 0:
+            logger.info("is this a relative import? Might need to support that too")
         for name in node.names:
             if name.name.startswith("_"):
                 # Skip private imports
@@ -76,7 +89,11 @@ def parse_symbols(
     if is_dunder_file(path):
         return None
     py_script = path.read_text()
-    tree = ast.parse(py_script, type_comments=True)
+    try:
+        tree = ast.parse(py_script, type_comments=True)
+    except SyntaxError as e:
+        logger.warning(f"Syntax error while parsing {path}: {e}")
+        return None
     parser = SymbolParser(pkg_import_name=pkg_import_name)
     parser.visit(tree)
     if is_test_file(path):

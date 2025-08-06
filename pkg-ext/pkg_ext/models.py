@@ -86,7 +86,7 @@ class RefSymbol(Entity):
     @property
     def local_id(self) -> str:
         """Without the top level package name."""
-        return f"{self.rel_path.removesuffix('.py')}:{self.name}"
+        return ref_id(self.rel_path, self.name)
 
     def full_id(self, pkg_import_name: str) -> str:
         """Full ID including the package name."""
@@ -126,7 +126,11 @@ class PkgFileBase(Entity):
         if not isinstance(other, PkgFileBase):
             raise TypeError(f"Expected PkgFileBase, got {type(other)}")
         other_import_name = other.module_full_name
-        return any(ref.startswith(other_import_name) for ref in self.local_imports)
+        other_import_ref = f"{other_import_name}:"
+        return any(
+            ref.startswith(other_import_ref) or ref == other_import_name
+            for ref in self.local_imports
+        )
 
     def iterate_ref_symbols(self) -> Iterable[RefSymbol]:
         yield from []
@@ -158,9 +162,9 @@ class PkgSrcFile(PkgFileBase):
     @model_validator(mode="after")
     def ensure_not_a_test(self):
         if is_test_file(self.path):
-            raise ValueError(f"File {self.path} is a test file, not a package file.")
+            raise ValueError(f"File {self.path} is a test file, not a src file.")
         if is_dunder_file(self.path):
-            raise ValueError(f"File {self.path} is a a package file.")
+            raise ValueError(f"File {self.path} is a dunder file, not a src file.")
         return self
 
     def iterate_ref_symbols(self) -> Iterable[RefSymbol]:

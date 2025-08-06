@@ -2,8 +2,13 @@ import time
 
 import pytest
 
-from ask_shell.rich_live import add_renderable, get_live, live_frozen, render_live
-from ask_shell.rich_progress import new_task
+from ask_shell._internal.rich_live import (
+    add_renderable,
+    get_live,
+    live_frozen,
+    render_live,
+)
+from ask_shell._internal.rich_progress import new_task
 
 
 def test_live_frozen_task_when_frozen_dont_update_console(capture_console):

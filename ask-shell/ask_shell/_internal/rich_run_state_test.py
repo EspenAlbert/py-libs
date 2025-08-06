@@ -1,8 +1,13 @@
 import logging
 
-from ask_shell.models import ShellConfig, ShellRun, ShellRunAfter, ShellRunStdOutput
-from ask_shell.rich_live import get_live
-from ask_shell.rich_run_state import _RunState
+from ask_shell._internal.models import (
+    ShellConfig,
+    ShellRun,
+    ShellRunAfter,
+    ShellRunStdOutput,
+)
+from ask_shell._internal.rich_live import get_live
+from ask_shell._internal.rich_run_state import _RunState
 
 logger = logging.getLogger(__name__)
 

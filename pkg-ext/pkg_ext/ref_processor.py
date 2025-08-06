@@ -1,14 +1,14 @@
 import logging
 from pathlib import Path
 
-from ask_shell._run import run_and_wait
-from ask_shell.interactive import (
+from ask_shell._internal._run import run_and_wait
+from ask_shell._internal.interactive import (
     ChoiceTyped,
     confirm,
     select_list_choice,
     select_list_multiple_choices,
 )
-from ask_shell.rich_progress import new_task
+from ask_shell._internal.rich_progress import new_task
 from model_lib.model_base import Entity
 from pydantic import DirectoryPath, Field
 from zero_3rdparty.iter_utils import (

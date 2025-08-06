@@ -4,10 +4,10 @@ import logging
 from pathlib import Path
 
 import typer
-from ask_shell.interactive import (
+from ask_shell._internal.interactive import (
     confirm,
 )
-from ask_shell.typer_command import configure_logging
+from ask_shell._internal.typer_command import configure_logging
 from typer import Typer
 from zero_3rdparty.file_utils import iter_paths_and_relative
 

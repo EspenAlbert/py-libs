@@ -5,14 +5,14 @@ from unittest.mock import Mock
 
 import pytest
 
-from ask_shell._run import (
+from ask_shell._internal._run import (
     THREAD_POOL_FULL_WAIT_TIME_SECONDS,
     THREADS_PER_RUN,
     run,
     wait_on_ok_errors,
 )
-from ask_shell.global_callbacks import wait_on_available_threads
-from ask_shell.models import ShellRun, ShellRunBefore
+from ask_shell._internal.global_callbacks import wait_on_available_threads
+from ask_shell._internal.models import ShellRun, ShellRunBefore
 from ask_shell.settings import AskShellSettings
 
 logger = logging.getLogger(__name__)

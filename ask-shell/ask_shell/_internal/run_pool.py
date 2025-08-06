@@ -5,14 +5,14 @@ from math import ceil
 from threading import Event, RLock
 from typing import Any, Callable, Protocol, TypeVar
 
-from ask_shell._run import (
+from ask_shell._internal._run import (
     THREADS_PER_RUN,
     get_pool,
     handle_interrupt_wait,
     max_run_count_for_workers,
     wait_if_many_runs,
 )
-from ask_shell.rich_progress import new_task
+from ask_shell._internal.rich_progress import new_task
 from ask_shell.settings import AskShellSettings
 
 T_co = TypeVar("T_co", covariant=True)

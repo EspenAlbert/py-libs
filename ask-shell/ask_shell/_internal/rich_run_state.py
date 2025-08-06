@@ -9,7 +9,7 @@ from rich.progress import (
     TimeElapsedColumn,
 )
 
-from ask_shell.models import (
+from ask_shell._internal.models import (
     ShellRun,
     ShellRunEventT,
     ShellRunPOpenStarted,
@@ -18,7 +18,7 @@ from ask_shell.models import (
     ShellRunStdReadError,
     ShellRunStdStarted,
 )
-from ask_shell.rich_progress import ProgressManager, log_task_done, new_task
+from ask_shell._internal.rich_progress import ProgressManager, log_task_done, new_task
 
 
 def _deque_default() -> deque[str]:

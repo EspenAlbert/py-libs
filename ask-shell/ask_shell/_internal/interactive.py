@@ -19,9 +19,12 @@ from questionary import select as _select
 from questionary import text as _text
 from zero_3rdparty.object_name import as_name, func_arg_names
 
-from ask_shell._run import get_pool
-from ask_shell._run_env import ENV_NAME_FORCE_INTERACTIVE_SHELL, interactive_shell
-from ask_shell.rich_live import pause_live
+from ask_shell._internal._run import get_pool
+from ask_shell._internal._run_env import (
+    ENV_NAME_FORCE_INTERACTIVE_SHELL,
+    interactive_shell,
+)
+from ask_shell._internal.rich_live import pause_live
 from ask_shell.settings import AskShellSettings
 
 T = TypeVar("T")

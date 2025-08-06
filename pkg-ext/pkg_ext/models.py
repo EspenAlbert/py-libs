@@ -6,7 +6,7 @@ from pathlib import Path
 from pydoc import locate
 from typing import Iterable
 
-from ask_shell.interactive import ChoiceTyped
+from ask_shell._internal.interactive import ChoiceTyped
 from model_lib.model_base import Entity
 from pydantic import Field, ValidationError, model_validator
 from zero_3rdparty.enum_utils import StrEnum

@@ -5,7 +5,7 @@ from os import getenv
 
 from zero_3rdparty.run_env import in_test_env, running_in_container_environment
 
-from ask_shell._constants import ENV_PREFIX
+from ask_shell._internal._constants import ENV_PREFIX
 
 ENV_NAME_FORCE_INTERACTIVE_SHELL = f"{ENV_PREFIX}FORCE_INTERACTIVE_SHELL"
 logger = logging.getLogger(__name__)

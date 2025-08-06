@@ -12,8 +12,8 @@ from zero_3rdparty.datetime_utils import utc_now
 from zero_3rdparty.file_utils import clean_dir
 from zero_3rdparty.object_name import as_name
 
-from ask_shell._constants import ENV_PREFIX
-from ask_shell._run_env import interactive_shell
+from ask_shell._internal._constants import ENV_PREFIX
+from ask_shell._internal._run_env import interactive_shell
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +21,10 @@ DEFAULT_RUN_LOGS_BASE_DIR = "run_logs"
 
 
 def default_callbacks_funcs() -> list[str]:
-    from ask_shell.global_callbacks import (
+    from ask_shell._internal.global_callbacks import (
         wait_on_available_threads,
     )
-    from ask_shell.rich_live_callback import rich_live_callback
+    from ask_shell._internal.rich_live_callback import rich_live_callback
 
     return [
         as_name(call)
@@ -153,7 +153,7 @@ def _clean_run_logs(run_logs: Path, clean_value: str) -> None:
     if not run_logs.exists():
         return
     if run_logs.name != DEFAULT_RUN_LOGS_BASE_DIR:
-        from ask_shell.interactive import confirm  # Avoid circular import
+        from ask_shell._internal.interactive import confirm  # Avoid circular import
 
         if confirm(
             f"Run logs directory '{run_logs}' is not the default {DEFAULT_RUN_LOGS_BASE_DIR}. Do you want to skip cleaning?",

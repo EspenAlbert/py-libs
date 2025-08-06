@@ -1,6 +1,6 @@
 import logging
 
-from ask_shell.typer_command import hide_secrets
+from ask_shell._internal.typer_command import hide_secrets
 
 
 def test_hide_secrets(caplog, tmp_path):

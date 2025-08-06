@@ -21,7 +21,7 @@ from pydantic import Field, model_validator
 from rich.console import Console
 from zero_3rdparty.closable_queue import ClosableQueue
 
-from ask_shell._run_env import interactive_shell
+from ask_shell._internal._run_env import interactive_shell
 from ask_shell.settings import AskShellSettings
 
 logger = logging.getLogger(__name__)
@@ -574,7 +574,7 @@ def _mise_binary() -> Path | None:
 
 @lru_cache
 def _mise_which(binary_name: str, cwd: Path) -> Path | None:
-    from ask_shell._run import run_and_wait
+    from ask_shell._internal._run import run_and_wait
 
     logger.warning(f"Trying to find {binary_name} using 'mise which' in cwd {cwd}")
     response = run_and_wait(

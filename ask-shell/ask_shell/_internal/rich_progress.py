@@ -15,7 +15,7 @@ from rich.progress import (
     TimeElapsedColumn,
 )
 
-from ask_shell.rich_live import RemoveLivePart, add_renderable, render_live
+from ask_shell._internal.rich_live import RemoveLivePart, add_renderable, render_live
 from ask_shell.settings import default_rich_info_style
 
 logger = logging.getLogger(__name__)

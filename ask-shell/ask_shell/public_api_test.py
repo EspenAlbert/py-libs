@@ -18,7 +18,7 @@ from ask_shell import (
     run_and_wait,
     wait_on_ok_errors,
 )
-from ask_shell.models import (
+from ask_shell._internal.models import (
     ShellRunAfter,
     ShellRunBefore,
     ShellRunPOpenStarted,

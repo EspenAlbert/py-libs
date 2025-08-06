@@ -14,8 +14,8 @@ from rich.logging import RichHandler
 from rich.traceback import Traceback
 
 import ask_shell
-from ask_shell.rich_live import get_live_console, log_to_live
-from ask_shell.rich_progress import new_task
+from ask_shell._internal.rich_live import get_live_console, log_to_live
+from ask_shell._internal.rich_progress import new_task
 from ask_shell.settings import AskShellSettings, default_rich_info_style
 
 T = TypeVar("T", bound=Callable)

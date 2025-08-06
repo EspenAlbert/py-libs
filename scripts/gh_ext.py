@@ -10,13 +10,13 @@ from typing import Any, Callable, ClassVar, Generic, Protocol, Self, TypeVar
 
 import git
 import typer
-from ask_shell._run import run_and_wait
-from ask_shell._run_env import interactive_shell
-from ask_shell.interactive import select_list_multiple
-from ask_shell.rich_live import print_to_live
-from ask_shell.rich_progress import new_task
+from ask_shell._internal._run import run_and_wait
+from ask_shell._internal._run_env import interactive_shell
+from ask_shell._internal.interactive import select_list_multiple
+from ask_shell._internal.rich_live import print_to_live
+from ask_shell._internal.rich_progress import new_task
+from ask_shell._internal.typer_command import configure_logging
 from ask_shell.settings import AskShellSettings
-from ask_shell.typer_command import configure_logging
 from model_lib import Entity, parse_payload
 from model_lib.serialize import dump
 from model_lib.serialize.parse import parse_model

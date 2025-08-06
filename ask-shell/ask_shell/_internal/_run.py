@@ -29,7 +29,7 @@ from rich.ansi import AnsiDecoder
 from rich.console import Console
 from rich.errors import MarkupError
 
-from ask_shell.models import (
+from ask_shell._internal.models import (
     RunIncompleteError,
     ShellConfig,
     ShellRun,

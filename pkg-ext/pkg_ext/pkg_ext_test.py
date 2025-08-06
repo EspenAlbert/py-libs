@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from ask_shell import _run_env, models, settings
+from ask_shell import settings
+from ask_shell._internal import _run_env, models
 
 from pkg_ext.file_parser import parse_symbols
 from pkg_ext.models import PkgSrcFile

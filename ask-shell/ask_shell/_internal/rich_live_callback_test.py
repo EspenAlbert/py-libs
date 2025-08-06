@@ -1,12 +1,12 @@
-from ask_shell.conftest import create_run_mocked_config
-from ask_shell.models import (
+from ask_shell._internal.models import (
     ShellRunAfter,
     ShellRunBefore,
 )
-from ask_shell.rich_live import _live_is_frozen, get_live
-from ask_shell.rich_live_callback import (
+from ask_shell._internal.rich_live import _live_is_frozen, get_live
+from ask_shell._internal.rich_live_callback import (
     RunConsoleLogger,
 )
+from ask_shell.conftest import create_run_mocked_config
 
 
 def test_live_frozen_when_user_input_task_is_running():

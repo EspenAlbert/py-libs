@@ -59,4 +59,4 @@ gh-ext *args:
 
 [positional-arguments]
 pkg-ext *args:
-  @uv run scripts/pkg_ext.py {{args}}
+  @uv run pkg-ext {{args}}

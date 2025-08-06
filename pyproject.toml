@@ -5,6 +5,7 @@ requires-python = ">=3.10"
 dependencies = [
     "ask-shell",
     "model-lib[toml]",
+    "pkg-ext",
     "zero-3rdparty",
 ]
 
@@ -14,21 +15,22 @@ package = false
 [tool.uv.sources]
 ask-shell = { workspace = true }
 model-lib = { workspace = true }
+pkg-ext = {workspace = true }
 zero-3rdparty = { workspace = true }
 
 [tool.uv.workspace]
-members = ["ask-shell", "model-lib", "zero-3rdparty"]
+members = ["ask-shell", "model-lib", "pkg-ext", "zero-3rdparty"]
 exclude=['model_lib', 'docker_example', 'compose_chart_export', 'docker_compose_parser']
 
 [tool.pytest.ini_options]
 addopts = "-s -vv --log-cli-level=INFO --ignore=.venv/* --ignore=.venv-ci/* --ignore=archive/* --capture=no --durations=0"
-testpaths = ["ask-shell/ask_shell", "model-lib/model_lib", "zero-3rdparty/zero_3rdparty"]
+testpaths = ["ask-shell/ask_shell", "model-lib/model_lib", "pkt-ext/pkg_ext", "zero-3rdparty/zero_3rdparty"]
 
 [tool.coverage.report]
 omit = ["*_test.py"]
 
 [tool.pyright]
-include = ["ask-shell", "model-lib", "zero-3rdparty"]
+include = ["ask-shell", "model-lib", "pkg-ext", "zero-3rdparty"]
 venvPath = ".venv"
 exclude = [
     "zero-3rdparty/zero_3rdparty/humps.py",

@@ -132,7 +132,9 @@ class SecretsHider(logging.Filter):
         super().__init__(name)
 
     def filter(self, record: logging.LogRecord) -> bool:
-        record.msg = remove_secrets(record.msg, self.secrets)
+        msg = record.msg
+        if isinstance(msg, str):
+            record.msg = remove_secrets(msg, self.secrets)
         return True
 
 

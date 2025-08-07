@@ -29,6 +29,7 @@ from rich.ansi import AnsiDecoder
 from rich.console import Console
 from rich.errors import MarkupError
 from zero_3rdparty.error import as_str_traceback
+from zero_3rdparty.future import add_done_callback, add_error_logging, chain_future
 
 from ask_shell._internal.models import (
     RunIncompleteError,
@@ -165,7 +166,10 @@ def run(
         "run() does not support user_input (only 1 should be active at a time), use run_and_wait() instead"
     )
     run = ShellRun(config)
-    _pool.submit(_execute_run, run)  # todo: never do a submit without checking
+    future = _pool.submit(_execute_run, run)
+    add_error_logging(
+        future, error_logger=logger, error_hint="unexpected error in _execute_run"
+    )
     with handle_interrupt_wait(f"interrupt when starting {run}"):
         return run.wait_on_started(start_timeout)
 
@@ -221,7 +225,11 @@ def run_and_wait(
         skip_progress_output=skip_progress_output,
     )
     run = ShellRun(config)
-    _pool.submit(_execute_run, run)
+    future = _pool.submit(_execute_run, run)
+    add_error_logging(
+        future, error_logger=logger, error_hint="unexpected error in _execute_run"
+    )
+    chain_future(future, run._complete_flag, skip_log_already_complete=True)
     with handle_interrupt_wait(f"interrupt when waiting for {run}"):
         run.wait_until_complete(timeout)
     return run
@@ -402,6 +410,12 @@ def _execute_run(shell_run: ShellRun) -> ShellRun:
         return shell_run
 
     consumer_future = _pool.submit(queue_consumer)
+    add_error_logging(
+        consumer_future,
+        error_logger=logger,
+        error_hint="unexpected queue_consumer error",
+    )
+    add_done_callback(shell_run._complete_flag, queue.close_safely)
     with _run_completer(shell_run, consumer_future):
         output_dir = config.run_output_dir_resolved()
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -423,9 +437,9 @@ def _execute_run(shell_run: ShellRun) -> ShellRun:
                 case BaseException():
                     error = result
                     break
-    queue.put_nowait(ShellRunAfter(run=shell_run, error=error))
-    shell_run._complete(error=error, queue_consumer=consumer_future)
-    return shell_run
+        queue.put_nowait(ShellRunAfter(run=shell_run, error=error))
+        shell_run._complete(error=error, queue_consumer=consumer_future)
+        return shell_run
 
 
 def _attempt_run(

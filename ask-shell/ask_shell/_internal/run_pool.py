@@ -45,8 +45,8 @@ class run_pool:
     _event: Event = field(init=False, default_factory=Event)
 
     def __post_init__(self):
-        self.pool_max_workers = self.pool._max_workers
-        max_run_count = max_run_count_for_workers(self.pool_max_workers)
+        self._pool_max_workers = self.pool._max_workers
+        max_run_count = max_run_count_for_workers(self._pool_max_workers)
         workers_required_if_full = (
             self.max_concurrent_submits * self.threads_used_per_submit
         )

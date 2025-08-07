@@ -7,13 +7,10 @@ from pydoc import locate
 from typing import Any, Callable, ClassVar, Literal, Self
 
 from model_lib.static_settings import StaticSettings
-from pydantic import Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
 from zero_3rdparty.datetime_utils import utc_now
 from zero_3rdparty.file_utils import clean_dir
 from zero_3rdparty.object_name import as_name
-
-from ask_shell._internal._constants import ENV_PREFIX
-from ask_shell._internal._run_env import interactive_shell
 
 logger = logging.getLogger(__name__)
 
@@ -35,33 +32,64 @@ def default_callbacks_funcs() -> list[str]:
     ]
 
 
-class AskShellSettings(StaticSettings):
-    ENV_NAME_RUN_THREAD_COUNT: ClassVar[str] = f"{ENV_PREFIX}RUN_THREAD_COUNT"
-    RUN_THREAD_COUNT_DEFAULT: ClassVar[int] = 50
-    ENV_NAME_THREAD_POOL_FULL_WAIT_TIME_SECONDS: ClassVar[str] = (
-        f"{ENV_PREFIX}THREAD_POOL_FULL_WAIT_TIME_SECONDS"  # How long to wait when the thread pools is full before trying again
-    )
-    THREAD_POOL_FULL_WAIT_TIME_SECONDS_DEFAULT: ClassVar[int] = 5
-    ENV_NAME_SEARCH_ENABLED_AFTER_CHOICES: ClassVar[str] = (
-        f"{ENV_PREFIX}SEARCH_ENABLED_AFTER_CHOICES"  # How many choices to show before enabling search
-    )
-    SEARCH_ENABLED_AFTER_CHOICES_DEFAULT: ClassVar[int] = 7
-    RUN_THREAD_COUNT: int = RUN_THREAD_COUNT_DEFAULT
+def default_remove_os_secrets() -> bool:
+    from ask_shell._internal._run_env import interactive_shell
 
+    return not interactive_shell
+
+
+ENV_PREFIX = "ASK_SHELL_"
+
+
+class AskShellSettings(StaticSettings):
+    model_config = ConfigDict(populate_by_name=True)  # type: ignore
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "UNSET"] = (
         "UNSET"
     )
 
-    # These should be prefixed with `ENV_PREFIX` to avoid conflicts with other libraries
-    global_callback_strings: list[str] = Field(default_factory=default_callbacks_funcs)
-    remove_os_secrets: bool = Field(default_factory=lambda: not interactive_shell())
+    ENV_NAME_FORCE_INTERACTIVE_SHELL: ClassVar[str] = (
+        f"{ENV_PREFIX}FORCE_INTERACTIVE_SHELL"
+    )
+    force_interactive_shell: bool = Field(
+        default=False,
+        alias=ENV_NAME_FORCE_INTERACTIVE_SHELL,
+        description="Useful for testing",
+    )
+    ENV_NAME_RUN_THREAD_COUNT: ClassVar[str] = f"{ENV_PREFIX}RUN_THREAD_COUNT"
+    run_thread_count: int = Field(
+        default=50,
+        alias=ENV_NAME_RUN_THREAD_COUNT,
+        description="Thread count for pool used to run shell commands",
+    )
+    thread_pool_full_wait_time_seconds: float = Field(
+        default=5,
+        alias=f"{ENV_PREFIX}THREAD_POOL_FULL_WAIT_TIME_SECONDS",
+        description="How long to wait when the thread pools is full before trying again",
+    )
+    search_enabled_after_choices: int = Field(
+        default=7,
+        alias=f"{ENV_PREFIX}SEARCH_ENABLED_AFTER_CHOICES",
+        description="How many choices to show before enabling search",
+    )
+    global_callback_strings: list[str] = Field(
+        default_factory=default_callbacks_funcs,
+        alias=f"{ENV_PREFIX}GLOBAL_CALLBACKS",
+        description="Use global callbacks to receive ShellRun events. Uses `locate` to find the callback function by its string name. Setting this will override defaults",
+    )
+    remove_os_secrets: bool = Field(
+        default_factory=default_remove_os_secrets,
+        alias=f"{ENV_PREFIX}REMOVE_OS_SECRETS",
+        description="Use a log filter to remove secrets from the terminal output. No guarantees though. Always be careful when logging.",
+    )
     run_logs_dir: Path | None = Field(
         default=None,
         description="Directory to store run logs. If not set, defaults to `cache_root/run_logs/YYYY-MM-DD`. You can also use `configure_run_logs_dir_if_unset` to set it dynamically.",
+        alias=f"{ENV_PREFIX}RUN_LOGS_DIR",
     )
     run_logs_clean: str = Field(
         default="yesterday",
         description="Runs once If `run_logs_dir` is not set. Can be 'yesterday' or a date string like '2023-01-01'. Will clean all logs up until the specified date but not that date itself.",
+        alias=f"{ENV_PREFIX}RUN_LOGS_CLEAN",
     )
 
     @model_validator(mode="after")
@@ -97,6 +125,8 @@ class AskShellSettings(StaticSettings):
         skip_env_update: bool = False,
         date_folder_expressing: str | None = "%Y-%m-%dT%H-%M-%S",
     ) -> Path:
+        from ask_shell._internal._run_env import interactive_shell
+
         if self.run_logs_dir is not None:
             return self.run_logs_dir
         assert new_relative_path or new_absolute_path, (
@@ -183,3 +213,8 @@ def _clean_run_logs(run_logs: Path, clean_value: str) -> None:
         if dir_date < parsed_date:
             logger.info(f"Cleaning run logs directory: {path}")
             clean_dir(path, recreate=False)
+
+
+_global_settings = AskShellSettings.for_testing(
+    global_callback_strings=[], remove_os_secrets=False
+)

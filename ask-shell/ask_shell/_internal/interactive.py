@@ -7,7 +7,6 @@ import logging
 import os
 from dataclasses import dataclass, field
 from functools import wraps
-from os import getenv
 from typing import Callable, Generic, TypeVar
 
 from prompt_toolkit.input.defaults import create_pipe_input
@@ -21,18 +20,15 @@ from zero_3rdparty.object_name import as_name, func_arg_names
 
 from ask_shell._internal._run import get_pool
 from ask_shell._internal._run_env import (
-    ENV_NAME_FORCE_INTERACTIVE_SHELL,
     interactive_shell,
 )
 from ask_shell._internal.rich_live import pause_live
-from ask_shell.settings import AskShellSettings
+from ask_shell.settings import AskShellSettings, _global_settings
 
 T = TypeVar("T")
 TypedAsk = Callable[[Question, type[T]], T]
 logger = logging.getLogger(__name__)
-SEARCH_ENABLED_AFTER_CHOICES = int(
-    getenv(AskShellSettings.ENV_NAME_SEARCH_ENABLED_AFTER_CHOICES, "7")
-)
+SEARCH_ENABLED_AFTER_CHOICES = _global_settings.search_enabled_after_choices
 
 
 def _default_asker(q: Question, _: type[T]) -> T:
@@ -315,6 +311,7 @@ class question_patcher:
 
     responses: list[str]
     next_response: int = 0
+    settings: AskShellSettings = field(default_factory=AskShellSettings.from_env)
 
     _old_force_interactive_env_str: str = field(default="", init=False, repr=False)
 
@@ -322,17 +319,15 @@ class question_patcher:
         global _question_asker
         self._old_patcher = _question_asker
         _question_asker = self.ask_question
-        self._old_force_interactive_env_str = getenv(
-            ENV_NAME_FORCE_INTERACTIVE_SHELL, ""
-        )
+        self._old_force_interactive_env_str = str(self.settings.force_interactive_shell)
         interactive_shell.cache_clear()
-        os.environ[ENV_NAME_FORCE_INTERACTIVE_SHELL] = "true"
+        os.environ[self.settings.ENV_NAME_FORCE_INTERACTIVE_SHELL] = "true"
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         global _question_patcher
         _question_patcher = self._old_patcher
-        os.environ[ENV_NAME_FORCE_INTERACTIVE_SHELL] = (
+        os.environ[self.settings.ENV_NAME_FORCE_INTERACTIVE_SHELL] = (
             self._old_force_interactive_env_str
         )
         interactive_shell.cache_clear()

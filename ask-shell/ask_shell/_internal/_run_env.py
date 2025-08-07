@@ -5,21 +5,16 @@ from os import getenv
 
 from zero_3rdparty.run_env import in_test_env, running_in_container_environment
 
-from ask_shell._internal._constants import ENV_PREFIX
+from ask_shell.settings import AskShellSettings, _global_settings
 
-ENV_NAME_FORCE_INTERACTIVE_SHELL = f"{ENV_PREFIX}FORCE_INTERACTIVE_SHELL"
 logger = logging.getLogger(__name__)
 
 
 @lru_cache
 def interactive_shell() -> bool:
-    if getenv(ENV_NAME_FORCE_INTERACTIVE_SHELL, "false").lower() in (
-        "true",
-        "1",
-        "yes",
-    ):
+    if AskShellSettings.from_env().force_interactive_shell:
         logger.debug(
-            f"Interactive shell forced by environment variable {ENV_NAME_FORCE_INTERACTIVE_SHELL}"
+            f"Interactive shell forced by environment variable {_global_settings.ENV_NAME_FORCE_INTERACTIVE_SHELL}"
         )
         return True
     if non_interactive_reason := _not_interactive_reason():

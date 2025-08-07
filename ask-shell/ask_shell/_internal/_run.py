@@ -20,7 +20,7 @@ import time
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 from contextlib import suppress
 from dataclasses import dataclass
-from os import getenv, setsid
+from os import setsid
 from pathlib import Path
 from typing import IO, Any, Callable
 
@@ -45,25 +45,13 @@ from ask_shell._internal.models import (
     ShellRunStdReadError,
     ShellRunStdStarted,
 )
-from ask_shell.settings import AskShellSettings
+from ask_shell.settings import AskShellSettings, _global_settings
 
 logger = logging.getLogger(__name__)
 THREADS_PER_RUN = 4  # Each run will take 4 threads: 1 for stdout, 1 for stderr, 1 for consuming queue messages and 1 for popen wait.
-THREAD_POOL_FULL_WAIT_TIME_SECONDS = float(
-    getenv(
-        AskShellSettings.ENV_NAME_THREAD_POOL_FULL_WAIT_TIME_SECONDS,
-        AskShellSettings.THREAD_POOL_FULL_WAIT_TIME_SECONDS_DEFAULT,
-    )
-)
+THREAD_POOL_FULL_WAIT_TIME_SECONDS = _global_settings.thread_pool_full_wait_time_seconds
 
-_pool = ThreadPoolExecutor(
-    max_workers=int(
-        getenv(
-            AskShellSettings.ENV_NAME_RUN_THREAD_COUNT,
-            AskShellSettings.RUN_THREAD_COUNT_DEFAULT,
-        )
-    )
-)
+_pool = ThreadPoolExecutor(max_workers=_global_settings.run_thread_count)
 
 
 def get_pool() -> ThreadPoolExecutor:
@@ -100,7 +88,7 @@ def max_run_count_for_workers(worker_count: int | None = None) -> int:
     """Calculate the maximum number of runs that can be executed concurrently based on the number of workers."""
     if worker_count is None:
         worker_count = _pool._max_workers  # type: ignore
-    return max(1, worker_count // THREADS_PER_RUN)  # leave some threads for other tasks
+    return max(1, worker_count // THREADS_PER_RUN)
 
 
 def stop_runs_and_pool(reason: str = "atexit", immediate: bool = False):
@@ -532,7 +520,6 @@ def _run(
 
         fut_stdout = _pool.submit(read_stdout)
         fut_stderr = _pool.submit(read_stderr)
-        # no proc.wait/communicate, not sure if it will work
         wait([fut_stdout, fut_stderr])
 
 

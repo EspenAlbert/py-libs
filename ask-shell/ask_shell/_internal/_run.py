@@ -51,7 +51,7 @@ logger = logging.getLogger(__name__)
 THREADS_PER_RUN = 4  # Each run will take 4 threads: 1 for stdout, 1 for stderr, 1 for consuming queue messages and 1 for popen wait.
 THREAD_POOL_FULL_WAIT_TIME_SECONDS = _global_settings.thread_pool_full_wait_time_seconds
 
-_pool = ThreadPoolExecutor(max_workers=_global_settings.run_thread_count)
+_pool = ThreadPoolExecutor(max_workers=_global_settings.thread_count)
 
 
 def get_pool() -> ThreadPoolExecutor:
@@ -86,8 +86,7 @@ def wait_if_many_runs(
 
 def max_run_count_for_workers(worker_count: int | None = None) -> int:
     """Calculate the maximum number of runs that can be executed concurrently based on the number of workers."""
-    if worker_count is None:
-        worker_count = _pool._max_workers  # type: ignore
+    worker_count = worker_count or _global_settings.thread_count
     return max(1, worker_count // THREADS_PER_RUN)
 
 

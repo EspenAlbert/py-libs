@@ -52,7 +52,7 @@ class run_pool:
         )
         run_count_used_by_this_pool = ceil(workers_required_if_full // THREADS_PER_RUN)
         assert run_count_used_by_this_pool < max_run_count, (
-            f"Run count used by this pool ({run_count_used_by_this_pool}) exceeds max run count ({max_run_count}). Adjust {AskShellSettings.ENV_NAME_RUN_THREAD_COUNT} environment variable or decrease `max_concurrent_submits` parameter."
+            f"Run count used by this pool ({run_count_used_by_this_pool}) exceeds max run count ({max_run_count}). Adjust {AskShellSettings.ENV_NAME_THREAD_COUNT} environment variable or decrease `max_concurrent_submits` parameter."
         )
         self._max_run_count_with_this_pool = max_run_count - run_count_used_by_this_pool
 

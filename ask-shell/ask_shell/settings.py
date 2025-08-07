@@ -55,11 +55,11 @@ class AskShellSettings(StaticSettings):
         alias=ENV_NAME_FORCE_INTERACTIVE_SHELL,
         description="Useful for testing",
     )
-    ENV_NAME_RUN_THREAD_COUNT: ClassVar[str] = f"{ENV_PREFIX}RUN_THREAD_COUNT"
-    run_thread_count: int = Field(
+    ENV_NAME_THREAD_COUNT: ClassVar[str] = f"{ENV_PREFIX}THREAD_COUNT"
+    thread_count: int = Field(
         default=50,
-        alias=ENV_NAME_RUN_THREAD_COUNT,
-        description="Thread count for pool used to run shell commands",
+        alias=ENV_NAME_THREAD_COUNT,
+        description="Thread count for ask-shell pool",
     )
     thread_pool_full_wait_time_seconds: float = Field(
         default=5,

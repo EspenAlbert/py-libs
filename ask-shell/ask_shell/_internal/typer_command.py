@@ -45,8 +45,8 @@ def track_progress_decorator(
             ):
                 try:
                     return command(*args, **kwargs)
-                except BaseException as e:
-                    raise e  # re-raise the exception to be handled by the except hook
+                except BaseException:
+                    raise  # re-raise the exception to be handled by the except hook
                 finally:
                     log_exit_summary(settings)
 
@@ -148,11 +148,7 @@ def hide_secrets(handler: logging.Handler, secrets_dict: dict[str, str]) -> None
         if not isinstance(value, str):
             continue
         key_lower = key.lower()
-        if (
-            key_lower in {"true", "false"}
-            or value.lower() in {"true", "false"}
-            or value.isdigit()
-        ):
+        if value.lower() in {"true", "false"} or value.isdigit():
             continue
         with suppress(Exception):
             if Path(value).exists():

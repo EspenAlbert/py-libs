@@ -20,7 +20,6 @@ import time
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 from contextlib import suppress
 from dataclasses import dataclass
-from os import setsid
 from pathlib import Path
 from typing import IO, Any, Callable
 
@@ -254,9 +253,9 @@ def run_error(run: ShellRun, timeout: float | None = 1) -> BaseException | None:
 
 
 def wait_on_ok_errors(
-    *runs: ShellRun,  # type: ignore
+    *runs: ShellRun,
     timeout: float | None = None,
-    skip_kill_timeouts: bool = False,  # type: ignore
+    skip_kill_timeouts: bool = False,
 ) -> tuple[list[ShellRun], list[tuple[BaseException, ShellRun]]]:
     future_runs = {run._complete_flag: run for run in runs}
     with handle_interrupt_wait("interrupt when waiting for runs"):
@@ -269,16 +268,20 @@ def wait_on_ok_errors(
     if not_done:
         if skip_kill_timeouts:
             errors.extend(
-                (RunIncompleteError(future_runs[run]), future_runs[run])
-                for run in not_done
+                (
+                    RunIncompleteError(future_runs[future], killed=False),
+                    future_runs[future],
+                )
+                for future in not_done
             )
-            runs: list[ShellRun] = [future_runs[f] for f in done]  # type: ignore
         else:
             for run in runs:
                 if run.is_running:
+                    errors.append((RunIncompleteError(run, killed=True), run))
                     kill(run, immediate=True, reason="timeout")
 
-    for run in runs:
+    for completed_future in done:
+        run = future_runs[completed_future]
         if error := run_error(run):
             errors.append((error, run))
         else:
@@ -339,8 +342,10 @@ def kill(
         logger.warning(
             f"killing timeout after {abort_timeout}s! forcing a kill: {run} {reason}"
         )
-        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-        with suppress(subprocess.TimeoutExpired):
+        with suppress(
+            OSError, NameError, subprocess.TimeoutExpired
+        ):  # Process group may no longer exist
+            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
             proc.wait(timeout=1)
     except (OSError, ValueError) as e:
         logger.warning(f"unable to get output when shutting down: {run} {e!r}")
@@ -464,7 +469,7 @@ def _run(
         dict(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            preexec_fn=setsid,
+            start_new_session=True,
             universal_newlines=True,
         )
         | config.popen_kwargs
@@ -493,6 +498,7 @@ def _run(
                     ),
                     on_line=add_stdout_line,
                     config=config,
+                    is_stdout=True,
                 )
             except BaseException as e:
                 logger.exception(e)
@@ -512,6 +518,7 @@ def _run(
                     ),
                     on_line=add_stderr_line,
                     config=config,
+                    is_stdout=False,
                 )
             except BaseException as e:
                 logger.exception(e)
@@ -528,6 +535,7 @@ def _read_until_complete(
     on_console_ready: Callable[[Console], None],
     on_line: Callable[[str], None],
     config: ShellConfig,
+    is_stdout: bool,
 ):
     with open(output_path, "w") as f:
         console = Console(
@@ -543,6 +551,7 @@ def _read_until_complete(
         old_write = f.write
 
         def write_hook(text: str):
+            # choosing to line.strip() as the writing to console will add padding depending on console width
             text_no_extras = [line.strip() for line in text.splitlines()]
             return old_write("\n".join(text_no_extras))
 
@@ -560,7 +569,7 @@ def _read_until_complete(
 
         f.write = write_hook_ansi if config.ansi_content else write_hook
         if config.user_input:
-            out_stream = sys.stdout if ".stdout." in output_path.name else sys.stderr
+            out_stream = sys.stdout if is_stdout else sys.stderr
 
             def _on_line(line: str):
                 console.log(line, end="")

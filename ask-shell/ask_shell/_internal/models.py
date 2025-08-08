@@ -293,6 +293,7 @@ class ShellRun:
 
     config: ShellConfig
     p_open: subprocess.Popen | None = field(init=False, default=None)
+    current_attempt: int = field(init=False, default=1)
 
     _start_flag: Future[ShellRun] = field(default_factory=Future, init=False)
     _complete_flag: Future[ShellRun] = field(default_factory=Future, init=False)
@@ -302,7 +303,6 @@ class ShellRun:
     _stderr_log_path: Path | None = field(init=False, default=None)
     _queue: ShellRunQueueT = field(init=False, default_factory=ClosableQueue)
     _lock: RLock = field(init=False, default_factory=RLock)
-    _current_attempt: int = field(init=False, default=1)
 
     @property
     def has_started(self) -> bool:
@@ -320,8 +320,8 @@ class ShellRun:
                 "running" if self.is_running else f"exit_code={self.exit_code}",
                 (
                     ""
-                    if self._current_attempt == 1
-                    else f"attempt={self._current_attempt}/{self.config.attempts}"
+                    if self.current_attempt == 1
+                    else f"attempt={self.current_attempt}/{self.config.attempts}"
                 ),
                 ")",
             )
@@ -374,9 +374,7 @@ class ShellRun:
 
     def _on_event(self, message: ShellRunEventT):
         with self._lock:
-            for callback in list(self.config.message_callbacks):
-                if callback(message):  # todo: call safely?
-                    self.config.message_callbacks.remove(callback)
+            self._call_callbacks(message)
             match message:
                 case ShellRunStdStarted(
                     is_stdout=True, console=console, log_path=log_path
@@ -396,10 +394,18 @@ class ShellRun:
                     self._reset_read_state(attempt)
                 case ShellRunStdReadError(is_stdout=is_stdout, error=error):
                     logger.error(
-                        f"Error reading {'stdout' if is_stdout else 'stderr'} foro {self}: {error!r}"
+                        f"Error reading {'stdout' if is_stdout else 'stderr'} for {self}: {error!r}"
                     )
             if not self._start_flag.done() and self.has_started:
                 self._start_flag.set_result(self)
+
+    def _call_callbacks(self, message: ShellRunEventT):
+        for callback in list(self.config.message_callbacks):
+            try:
+                if callback(message):
+                    self.config.message_callbacks.remove(callback)
+            except Exception as e:
+                logger.error(f"Error in message callback: {e!r}")
 
     def wait_on_started(self, timeout: float | None = None) -> ShellRun:
         return self._start_flag.result(timeout)
@@ -511,7 +517,7 @@ class ShellRun:
             stderr_logs_html.write_text(self._stderr.export_html(clear=False))
 
     def _reset_read_state(self, attempt: int):
-        self._current_attempt = attempt
+        self.current_attempt = attempt
         self._stdout = None
         self._stderr = None
         self.p_open = None
@@ -552,8 +558,9 @@ class ShellError(Exception):
 
 
 class RunIncompleteError(Exception):
-    def __init__(self, run: ShellRun):
+    def __init__(self, run: ShellRun, killed: bool):
         self.run = run
+        self.killed = killed
 
 
 class EmptyOutputError(Exception):

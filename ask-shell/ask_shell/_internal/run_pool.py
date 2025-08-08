@@ -50,7 +50,7 @@ class run_pool:
         workers_required_if_full = (
             self.max_concurrent_submits * self.threads_used_per_submit
         )
-        run_count_used_by_this_pool = ceil(workers_required_if_full // THREADS_PER_RUN)
+        run_count_used_by_this_pool = ceil(workers_required_if_full / THREADS_PER_RUN)
         assert run_count_used_by_this_pool < max_run_count, (
             f"Run count used by this pool ({run_count_used_by_this_pool}) exceeds max run count ({max_run_count}). Adjust {AskShellSettings.ENV_NAME_THREAD_COUNT} environment variable or decrease `max_concurrent_submits` parameter."
         )

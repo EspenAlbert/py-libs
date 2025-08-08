@@ -61,6 +61,7 @@ def reset_live() -> None:
         if _live.is_started:
             _live.stop()
         _renderables = []
+        # intentionally not setting _live = None to always re-use the same after creation
 
 
 class live_frozen:
@@ -121,7 +122,6 @@ class LivePart:
 def render_live() -> None:
     if _live_is_frozen():
         return
-    global _renderables
     live = get_live()
     with _lock:
         if not _renderables:
@@ -154,7 +154,9 @@ def add_renderable(
         with _lock:
             if print_after_removing:
                 get_live().console.print(part.renderable)
-            _renderables = [part for part in _renderables if part.name != name]
+            _renderables = [
+                renderable for renderable in _renderables if renderable.name != name
+            ]
             render_live()
 
     return remove_renderable

@@ -108,7 +108,7 @@ class _RunState:
         run_id = id(run)
         if run_id in self.runs:
             return  # Run already exists, no need to add it again
-        self.runs[id(run)] = run_info = _RunInfo(run=run)
+        self.runs[run_id] = run_info = _RunInfo(run=run)
         task = new_task(
             description=run.config.print_prefix,
             total=1,
@@ -149,6 +149,6 @@ class _RunState:
             force_error=not run.clean_complete,
             description_override=f"'{run.config.shell_input}'",
             extra_parts=[
-                "" if run._current_attempt == 1 else f"attempt {run._current_attempt}",
+                "" if run.current_attempt == 1 else f"attempt {run.current_attempt}",
             ],
         )

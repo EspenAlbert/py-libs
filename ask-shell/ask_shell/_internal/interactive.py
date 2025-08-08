@@ -48,7 +48,9 @@ FuncT = TypeVar("FuncT", bound=Callable)
 
 
 def return_default_if_not_interactive(func: FuncT) -> FuncT:
-    assert "default" in func_arg_names(func)
+    assert "default" in func_arg_names(func), (
+        f"Function {as_name(func)} must have a 'default' parameter"
+    )
 
     @wraps(func)
     def return_default(*args, **kwargs):
@@ -67,8 +69,6 @@ def return_default_if_not_interactive(func: FuncT) -> FuncT:
     return return_default  # type: ignore
 
 
-@pause_live
-@return_default_if_not_interactive
 def confirm(prompt_text: str, *, default: bool | None = None) -> bool:
     if default is None:
         return _question_asker(_confirm(prompt_text), bool)
@@ -84,7 +84,7 @@ def select_list_multiple(
     default: list[str] | None = None,
     options: SelectOptions | None = None,
 ) -> list[str]:
-    assert choices, "choices must not be empty"
+    assert choices, f"choices must not be empty for {as_name(select_list_multiple)}"
     options = options or SelectOptions()
     chosen = options.set_defaults(len(choices))
     default = default or []
@@ -124,7 +124,9 @@ def select_list_multiple_choices(
     *,
     options: SelectOptions | None = None,
 ) -> list[T]:
-    assert choices, "choices must not be empty"
+    assert choices, (
+        f"choices must not be empty for {as_name(select_list_multiple_choices)}"
+    )
     options = options or SelectOptions()
     chosen = options.set_defaults(len(choices))
     return _question_asker(
@@ -201,9 +203,6 @@ def text(
     return _question_asker(_text(prompt_text, default=default), str)
 
 
-T = TypeVar("T")
-
-
 @pause_live
 @return_default_if_not_interactive
 def select_dict(
@@ -213,7 +212,7 @@ def select_dict(
     default: str | None = None,
     options: SelectOptions | None = None,
 ) -> T:
-    assert choices, "choices must not be empty"
+    assert choices, f"choices must not be empty for {as_name(select_dict)}"
     options = options or SelectOptions()
     chosen = options.set_defaults(len(choices))
     selection = _question_asker(
@@ -239,7 +238,7 @@ def select_list(
     default: str | None = None,
     options: SelectOptions | None = None,
 ) -> str:
-    assert choices, "choices must not be empty"
+    assert choices, f"choices must not be empty for {as_name(select_list)}"
     options = options or SelectOptions()
     chosen = options.set_defaults(len(choices))
     return _question_asker(
@@ -264,7 +263,7 @@ def select_list_choice(
     default: T | None = None,
     options: SelectOptions | None = None,
 ) -> T:
-    assert choices, "choices must not be empty"
+    assert choices, f"choices must not be empty for {as_name(select_list_choice)}"
     options = options or SelectOptions()
     chosen = options.set_defaults(len(choices))
     return _question_asker(

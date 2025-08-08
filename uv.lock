@@ -6,6 +6,7 @@ requires-python = ">=3.10"
 members = [
     "ask-shell",
     "model-lib",
+    "pkg-ext",
     "py-libs",
     "zero-3rdparty",
 ]
@@ -707,6 +708,11 @@ wheels = [
 ]
 
 [[package]]
+name = "pkg-ext"
+version = "1.0.0+rc1"
+source = { editable = "pkg-ext" }
+
+[[package]]
 name = "platformdirs"
 version = "4.3.6"
 source = { registry = "https://pypi.org/simple" }
@@ -743,6 +749,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "ask-shell" },
     { name = "model-lib", extra = ["toml"] },
+    { name = "pkg-ext" },
     { name = "zero-3rdparty" },
 ]
 
@@ -768,6 +775,7 @@ dev = [
 requires-dist = [
     { name = "ask-shell", editable = "ask-shell" },
     { name = "model-lib", extras = ["toml"], editable = "model-lib" },
+    { name = "pkg-ext", editable = "pkg-ext" },
     { name = "zero-3rdparty", editable = "zero-3rdparty" },
 ]
 

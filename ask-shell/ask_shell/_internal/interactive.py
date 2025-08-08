@@ -7,7 +7,6 @@ import logging
 import os
 from dataclasses import dataclass, field
 from functools import wraps
-from os import getenv
 from typing import Callable, Generic, TypeVar
 
 from prompt_toolkit.input.defaults import create_pipe_input
@@ -19,17 +18,17 @@ from questionary import select as _select
 from questionary import text as _text
 from zero_3rdparty.object_name import as_name, func_arg_names
 
-from ask_shell._run import get_pool
-from ask_shell._run_env import ENV_NAME_FORCE_INTERACTIVE_SHELL, interactive_shell
-from ask_shell.rich_live import pause_live
-from ask_shell.settings import AskShellSettings
+from ask_shell._internal._run import get_pool
+from ask_shell._internal._run_env import (
+    interactive_shell,
+)
+from ask_shell._internal.rich_live import pause_live
+from ask_shell.settings import AskShellSettings, _global_settings
 
 T = TypeVar("T")
 TypedAsk = Callable[[Question, type[T]], T]
 logger = logging.getLogger(__name__)
-SEARCH_ENABLED_AFTER_CHOICES = int(
-    getenv(AskShellSettings.ENV_NAME_SEARCH_ENABLED_AFTER_CHOICES, "7")
-)
+SEARCH_ENABLED_AFTER_CHOICES = _global_settings.search_enabled_after_choices
 
 
 def _default_asker(q: Question, _: type[T]) -> T:
@@ -49,7 +48,9 @@ FuncT = TypeVar("FuncT", bound=Callable)
 
 
 def return_default_if_not_interactive(func: FuncT) -> FuncT:
-    assert "default" in func_arg_names(func)
+    assert "default" in func_arg_names(func), (
+        f"Function {as_name(func)} must have a 'default' parameter"
+    )
 
     @wraps(func)
     def return_default(*args, **kwargs):
@@ -68,8 +69,6 @@ def return_default_if_not_interactive(func: FuncT) -> FuncT:
     return return_default  # type: ignore
 
 
-@pause_live
-@return_default_if_not_interactive
 def confirm(prompt_text: str, *, default: bool | None = None) -> bool:
     if default is None:
         return _question_asker(_confirm(prompt_text), bool)
@@ -85,7 +84,7 @@ def select_list_multiple(
     default: list[str] | None = None,
     options: SelectOptions | None = None,
 ) -> list[str]:
-    assert choices, "choices must not be empty"
+    assert choices, f"choices must not be empty for {as_name(select_list_multiple)}"
     options = options or SelectOptions()
     chosen = options.set_defaults(len(choices))
     default = default or []
@@ -125,7 +124,9 @@ def select_list_multiple_choices(
     *,
     options: SelectOptions | None = None,
 ) -> list[T]:
-    assert choices, "choices must not be empty"
+    assert choices, (
+        f"choices must not be empty for {as_name(select_list_multiple_choices)}"
+    )
     options = options or SelectOptions()
     chosen = options.set_defaults(len(choices))
     return _question_asker(
@@ -202,9 +203,6 @@ def text(
     return _question_asker(_text(prompt_text, default=default), str)
 
 
-T = TypeVar("T")
-
-
 @pause_live
 @return_default_if_not_interactive
 def select_dict(
@@ -214,7 +212,7 @@ def select_dict(
     default: str | None = None,
     options: SelectOptions | None = None,
 ) -> T:
-    assert choices, "choices must not be empty"
+    assert choices, f"choices must not be empty for {as_name(select_dict)}"
     options = options or SelectOptions()
     chosen = options.set_defaults(len(choices))
     selection = _question_asker(
@@ -240,7 +238,7 @@ def select_list(
     default: str | None = None,
     options: SelectOptions | None = None,
 ) -> str:
-    assert choices, "choices must not be empty"
+    assert choices, f"choices must not be empty for {as_name(select_list)}"
     options = options or SelectOptions()
     chosen = options.set_defaults(len(choices))
     return _question_asker(
@@ -265,7 +263,7 @@ def select_list_choice(
     default: T | None = None,
     options: SelectOptions | None = None,
 ) -> T:
-    assert choices, "choices must not be empty"
+    assert choices, f"choices must not be empty for {as_name(select_list_choice)}"
     options = options or SelectOptions()
     chosen = options.set_defaults(len(choices))
     return _question_asker(
@@ -312,6 +310,7 @@ class question_patcher:
 
     responses: list[str]
     next_response: int = 0
+    settings: AskShellSettings = field(default_factory=AskShellSettings.from_env)
 
     _old_force_interactive_env_str: str = field(default="", init=False, repr=False)
 
@@ -319,17 +318,15 @@ class question_patcher:
         global _question_asker
         self._old_patcher = _question_asker
         _question_asker = self.ask_question
-        self._old_force_interactive_env_str = getenv(
-            ENV_NAME_FORCE_INTERACTIVE_SHELL, ""
-        )
+        self._old_force_interactive_env_str = str(self.settings.force_interactive_shell)
         interactive_shell.cache_clear()
-        os.environ[ENV_NAME_FORCE_INTERACTIVE_SHELL] = "true"
+        os.environ[self.settings.ENV_NAME_FORCE_INTERACTIVE_SHELL] = "true"
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         global _question_patcher
         _question_patcher = self._old_patcher
-        os.environ[ENV_NAME_FORCE_INTERACTIVE_SHELL] = (
+        os.environ[self.settings.ENV_NAME_FORCE_INTERACTIVE_SHELL] = (
             self._old_force_interactive_env_str
         )
         interactive_shell.cache_clear()

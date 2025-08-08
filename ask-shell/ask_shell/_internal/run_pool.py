@@ -5,14 +5,14 @@ from math import ceil
 from threading import Event, RLock
 from typing import Any, Callable, Protocol, TypeVar
 
-from ask_shell._run import (
+from ask_shell._internal._run import (
     THREADS_PER_RUN,
     get_pool,
     handle_interrupt_wait,
     max_run_count_for_workers,
     wait_if_many_runs,
 )
-from ask_shell.rich_progress import new_task
+from ask_shell._internal.rich_progress import new_task
 from ask_shell.settings import AskShellSettings
 
 T_co = TypeVar("T_co", covariant=True)
@@ -45,14 +45,14 @@ class run_pool:
     _event: Event = field(init=False, default_factory=Event)
 
     def __post_init__(self):
-        self.pool_max_workers = self.pool._max_workers
-        max_run_count = max_run_count_for_workers(self.pool_max_workers)
+        self._pool_max_workers = self.pool._max_workers
+        max_run_count = max_run_count_for_workers(self._pool_max_workers)
         workers_required_if_full = (
             self.max_concurrent_submits * self.threads_used_per_submit
         )
-        run_count_used_by_this_pool = ceil(workers_required_if_full // THREADS_PER_RUN)
+        run_count_used_by_this_pool = ceil(workers_required_if_full / THREADS_PER_RUN)
         assert run_count_used_by_this_pool < max_run_count, (
-            f"Run count used by this pool ({run_count_used_by_this_pool}) exceeds max run count ({max_run_count}). Adjust {AskShellSettings.ENV_NAME_RUN_THREAD_COUNT} environment variable or decrease `max_concurrent_submits` parameter."
+            f"Run count used by this pool ({run_count_used_by_this_pool}) exceeds max run count ({max_run_count}). Adjust {AskShellSettings.ENV_NAME_THREAD_COUNT} environment variable or decrease `max_concurrent_submits` parameter."
         )
         self._max_run_count_with_this_pool = max_run_count - run_count_used_by_this_pool
 

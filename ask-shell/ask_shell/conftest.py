@@ -4,10 +4,10 @@ import pytest
 from rich.console import Console
 from zero_3rdparty.file_utils import ensure_parents_write_text
 
-from ask_shell._run import stop_runs_and_pool
-from ask_shell.models import ShellConfig, ShellRun
-from ask_shell.rich_live import get_live, reset_live
-from ask_shell.rich_progress import get_default_progress_manager
+from ask_shell._internal._run import stop_runs_and_pool
+from ask_shell._internal.models import ShellConfig, ShellRun
+from ask_shell._internal.rich_live import get_live, reset_live
+from ask_shell._internal.rich_progress import get_default_progress_manager
 from ask_shell.settings import AskShellSettings
 
 

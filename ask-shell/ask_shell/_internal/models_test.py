@@ -2,8 +2,8 @@ import pytest
 from pydantic import ValidationError
 
 from ask_shell import ShellConfig
-from ask_shell._run import run_and_wait
-from ask_shell.models import ERROR_MESSAGE_INTERACTIVE_SHELL, EmptyOutputError
+from ask_shell._internal._run import run_and_wait
+from ask_shell._internal.models import ERROR_MESSAGE_INTERACTIVE_SHELL, EmptyOutputError
 
 
 def test_infer_print_prefix(tmp_path):

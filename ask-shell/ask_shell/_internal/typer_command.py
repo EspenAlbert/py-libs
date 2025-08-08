@@ -14,8 +14,8 @@ from rich.logging import RichHandler
 from rich.traceback import Traceback
 
 import ask_shell
-from ask_shell.rich_live import get_live_console, log_to_live
-from ask_shell.rich_progress import new_task
+from ask_shell._internal.rich_live import get_live_console, log_to_live
+from ask_shell._internal.rich_progress import new_task
 from ask_shell.settings import AskShellSettings, default_rich_info_style
 
 T = TypeVar("T", bound=Callable)
@@ -45,8 +45,8 @@ def track_progress_decorator(
             ):
                 try:
                     return command(*args, **kwargs)
-                except BaseException as e:
-                    raise e  # re-raise the exception to be handled by the except hook
+                except BaseException:
+                    raise  # re-raise the exception to be handled by the except hook
                 finally:
                     log_exit_summary(settings)
 
@@ -132,7 +132,9 @@ class SecretsHider(logging.Filter):
         super().__init__(name)
 
     def filter(self, record: logging.LogRecord) -> bool:
-        record.msg = remove_secrets(record.msg, self.secrets)
+        msg = record.msg
+        if isinstance(msg, str):
+            record.msg = remove_secrets(msg, self.secrets)
         return True
 
 
@@ -146,11 +148,7 @@ def hide_secrets(handler: logging.Handler, secrets_dict: dict[str, str]) -> None
         if not isinstance(value, str):
             continue
         key_lower = key.lower()
-        if (
-            key_lower in {"true", "false"}
-            or value.lower() in {"true", "false"}
-            or value.isdigit()
-        ):
+        if value.lower() in {"true", "false"} or value.isdigit():
             continue
         with suppress(Exception):
             if Path(value).exists():

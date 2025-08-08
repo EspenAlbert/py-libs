@@ -4,8 +4,8 @@ import time
 
 import pytest
 
-from ask_shell._run import max_run_count_for_workers, run_and_wait
-from ask_shell.run_pool import run_pool
+from ask_shell._internal._run import max_run_count_for_workers, run_and_wait
+from ask_shell._internal.run_pool import run_pool
 
 logger = logging.getLogger(__name__)
 

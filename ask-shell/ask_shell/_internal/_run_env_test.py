@@ -1,4 +1,4 @@
-from ask_shell._run_env import interactive_shell
+from ask_shell._internal._run_env import interactive_shell
 
 
 def test_interactive_shell():

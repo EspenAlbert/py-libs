@@ -1,7 +1,11 @@
 from pathlib import Path
 
-from ask_shell import _run_env, models, settings
-from pkg_ext import PkgSrcFile, create_refs, parse_symbols
+from ask_shell import settings
+from ask_shell._internal import _run_env, models
+
+from pkg_ext.file_parser import parse_symbols
+from pkg_ext.models import PkgSrcFile
+from pkg_ext.ref_processor import create_refs
 
 ASK_SHELL_PKG_IMPORT_NAME = "ask_shell"
 
@@ -11,9 +15,13 @@ def test_parse_symbols():
     settings_path = Path(settings.__file__)
     assert symbols.path == settings_path
     assert symbols.relative_path == settings_path.name
-    assert symbols.local_imports == {"ask_shell._run_env:interactive_shell"}
+    assert symbols.local_imports == set()
     assert symbols.classes == ["AskShellSettings"]
-    assert symbols.functions == ["default_callbacks_funcs", "default_rich_info_style"]
+    assert symbols.functions == [
+        "default_callbacks_funcs",
+        "default_remove_os_secrets",
+        "default_rich_info_style",
+    ]
 
 
 def test_parse_type_aliases():

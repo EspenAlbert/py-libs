@@ -17,10 +17,9 @@ import signal
 import subprocess
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor, wait
+from concurrent.futures import Future, ThreadPoolExecutor, wait
 from contextlib import suppress
 from dataclasses import dataclass
-from os import getenv, setsid
 from pathlib import Path
 from typing import IO, Any, Callable
 
@@ -28,8 +27,10 @@ from model_lib.pydantic_utils import copy_and_validate
 from rich.ansi import AnsiDecoder
 from rich.console import Console
 from rich.errors import MarkupError
+from zero_3rdparty.error import as_str_traceback
+from zero_3rdparty.future import add_done_callback, add_error_logging, chain_future
 
-from ask_shell.models import (
+from ask_shell._internal.models import (
     RunIncompleteError,
     ShellConfig,
     ShellRun,
@@ -43,25 +44,13 @@ from ask_shell.models import (
     ShellRunStdReadError,
     ShellRunStdStarted,
 )
-from ask_shell.settings import AskShellSettings
+from ask_shell.settings import AskShellSettings, _global_settings
 
 logger = logging.getLogger(__name__)
 THREADS_PER_RUN = 4  # Each run will take 4 threads: 1 for stdout, 1 for stderr, 1 for consuming queue messages and 1 for popen wait.
-THREAD_POOL_FULL_WAIT_TIME_SECONDS = float(
-    getenv(
-        AskShellSettings.ENV_NAME_THREAD_POOL_FULL_WAIT_TIME_SECONDS,
-        AskShellSettings.THREAD_POOL_FULL_WAIT_TIME_SECONDS_DEFAULT,
-    )
-)
+THREAD_POOL_FULL_WAIT_TIME_SECONDS = _global_settings.thread_pool_full_wait_time_seconds
 
-_pool = ThreadPoolExecutor(
-    max_workers=int(
-        getenv(
-            AskShellSettings.ENV_NAME_RUN_THREAD_COUNT,
-            AskShellSettings.RUN_THREAD_COUNT_DEFAULT,
-        )
-    )
-)
+_pool = ThreadPoolExecutor(max_workers=_global_settings.thread_count)
 
 
 def get_pool() -> ThreadPoolExecutor:
@@ -96,9 +85,8 @@ def wait_if_many_runs(
 
 def max_run_count_for_workers(worker_count: int | None = None) -> int:
     """Calculate the maximum number of runs that can be executed concurrently based on the number of workers."""
-    if worker_count is None:
-        worker_count = _pool._max_workers  # type: ignore
-    return max(1, worker_count // THREADS_PER_RUN)  # leave some threads for other tasks
+    worker_count = worker_count or _global_settings.thread_count
+    return max(1, worker_count // THREADS_PER_RUN)
 
 
 def stop_runs_and_pool(reason: str = "atexit", immediate: bool = False):
@@ -164,7 +152,10 @@ def run(
         "run() does not support user_input (only 1 should be active at a time), use run_and_wait() instead"
     )
     run = ShellRun(config)
-    _pool.submit(_execute_run, run)
+    future = _pool.submit(_execute_run, run)
+    add_error_logging(
+        future, error_logger=logger, error_hint="unexpected error in _execute_run"
+    )
     with handle_interrupt_wait(f"interrupt when starting {run}"):
         return run.wait_on_started(start_timeout)
 
@@ -220,7 +211,11 @@ def run_and_wait(
         skip_progress_output=skip_progress_output,
     )
     run = ShellRun(config)
-    _pool.submit(_execute_run, run)
+    future = _pool.submit(_execute_run, run)
+    add_error_logging(
+        future, error_logger=logger, error_hint="unexpected error in _execute_run"
+    )
+    chain_future(future, run._complete_flag, skip_log_already_complete=True)
     with handle_interrupt_wait(f"interrupt when waiting for {run}"):
         run.wait_until_complete(timeout)
     return run
@@ -258,9 +253,9 @@ def run_error(run: ShellRun, timeout: float | None = 1) -> BaseException | None:
 
 
 def wait_on_ok_errors(
-    *runs: ShellRun,  # type: ignore
+    *runs: ShellRun,
     timeout: float | None = None,
-    skip_kill_timeouts: bool = False,  # type: ignore
+    skip_kill_timeouts: bool = False,
 ) -> tuple[list[ShellRun], list[tuple[BaseException, ShellRun]]]:
     future_runs = {run._complete_flag: run for run in runs}
     with handle_interrupt_wait("interrupt when waiting for runs"):
@@ -273,16 +268,20 @@ def wait_on_ok_errors(
     if not_done:
         if skip_kill_timeouts:
             errors.extend(
-                (RunIncompleteError(future_runs[run]), future_runs[run])
-                for run in not_done
+                (
+                    RunIncompleteError(future_runs[future], killed=False),
+                    future_runs[future],
+                )
+                for future in not_done
             )
-            runs: list[ShellRun] = [future_runs[f] for f in done]  # type: ignore
         else:
             for run in runs:
                 if run.is_running:
+                    errors.append((RunIncompleteError(run, killed=True), run))
                     kill(run, immediate=True, reason="timeout")
 
-    for run in runs:
+    for completed_future in done:
+        run = future_runs[completed_future]
         if error := run_error(run):
             errors.append((error, run))
         else:
@@ -343,13 +342,35 @@ def kill(
         logger.warning(
             f"killing timeout after {abort_timeout}s! forcing a kill: {run} {reason}"
         )
-        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-        with suppress(subprocess.TimeoutExpired):
+        with suppress(
+            OSError, NameError, subprocess.TimeoutExpired
+        ):  # Process group may no longer exist
+            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
             proc.wait(timeout=1)
     except (OSError, ValueError) as e:
         logger.warning(f"unable to get output when shutting down: {run} {e!r}")
     finally:
         run.wait_until_complete(timeout=1, no_raise=True)
+
+
+@dataclass
+class _run_completer:
+    """contextmanager to catch any unexpected errors"""
+
+    run: ShellRun
+    consumer_future: Future
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_type is None:
+            return
+        run = self.run
+        tb = as_str_traceback(traceback)
+        logger.error(f"shell run failed unexpectedly with error {exc_value}, tb={tb}")
+        run._queue.put_nowait(ShellRunAfter(run=run, error=exc_value))
+        run._complete(error=exc_value, queue_consumer=self.consumer_future)
 
 
 def _execute_run(shell_run: ShellRun) -> ShellRun:
@@ -381,27 +402,36 @@ def _execute_run(shell_run: ShellRun) -> ShellRun:
         return shell_run
 
     consumer_future = _pool.submit(queue_consumer)
-    output_dir = config.run_output_dir_resolved()
-    output_dir.mkdir(parents=True, exist_ok=True)
-    error: BaseException | None = None
-    for attempt in range(1, config.attempts + 1):
-        if attempt > 1:
-            queue.put_nowait(ShellRunRetryAttempt(attempt=attempt))
-            logger.warning(
-                f"Retrying run {shell_run} attempt {attempt} of {config.attempts}"
-            )
-        attempt_log_prefix = config.run_log_stem(attempt)
+    add_error_logging(
+        consumer_future,
+        error_logger=logger,
+        error_hint="unexpected queue_consumer error",
+    )
+    add_done_callback(shell_run._complete_flag, queue.close_safely)
+    with _run_completer(shell_run, consumer_future):
+        output_dir = config.run_output_dir_resolved()
+        output_dir.mkdir(parents=True, exist_ok=True)
+        error: BaseException | None = None
+        for attempt in range(1, config.attempts + 1):
+            if attempt > 1:
+                queue.put_nowait(ShellRunRetryAttempt(attempt=attempt))
+                logger.warning(
+                    f"Retrying run {shell_run} attempt {attempt} of {config.attempts}"
+                )
+            attempt_log_prefix = config.run_log_stem(attempt)
 
-        result = _attempt_run(shell_run, output_dir, attempt_log_prefix)
-        match result:
-            case ShellRun() if result.clean_complete or not config.should_retry(result):
-                break
-            case BaseException():
-                error = result
-                break
-    queue.put_nowait(ShellRunAfter(run=shell_run, error=error))
-    shell_run._complete(error=error, queue_consumer=consumer_future)
-    return shell_run
+            result = _attempt_run(shell_run, output_dir, attempt_log_prefix)
+            match result:
+                case ShellRun() if result.clean_complete or not config.should_retry(
+                    result
+                ):
+                    break
+                case BaseException():
+                    error = result
+                    break
+        queue.put_nowait(ShellRunAfter(run=shell_run, error=error))
+        shell_run._complete(error=error, queue_consumer=consumer_future)
+        return shell_run
 
 
 def _attempt_run(
@@ -439,7 +469,7 @@ def _run(
         dict(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            preexec_fn=setsid,
+            start_new_session=True,
             universal_newlines=True,
         )
         | config.popen_kwargs
@@ -468,6 +498,7 @@ def _run(
                     ),
                     on_line=add_stdout_line,
                     config=config,
+                    is_stdout=True,
                 )
             except BaseException as e:
                 logger.exception(e)
@@ -487,6 +518,7 @@ def _run(
                     ),
                     on_line=add_stderr_line,
                     config=config,
+                    is_stdout=False,
                 )
             except BaseException as e:
                 logger.exception(e)
@@ -494,7 +526,6 @@ def _run(
 
         fut_stdout = _pool.submit(read_stdout)
         fut_stderr = _pool.submit(read_stderr)
-        # no proc.wait/communicate, not sure if it will work
         wait([fut_stdout, fut_stderr])
 
 
@@ -504,6 +535,7 @@ def _read_until_complete(
     on_console_ready: Callable[[Console], None],
     on_line: Callable[[str], None],
     config: ShellConfig,
+    is_stdout: bool,
 ):
     with open(output_path, "w") as f:
         console = Console(
@@ -519,6 +551,7 @@ def _read_until_complete(
         old_write = f.write
 
         def write_hook(text: str):
+            # choosing to line.strip() as the writing to console will add padding depending on console width
             text_no_extras = [line.strip() for line in text.splitlines()]
             return old_write("\n".join(text_no_extras))
 
@@ -536,7 +569,7 @@ def _read_until_complete(
 
         f.write = write_hook_ansi if config.ansi_content else write_hook
         if config.user_input:
-            out_stream = sys.stdout if ".stdout." in output_path.name else sys.stderr
+            out_stream = sys.stdout if is_stdout else sys.stderr
 
             def _on_line(line: str):
                 console.log(line, end="")

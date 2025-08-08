@@ -1,7 +1,7 @@
 import logging
 
-from ask_shell.rich_live import get_live, pause_live
-from ask_shell.rich_progress import (
+from ask_shell._internal.rich_live import get_live, pause_live
+from ask_shell._internal.rich_progress import (
     get_default_progress_manager,
     new_task,
 )

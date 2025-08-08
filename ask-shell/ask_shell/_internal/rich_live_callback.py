@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ask_shell.models import (
+from ask_shell._internal.models import (
     ShellRunAfter,
     ShellRunBefore,
     ShellRunEventT,
 )
-from ask_shell.rich_live import live_frozen
-from ask_shell.rich_run_state import _RunState
+from ask_shell._internal.rich_live import live_frozen
+from ask_shell._internal.rich_run_state import _RunState
 
 
 @dataclass

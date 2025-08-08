@@ -15,12 +15,13 @@ def test_parse_symbols():
     settings_path = Path(settings.__file__)
     assert symbols.path == settings_path
     assert symbols.relative_path == settings_path.name
-    assert symbols.local_imports == {
-        "ask_shell._constants:ENV_PREFIX",
-        "ask_shell._run_env:interactive_shell",
-    }
+    assert symbols.local_imports == set()
     assert symbols.classes == ["AskShellSettings"]
-    assert symbols.functions == ["default_callbacks_funcs", "default_rich_info_style"]
+    assert symbols.functions == [
+        "default_callbacks_funcs",
+        "default_remove_os_secrets",
+        "default_rich_info_style",
+    ]
 
 
 def test_parse_type_aliases():

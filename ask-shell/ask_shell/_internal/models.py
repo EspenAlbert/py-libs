@@ -136,6 +136,44 @@ ShellRunCallbackT: TypeAlias = Callable[[ShellRunEventT], bool | None]
 ShellRunQueueT: TypeAlias = ClosableQueue[ShellRunEventT]
 
 
+@lru_cache
+def _mise_binary() -> Path | None:
+    if found := which("mise"):
+        return Path(found)
+    return None
+
+
+@lru_cache
+def _mise_which(binary_name: str, cwd: Path) -> Path | None:
+    from ask_shell._internal._run import run_and_wait
+
+    logger.warning(f"Trying to find {binary_name} using 'mise which' in cwd {cwd}")
+    response = run_and_wait(
+        f"mise which {binary_name}",
+        allow_non_zero_exit=True,
+        cwd=cwd,
+        print_prefix="mise which in cwd",
+    )
+    if response.exit_code == 0:
+        return Path(response.stdout_one_line)
+    response = run_and_wait(
+        f"mise which {binary_name}",
+        allow_non_zero_exit=True,
+        cwd=Path.home(),
+        print_prefix="mise which in home",
+    )
+    return Path(response.stdout_one_line) if response.exit_code == 0 else None
+
+
+def _resolve_binary(binary_name: str, cwd: Path) -> Path:
+    if path := which(binary_name):
+        return Path(path)
+    if _mise_binary() and (found := _mise_which(binary_name, cwd)):
+        return found
+    install = install_instructions(binary_name)
+    raise ValueError(f"Binary or non-executable '{binary_name}' not found. {install}")
+
+
 class ShellConfig(Entity):
     """
     >>> ShellConfig("some_script").print_prefix
@@ -195,9 +233,6 @@ class ShellConfig(Entity):
         description="Callbacks for run messages, useful for custom handling of stdout/stderr",
     )
 
-    def __repr__(self) -> str:
-        return f"ShellConfig({self.shell_input!r}, cwd={self.cwd!r}, attempts={self.attempts})"
-
     @property
     def exec_name(self) -> str:
         return self.binary_file_args.name
@@ -225,6 +260,26 @@ class ShellConfig(Entity):
             case _:
                 raise ValueError("shell_input must not be empty")
 
+    def _infer_print_prefix(self, parsed_input: ShellInput):
+        cwd = self.cwd
+        prefix_parts = [f"{cwd.parent.name}/{cwd.name}" if cwd.parents else cwd.name]
+        if parsed_input.is_binary_call:
+            prefix_parts.append(parsed_input.binary_name)
+        else:
+            prefix_parts.append(parsed_input.file_path_relative(cwd))
+        if first_arg := parsed_input.first_arg:
+            prefix_parts.append(first_arg)
+        self.print_prefix = " ".join(prefix_parts)
+
+    def _infer_ansi_content(self, parsed_input: ShellInput):
+        if parsed_input.is_binary_call and parsed_input.binary_name in (
+            "terraform",
+            "kubectl",
+        ):
+            self.ansi_content = True
+        else:
+            self.ansi_content = False
+
     @model_validator(mode="after")
     def post_init(self) -> Self:
         if self.cwd is None:
@@ -250,26 +305,6 @@ class ShellConfig(Entity):
         self.message_callbacks.extend(self.settings.message_callbacks)
         return self
 
-    def _infer_print_prefix(self, parsed_input: ShellInput):
-        cwd = self.cwd
-        prefix_parts = [f"{cwd.parent.name}/{cwd.name}" if cwd.parents else cwd.name]
-        if parsed_input.is_binary_call:
-            prefix_parts.append(parsed_input.binary_name)
-        else:
-            prefix_parts.append(parsed_input.file_path_relative(cwd))
-        if first_arg := parsed_input.first_arg:
-            prefix_parts.append(first_arg)
-        self.print_prefix = " ".join(prefix_parts)
-
-    def _infer_ansi_content(self, parsed_input: ShellInput):
-        if parsed_input.is_binary_call and parsed_input.binary_name in (
-            "terraform",
-            "kubectl",
-        ):
-            self.ansi_content = True
-        else:
-            self.ansi_content = False
-
     @property
     def popen_kwargs(self):
         kwargs: dict[str, Any] = {"env": self.env} | self.extra_popen_kwargs
@@ -277,6 +312,9 @@ class ShellConfig(Entity):
         if self.user_input:
             kwargs["stdin"] = sys.stdin
         return kwargs
+
+    def __repr__(self) -> str:
+        return f"ShellConfig({self.shell_input!r}, cwd={self.cwd!r}, attempts={self.attempts})"
 
 
 OutputT = TypeVar("OutputT")
@@ -307,26 +345,6 @@ class ShellRun:
     @property
     def has_started(self) -> bool:
         return self._stdout is not None and self._stderr is not None
-
-    def __repr__(self) -> str:
-        return f"ShellRun(config={self.config!r}, __str__={self})"
-
-    def __str__(self) -> str:
-        return " ".join(
-            part
-            for part in (
-                "ShellRun(",
-                self.config.print_prefix,
-                "running" if self.is_running else f"exit_code={self.exit_code}",
-                (
-                    ""
-                    if self.current_attempt == 1
-                    else f"attempt={self.current_attempt}/{self.config.attempts}"
-                ),
-                ")",
-            )
-            if part
-        )
 
     def add_output_callback(
         self, call: OutputCallbackT, *, is_stdout: bool, skip_old_lines: bool = False
@@ -372,6 +390,30 @@ class ShellRun:
                 return None
         return remove_callback
 
+    def _call_callbacks(self, message: ShellRunEventT):
+        for callback in list(self.config.message_callbacks):
+            try:
+                if callback(message):
+                    self.config.message_callbacks.remove(callback)
+            except Exception as e:
+                logger.error(f"Error in message callback: {e!r}")
+
+    def _dump_html_logs(self):
+        if (stdout_logs := self._stdout_log_path) and self._stdout:
+            stdout_logs_html = stdout_logs.with_suffix(".html")
+            stdout_logs_html.write_text(self._stdout.export_html(clear=False))
+        if (stderr_logs := self._stderr_log_path) and self._stderr:
+            stderr_logs_html = stderr_logs.with_suffix(".html")
+            stderr_logs_html.write_text(self._stderr.export_html(clear=False))
+
+    def _reset_read_state(self, attempt: int):
+        self.current_attempt = attempt
+        self._stdout = None
+        self._stderr = None
+        self.p_open = None
+        self._stdout_log_path = None
+        self._stderr_log_path = None
+
     def _on_event(self, message: ShellRunEventT):
         with self._lock:
             self._call_callbacks(message)
@@ -398,14 +440,6 @@ class ShellRun:
                     )
             if not self._start_flag.done() and self.has_started:
                 self._start_flag.set_result(self)
-
-    def _call_callbacks(self, message: ShellRunEventT):
-        for callback in list(self.config.message_callbacks):
-            try:
-                if callback(message):
-                    self.config.message_callbacks.remove(callback)
-            except Exception as e:
-                logger.error(f"Error in message callback: {e!r}")
 
     def wait_on_started(self, timeout: float | None = None) -> ShellRun:
         return self._start_flag.result(timeout)
@@ -508,21 +542,25 @@ class ShellRun:
     def is_running(self):
         return not self._complete_flag.done()
 
-    def _dump_html_logs(self):
-        if (stdout_logs := self._stdout_log_path) and self._stdout:
-            stdout_logs_html = stdout_logs.with_suffix(".html")
-            stdout_logs_html.write_text(self._stdout.export_html(clear=False))
-        if (stderr_logs := self._stderr_log_path) and self._stderr:
-            stderr_logs_html = stderr_logs.with_suffix(".html")
-            stderr_logs_html.write_text(self._stderr.export_html(clear=False))
+    def __repr__(self) -> str:
+        return f"ShellRun(config={self.config!r}, __str__={self})"
 
-    def _reset_read_state(self, attempt: int):
-        self.current_attempt = attempt
-        self._stdout = None
-        self._stderr = None
-        self.p_open = None
-        self._stdout_log_path = None
-        self._stderr_log_path = None
+    def __str__(self) -> str:
+        return " ".join(
+            part
+            for part in (
+                "ShellRun(",
+                self.config.print_prefix,
+                "running" if self.is_running else f"exit_code={self.exit_code}",
+                (
+                    ""
+                    if self.current_attempt == 1
+                    else f"attempt={self.current_attempt}/{self.config.attempts}"
+                ),
+                ")",
+            )
+            if part
+        )
 
 
 class ShellError(Exception):
@@ -570,41 +608,3 @@ class EmptyOutputError(Exception):
 
     def __str__(self) -> str:
         return f"No output in {self.stream} for {self.run}"
-
-
-@lru_cache
-def _mise_binary() -> Path | None:
-    if found := which("mise"):
-        return Path(found)
-    return None
-
-
-@lru_cache
-def _mise_which(binary_name: str, cwd: Path) -> Path | None:
-    from ask_shell._internal._run import run_and_wait
-
-    logger.warning(f"Trying to find {binary_name} using 'mise which' in cwd {cwd}")
-    response = run_and_wait(
-        f"mise which {binary_name}",
-        allow_non_zero_exit=True,
-        cwd=cwd,
-        print_prefix="mise which in cwd",
-    )
-    if response.exit_code == 0:
-        return Path(response.stdout_one_line)
-    response = run_and_wait(
-        f"mise which {binary_name}",
-        allow_non_zero_exit=True,
-        cwd=Path.home(),
-        print_prefix="mise which in home",
-    )
-    return Path(response.stdout_one_line) if response.exit_code == 0 else None
-
-
-def _resolve_binary(binary_name: str, cwd: Path) -> Path:
-    if path := which(binary_name):
-        return Path(path)
-    if _mise_binary() and (found := _mise_which(binary_name, cwd)):
-        return found
-    install = install_instructions(binary_name)
-    raise ValueError(f"Binary or non-executable '{binary_name}' not found. {install}")

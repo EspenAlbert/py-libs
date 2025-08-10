@@ -183,14 +183,6 @@ class new_task:
     def __post_init__(self):
         assert self.total > 0, "Total must be greater than 0"
 
-    def __enter__(self) -> Self:
-        self.manager.add_task(self)
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.complete()  # Ensure we mark it as complete
-        self.manager.remove_task(self, error=exc_val)
-
     def complete(self) -> None:
         self.update(advance=self.total, total=self.total, log_update=False)
 
@@ -218,3 +210,11 @@ class new_task:
         self.manager.update_task(
             self, advance=advance, total=total, log_update=log_update, **task_fields
         )
+
+    def __enter__(self) -> Self:
+        self.manager.add_task(self)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.complete()  # Ensure we mark it as complete
+        self.manager.remove_task(self, error=exc_val)

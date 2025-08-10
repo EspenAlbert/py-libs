@@ -2,7 +2,7 @@ alias b := build
 alias t := test
 mversion := "1.0.0b5"
 zversion := "1.0.0b5"
-quick: fmt fix lint
+quick: ssort fmt fix lint
   @echo "Quick checks passed"
 pre-push: lint fmt-check test
   @echo "All checks passed"
@@ -51,7 +51,10 @@ pkg-find tag_name:
   @uv run scripts/pkg_version.py {{tag_name}} decode-tag
 changes-ask-shell:
   just pkg-ext ./ask-shell/ask_shell
-
+ssort:
+  @uv run ssort ask-shell/ask_shell pkg-ext/pkg_ext
+ssort-check:
+  @uv run ssort --diff --check ask-shell/ask_shell pkg-ext/pkg_ext
 
 [positional-arguments]
 gh-ext *args:

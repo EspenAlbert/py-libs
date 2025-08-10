@@ -15,13 +15,34 @@ from zero_3rdparty.id_creator import simple_id
 
 _live: Live | None = None
 _lock = RLock()
+
+
+@total_ordering
+@dataclass
+class LivePart:
+    name: str
+    renderable: RenderableType
+    order: int = 0
+
+    def __lt__(self, other) -> bool:
+        if not isinstance(other, LivePart):
+            raise TypeError
+        return (self.order, self.name) < (other.order, other.name)
+
+
 _renderables: list[LivePart] = []
 _live_is_frozen_attr_name = "__live_is_frozen__"
 logger = logging.getLogger(__name__)
 
 
-def _live_is_frozen() -> bool:
-    return getattr(get_live(), _live_is_frozen_attr_name, False)
+def reset_live() -> None:
+    global _live, _renderables
+    with _lock:
+        if _live is None:
+            return
+        if _live.is_started:
+            _live.stop()
+        _renderables = []
 
 
 def _console_hook(func: Callable) -> Callable:
@@ -53,14 +74,25 @@ def get_live() -> Live:
     return _live
 
 
-def reset_live() -> None:
-    global _live, _renderables
+def _live_is_frozen() -> bool:
+    return getattr(get_live(), _live_is_frozen_attr_name, False)
+
+
+def render_live() -> None:
+    if _live_is_frozen():
+        return
+    live = get_live()
     with _lock:
-        if _live is None:
+        if not _renderables:
+            if live.is_started:
+                live.stop()
             return
-        if _live.is_started:
-            _live.stop()
-        _renderables = []
+        if not live.is_started:
+            live.console.print("")  # avoid last line being overwritten
+            live.start()
+        _renderables.sort()  # Ensure the renderables are sorted by order and name
+        group = Group(*[part.renderable for part in _renderables])
+        live.update(group, refresh=True)
         # intentionally not setting _live = None to always re-use the same after creation
 
 
@@ -104,36 +136,6 @@ def pause_live(func: T) -> T:
             return func(*args, **kwargs)  # type: ignore
 
     return wrapper  # type: ignore
-
-
-@total_ordering
-@dataclass
-class LivePart:
-    name: str
-    renderable: RenderableType
-    order: int = 0
-
-    def __lt__(self, other) -> bool:
-        if not isinstance(other, LivePart):
-            raise TypeError
-        return (self.order, self.name) < (other.order, other.name)
-
-
-def render_live() -> None:
-    if _live_is_frozen():
-        return
-    live = get_live()
-    with _lock:
-        if not _renderables:
-            if live.is_started:
-                live.stop()
-            return
-        if not live.is_started:
-            live.console.print("")  # avoid last line being overwritten
-            live.start()
-        _renderables.sort()  # Ensure the renderables are sorted by order and name
-        group = Group(*[part.renderable for part in _renderables])
-        live.update(group, refresh=True)
 
 
 class RemoveLivePart(Protocol):

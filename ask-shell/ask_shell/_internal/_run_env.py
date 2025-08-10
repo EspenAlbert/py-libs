@@ -10,19 +10,6 @@ from ask_shell.settings import AskShellSettings, _global_settings
 logger = logging.getLogger(__name__)
 
 
-@lru_cache
-def interactive_shell() -> bool:
-    if AskShellSettings.from_env().force_interactive_shell:
-        logger.debug(
-            f"Interactive shell forced by environment variable {_global_settings.ENV_NAME_FORCE_INTERACTIVE_SHELL}"
-        )
-        return True
-    if non_interactive_reason := _not_interactive_reason():
-        logger.debug(f"Interactive shell not available: {non_interactive_reason}")
-        return False
-    return True
-
-
 def _not_interactive_reason() -> str:
     if in_test_env():
         return "Running in test environment"
@@ -35,3 +22,16 @@ def _not_interactive_reason() -> str:
     if running_in_container_environment():
         return "Running in container environment"
     return ""
+
+
+@lru_cache
+def interactive_shell() -> bool:
+    if AskShellSettings.from_env().force_interactive_shell:
+        logger.debug(
+            f"Interactive shell forced by environment variable {_global_settings.ENV_NAME_FORCE_INTERACTIVE_SHELL}"
+        )
+        return True
+    if non_interactive_reason := _not_interactive_reason():
+        logger.debug(f"Interactive shell not available: {non_interactive_reason}")
+        return False
+    return True

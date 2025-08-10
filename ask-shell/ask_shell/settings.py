@@ -41,6 +41,43 @@ def default_remove_os_secrets() -> bool:
 ENV_PREFIX = "ASK_SHELL_"
 
 
+@lru_cache  # to avoid cleaning run logs multiple times
+def _clean_run_logs(run_logs: Path, clean_value: str) -> None:
+    if not run_logs.exists():
+        return
+    if run_logs.name != DEFAULT_RUN_LOGS_BASE_DIR:
+        from ask_shell._internal.interactive import confirm  # Avoid circular import
+
+        if confirm(
+            f"Run logs directory '{run_logs}' is not the default {DEFAULT_RUN_LOGS_BASE_DIR}. Do you want to skip cleaning?",
+            default=True,
+        ):
+            return
+
+    if clean_value == "yesterday":
+        clean_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    else:
+        clean_date = clean_value
+    try:
+        parsed_date = datetime.strptime(clean_date, "%Y-%m-%d")
+    except ValueError:
+        logger.warning(
+            "Invalid date format for run logs cleaning. Expected 'YYYY-MM-DD' or 'yesterday'."
+        )
+        return
+    for path in run_logs.iterdir():
+        if not path.is_dir():
+            continue
+        dir_name = path.name
+        try:
+            dir_date = datetime.strptime(dir_name, "%Y-%m-%d")
+        except ValueError:
+            continue
+        if dir_date < parsed_date:
+            logger.info(f"Cleaning run logs directory: {path}")
+            clean_dir(path, recreate=False)
+
+
 class AskShellSettings(StaticSettings):
     model_config = ConfigDict(populate_by_name=True)  # type: ignore
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "UNSET"] = (
@@ -176,43 +213,6 @@ class AskShellSettings(StaticSettings):
 
 def default_rich_info_style() -> str:
     return "[cyan]"
-
-
-@lru_cache  # to avoid cleaning run logs multiple times
-def _clean_run_logs(run_logs: Path, clean_value: str) -> None:
-    if not run_logs.exists():
-        return
-    if run_logs.name != DEFAULT_RUN_LOGS_BASE_DIR:
-        from ask_shell._internal.interactive import confirm  # Avoid circular import
-
-        if confirm(
-            f"Run logs directory '{run_logs}' is not the default {DEFAULT_RUN_LOGS_BASE_DIR}. Do you want to skip cleaning?",
-            default=True,
-        ):
-            return
-
-    if clean_value == "yesterday":
-        clean_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-    else:
-        clean_date = clean_value
-    try:
-        parsed_date = datetime.strptime(clean_date, "%Y-%m-%d")
-    except ValueError:
-        logger.warning(
-            "Invalid date format for run logs cleaning. Expected 'YYYY-MM-DD' or 'yesterday'."
-        )
-        return
-    for path in run_logs.iterdir():
-        if not path.is_dir():
-            continue
-        dir_name = path.name
-        try:
-            dir_date = datetime.strptime(dir_name, "%Y-%m-%d")
-        except ValueError:
-            continue
-        if dir_date < parsed_date:
-            logger.info(f"Cleaning run logs directory: {path}")
-            clean_dir(path, recreate=False)
 
 
 _global_settings = AskShellSettings.for_testing(

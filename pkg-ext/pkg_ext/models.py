@@ -56,14 +56,6 @@ class RefSymbol(Entity):
         init=False,
     )
 
-    def __str__(self) -> str:
-        return f"{self.name} ({self.type}) in {self.rel_path}"
-
-    def __lt__(self, other) -> bool:
-        if not isinstance(other, RefSymbol):
-            raise TypeError
-        return self.local_id < other.local_id
-
     @model_validator(mode="after")
     def ensure_valid_name(self):
         assert self.name, "Symbol name cannot be empty"
@@ -105,6 +97,14 @@ class RefSymbol(Entity):
             description=f"{self.docstring}\nSource usages: {src_usages_str}\nTest usages: {test_usages_str}",
             checked=checked,
         )
+
+    def __lt__(self, other) -> bool:
+        if not isinstance(other, RefSymbol):
+            raise TypeError
+        return self.local_id < other.local_id
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.type}) in {self.rel_path}"
 
 
 @total_ordering

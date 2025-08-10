@@ -56,11 +56,6 @@ class run_pool:
         )
         self._max_run_count_with_this_pool = max_run_count - run_count_used_by_this_pool
 
-    def __enter__(self):
-        self._task = new_task(self.task_name, self.total)
-        self._task.__enter__()
-        return self
-
     def _on_submit_done(self):
         """Callback to be called when a submit is done. This is used to decrement the current submit count."""
         with self._lock:
@@ -94,6 +89,11 @@ class run_pool:
         future = self.pool.submit(fn, *args, **kwargs)
         future.add_done_callback(lambda _: self._on_submit_done())
         return future
+
+    def __enter__(self):
+        self._task = new_task(self.task_name, self.total)
+        self._task.__enter__()
+        return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         # no cleanup necessary, the pool will be cleaned up automatically due to atexit call

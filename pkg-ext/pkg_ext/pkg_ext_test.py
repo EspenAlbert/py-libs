@@ -10,6 +10,13 @@ from pkg_ext.ref_processor import create_refs
 ASK_SHELL_PKG_IMPORT_NAME = "ask_shell"
 
 
+def _parse_src_module(module) -> PkgSrcFile:
+    models_path = Path(module.__file__)
+    result = parse_symbols(models_path, models_path.name, ASK_SHELL_PKG_IMPORT_NAME)
+    assert isinstance(result, PkgSrcFile)
+    return result
+
+
 def test_parse_symbols():
     symbols = _parse_src_module(settings)
     settings_path = Path(settings.__file__)
@@ -67,13 +74,6 @@ def test_create_refs():
     actual_ref = refs.get(settings_ref)
     assert actual_ref is not None, f"Reference for {settings_ref} not found"
     assert actual_ref.src_usages == ["models.py"]
-
-
-def _parse_src_module(module) -> PkgSrcFile:
-    models_path = Path(module.__file__)
-    result = parse_symbols(models_path, models_path.name, ASK_SHELL_PKG_IMPORT_NAME)
-    assert isinstance(result, PkgSrcFile)
-    return result
 
 
 def test_parse_symbols_run_env():

@@ -68,11 +68,6 @@ class ChangelogAction(Entity):
         description="Pull request number, set from default branch before releasing after merge.",
     )
 
-    def __lt__(self, other) -> bool:
-        if not isinstance(other, ChangelogAction):
-            raise TypeError
-        return (self.ts, self.name) < (other.ts, other.name)
-
     @property
     def filename(self) -> str:
         """Generate a filename for the changelog action based on its timestamp."""
@@ -84,6 +79,11 @@ class ChangelogAction(Entity):
             exclude_unset=True, exclude_none=True, exclude_defaults=True, exclude={"ts"}
         )
         return dump(ignored_falsy, format="yaml")
+
+    def __lt__(self, other) -> bool:
+        if not isinstance(other, ChangelogAction):
+            raise TypeError
+        return (self.ts, self.name) < (other.ts, other.name)
 
 
 def parse_changelog_action(path: Path) -> list[ChangelogAction]:

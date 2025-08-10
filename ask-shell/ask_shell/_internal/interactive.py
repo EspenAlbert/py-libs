@@ -75,6 +75,52 @@ def confirm(prompt_text: str, *, default: bool | None = None) -> bool:
     return _question_asker(_confirm(prompt_text, default=default), bool)
 
 
+_unset = object()
+
+
+class SelectChosenOptions(BaseModel):
+    use_search_filter: bool
+    use_shortcuts: bool
+    use_jk_keys: bool
+
+
+class SelectOptions(BaseModel):
+    use_search_filter: bool | object = _unset
+    use_shortcuts: bool | object = _unset
+    use_jk_keys: bool | object = _unset
+
+    @model_validator(mode="after")
+    def validate_compatibility(self) -> SelectOptions:
+        if self.use_search_filter is True and self.use_jk_keys is True:
+            raise ValueError(
+                "use_search_filter and use_jk_keys cannot be used together"
+            )
+        return self
+
+    def set_defaults(self, choices_length: int) -> SelectChosenOptions:
+        if self.use_search_filter is _unset:
+            if self.use_jk_keys is True:
+                self.use_search_filter = False
+            else:
+                self.use_search_filter = choices_length > SEARCH_ENABLED_AFTER_CHOICES
+        assert isinstance(self.use_search_filter, bool)
+        if self.use_shortcuts is _unset:
+            # search filter and shortcuts don't work well together
+            self.use_shortcuts = (
+                not self.use_search_filter
+                and choices_length <= SEARCH_ENABLED_AFTER_CHOICES
+            )
+        assert isinstance(self.use_shortcuts, bool)
+        if self.use_jk_keys is _unset:
+            self.use_jk_keys = not self.use_search_filter
+        assert isinstance(self.use_jk_keys, bool)
+        return SelectChosenOptions(
+            use_search_filter=self.use_search_filter,
+            use_shortcuts=self.use_shortcuts,
+            use_jk_keys=self.use_jk_keys,
+        )
+
+
 @pause_live
 @return_default_if_not_interactive
 def select_list_multiple(
@@ -146,52 +192,6 @@ def select_list_multiple_choices(
         ),
         list[T],
     )
-
-
-_unset = object()
-
-
-class SelectOptions(BaseModel):
-    use_search_filter: bool | object = _unset
-    use_shortcuts: bool | object = _unset
-    use_jk_keys: bool | object = _unset
-
-    @model_validator(mode="after")
-    def validate_compatibility(self) -> SelectOptions:
-        if self.use_search_filter is True and self.use_jk_keys is True:
-            raise ValueError(
-                "use_search_filter and use_jk_keys cannot be used together"
-            )
-        return self
-
-    def set_defaults(self, choices_length: int) -> SelectChosenOptions:
-        if self.use_search_filter is _unset:
-            if self.use_jk_keys is True:
-                self.use_search_filter = False
-            else:
-                self.use_search_filter = choices_length > SEARCH_ENABLED_AFTER_CHOICES
-        assert isinstance(self.use_search_filter, bool)
-        if self.use_shortcuts is _unset:
-            # search filter and shortcuts don't work well together
-            self.use_shortcuts = (
-                not self.use_search_filter
-                and choices_length <= SEARCH_ENABLED_AFTER_CHOICES
-            )
-        assert isinstance(self.use_shortcuts, bool)
-        if self.use_jk_keys is _unset:
-            self.use_jk_keys = not self.use_search_filter
-        assert isinstance(self.use_jk_keys, bool)
-        return SelectChosenOptions(
-            use_search_filter=self.use_search_filter,
-            use_shortcuts=self.use_shortcuts,
-            use_jk_keys=self.use_jk_keys,
-        )
-
-
-class SelectChosenOptions(BaseModel):
-    use_search_filter: bool
-    use_shortcuts: bool
-    use_jk_keys: bool
 
 
 @pause_live
@@ -314,23 +314,6 @@ class question_patcher:
 
     _old_force_interactive_env_str: str = field(default="", init=False, repr=False)
 
-    def __enter__(self):
-        global _question_asker
-        self._old_patcher = _question_asker
-        _question_asker = self.ask_question
-        self._old_force_interactive_env_str = str(self.settings.force_interactive_shell)
-        interactive_shell.cache_clear()
-        os.environ[self.settings.ENV_NAME_FORCE_INTERACTIVE_SHELL] = "true"
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        global _question_patcher
-        _question_patcher = self._old_patcher
-        os.environ[self.settings.ENV_NAME_FORCE_INTERACTIVE_SHELL] = (
-            self._old_force_interactive_env_str
-        )
-        interactive_shell.cache_clear()
-
     def ask_question(self, q: Question, response_type: type[T]) -> T:
         q.application.output = DummyOutput()
 
@@ -349,6 +332,23 @@ class question_patcher:
 
         with create_pipe_input() as inp:
             return run(inp)
+
+    def __enter__(self):
+        global _question_asker
+        self._old_patcher = _question_asker
+        _question_asker = self.ask_question
+        self._old_force_interactive_env_str = str(self.settings.force_interactive_shell)
+        interactive_shell.cache_clear()
+        os.environ[self.settings.ENV_NAME_FORCE_INTERACTIVE_SHELL] = "true"
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        global _question_asker
+        _question_asker = self._old_patcher
+        os.environ[self.settings.ENV_NAME_FORCE_INTERACTIVE_SHELL] = (
+            self._old_force_interactive_env_str
+        )
+        interactive_shell.cache_clear()
 
 
 if __name__ == "__main__":

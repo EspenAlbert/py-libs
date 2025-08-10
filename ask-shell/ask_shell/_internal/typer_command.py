@@ -22,6 +22,34 @@ T = TypeVar("T", bound=Callable)
 original_excepthook = sys.excepthook
 
 
+def log_exit_summary(settings: AskShellSettings):
+    log_to_live(
+        f"{default_rich_info_style()}You can find the run logs in {settings.run_logs} "
+    )
+
+
+def except_hook(
+    exc_type: type[BaseException], exc_value: BaseException, tb: TracebackType | None
+) -> None:
+    """Similar to typer's except hook"""
+    internal_modules = [typer, click, ask_shell]
+    console = get_live_console()
+    rich_tb = Traceback.from_exception(
+        exc_type,
+        exc_value,
+        tb,
+        show_locals=True,
+        suppress=internal_modules,
+        width=console.width,
+    )
+    console.print(rich_tb)
+    standard_exception = traceback.TracebackException(
+        exc_type, exc_value, tb, limit=-7, compact=True
+    )
+    for line in standard_exception.format(chain=True):
+        console.print(line, end="")
+
+
 def track_progress_decorator(
     *,
     settings: AskShellSettings,
@@ -53,71 +81,6 @@ def track_progress_decorator(
         return wrapper  # type: ignore
 
     return decorator
-
-
-def log_exit_summary(settings: AskShellSettings):
-    log_to_live(
-        f"{default_rich_info_style()}You can find the run logs in {settings.run_logs} "
-    )
-
-
-def configure_logging(
-    app: typer.Typer,
-    *,
-    settings: AskShellSettings | None = None,
-    app_pretty_exceptions_enable: bool = False,
-    app_pretty_exceptions_show_locals: bool = False,
-    skip_except_hook: bool = False,
-    use_app_name_command_for_logs: bool = True,
-) -> logging.Handler:
-    settings = settings or AskShellSettings.from_env()
-    app_name = app.info.name or "typer_app"
-    for command in app.registered_commands:
-        command.callback = track_progress_decorator(
-            skip_except_hook=skip_except_hook,
-            settings=settings,
-            use_app_name_command_for_logs=use_app_name_command_for_logs,
-            app_name=app_name,
-            command_name=command.name or command.callback.__name__,  # type: ignore
-        )(
-            command.callback  # type: ignore
-        )
-    handler = RichHandler(
-        rich_tracebacks=False, level=settings.log_level, console=get_live_console()
-    )
-    logging.basicConfig(
-        level=settings.log_level,
-        format="%(message)s",
-        datefmt="[%X]",
-        handlers=[handler],
-    )
-    if settings.remove_os_secrets:
-        hide_secrets(handler, {**os.environ})
-    app.pretty_exceptions_enable = app_pretty_exceptions_enable
-    app.pretty_exceptions_show_locals = app_pretty_exceptions_show_locals
-    return handler
-
-
-def except_hook(
-    exc_type: type[BaseException], exc_value: BaseException, tb: TracebackType | None
-) -> None:
-    """Similar to typer's except hook"""
-    internal_modules = [typer, click, ask_shell]
-    console = get_live_console()
-    rich_tb = Traceback.from_exception(
-        exc_type,
-        exc_value,
-        tb,
-        show_locals=True,
-        suppress=internal_modules,
-        width=console.width,
-    )
-    console.print(rich_tb)
-    standard_exception = traceback.TracebackException(
-        exc_type, exc_value, tb, limit=-7, compact=True
-    )
-    for line in standard_exception.format(chain=True):
-        console.print(line, end="")
 
 
 def remove_secrets(message: str, secrets: list[str]) -> str:
@@ -160,3 +123,40 @@ def hide_secrets(handler: logging.Handler, secrets_dict: dict[str, str]) -> None
     if not secrets_to_hide:
         return
     handler.addFilter(SecretsHider(list(secrets_to_hide), name="secrets-hider"))
+
+
+def configure_logging(
+    app: typer.Typer,
+    *,
+    settings: AskShellSettings | None = None,
+    app_pretty_exceptions_enable: bool = False,
+    app_pretty_exceptions_show_locals: bool = False,
+    skip_except_hook: bool = False,
+    use_app_name_command_for_logs: bool = True,
+) -> logging.Handler:
+    settings = settings or AskShellSettings.from_env()
+    app_name = app.info.name or "typer_app"
+    for command in app.registered_commands:
+        command.callback = track_progress_decorator(
+            skip_except_hook=skip_except_hook,
+            settings=settings,
+            use_app_name_command_for_logs=use_app_name_command_for_logs,
+            app_name=app_name,
+            command_name=command.name or command.callback.__name__,  # type: ignore
+        )(
+            command.callback  # type: ignore
+        )
+    handler = RichHandler(
+        rich_tracebacks=False, level=settings.log_level, console=get_live_console()
+    )
+    logging.basicConfig(
+        level=settings.log_level,
+        format="%(message)s",
+        datefmt="[%X]",
+        handlers=[handler],
+    )
+    if settings.remove_os_secrets:
+        hide_secrets(handler, {**os.environ})
+    app.pretty_exceptions_enable = app_pretty_exceptions_enable
+    app.pretty_exceptions_show_locals = app_pretty_exceptions_show_locals
+    return handler

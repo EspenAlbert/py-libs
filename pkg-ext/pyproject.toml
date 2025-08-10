@@ -2,6 +2,10 @@
 name = "pkg-ext"
 version = "1.0.0+rc1"
 requires-python = ">=3.10"
+dependencies = [
+  "ask-shell",
+  "pycobertura==4.0.0",
+]
 
 [build-system]
 requires = ["hatchling"]

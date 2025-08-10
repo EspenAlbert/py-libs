@@ -31,9 +31,9 @@ test-all:
   just test 3.12
   just test 3.13
 cov:
-  export RUN_SLOW=false && uv run pytest --cov --cov-report=html
+  export SLOW=false && uv run pytest --cov --cov-report=html
 cov-full format='html':
-  export RUN_SLOW=true && uv run pytest --cov --cov-report={{format}}
+  export SLOW=true && uv run pytest --cov --cov-report={{format}}
 open-cov: cov
   open htmlcov/index.html
 open-cov-full: cov-full

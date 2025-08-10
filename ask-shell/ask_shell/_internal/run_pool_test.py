@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.skipif(os.environ.get("SLOW", "") == "", reason="needs os.environ[SLOW]")
 def test_running_enough_scripts_to_wait(settings, capture_console):
-    submit_tasks = max_run_count_for_workers(settings.RUN_THREAD_COUNT)
+    submit_tasks = max_run_count_for_workers(settings.thread_count)
 
     submit_task_sleep_time = 1
 

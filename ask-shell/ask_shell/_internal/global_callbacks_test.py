@@ -34,7 +34,7 @@ def test_wait_on_available_threads(settings):
 def test_running_enough_scripts_to_wait(settings):
     settings.message_callbacks.append(wait_on_available_threads)
     count = (
-        settings.RUN_THREAD_COUNT // THREADS_PER_RUN + 2
+        settings.thread_count // THREADS_PER_RUN + 2
     )  # at least 2 runs should be blocked
     before = time.monotonic()
     logger.info(f"start time: {before}")

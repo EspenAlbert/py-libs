@@ -1,3 +1,4 @@
+import os
 from unittest.mock import Mock
 
 import pytest
@@ -35,6 +36,7 @@ terraform {
 
 
 @pytest.fixture()
+@pytest.mark.skipif(os.environ.get("SLOW", "") == "", reason="needs os.environ[SLOW]")
 def tf_dir(settings):
     """Fixture to create a temporary directory with a Terraform example."""
     tf_path = settings.static_root / "terraform_example/main.tf"

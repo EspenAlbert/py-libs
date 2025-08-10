@@ -2,7 +2,7 @@ alias b := build
 alias t := test
 mversion := "1.0.0b5"
 zversion := "1.0.0b5"
-quick: ssort fmt fix lint
+quick: ssort fmt fix lint test-fast
   @echo "Quick checks passed"
 pre-push: lint fmt-check test
   @echo "All checks passed"
@@ -21,6 +21,8 @@ lint:
   uv run ruff check .
 type:
   uv run pyright
+test-fast:
+  export PYTHONPATH=scripts && export SKIP_MARKED_TESTS=true && uv run pytest -p pytest_skip_marked
 test version='3.11' test-path='':
   uv run --python {{version}} pytest {{test-path}}
 test-all:

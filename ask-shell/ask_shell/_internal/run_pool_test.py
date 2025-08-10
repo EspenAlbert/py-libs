@@ -48,6 +48,7 @@ def test_running_enough_scripts_to_wait(settings, capture_console):
     assert "Test Submit should block" in output, "Task name should be in the output"
 
 
+@pytest.mark.skipif(os.environ.get("SLOW", "") == "", reason="needs os.environ[SLOW]")
 def test_run_pool_multiple_usages(capture_console):
     with run_pool(task_name="First Pool", total=5) as pool1:
         for i in range(5):

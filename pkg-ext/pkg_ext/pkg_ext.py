@@ -35,6 +35,8 @@ def generate_api(
         help="Path to the package directory, expecting pkg_path/__init__.py to exist",
     ),
 ):
+    # TODO: Continue by running `just pre-push` in the background
+    # TODO: Continue by running `just cov-full xml`
     pkg_path = Path(pkg_path_str).resolve()
     assert pkg_path.is_dir(), f"Expected a directory, got {pkg_path}"
     init_file = pkg_path / "__init__.py"
@@ -54,6 +56,7 @@ def generate_api(
     handle_removed_refs(state, active_states)
     # Todo: Handle changed refs by inspecting signatures
     try:
+        # TODO: Support also grouping the references
         handle_added_refs(state, active_states)
     except KeyboardInterrupt:
         logger.warning("Interrupted while handling added references")

@@ -29,12 +29,17 @@ def gather_conc_futures(futures: Iterable[ConcFuture]) -> AsyncFuture:
 
 
 def chain_future(
-    complete_first: Future, complete_after: Future, only_on_error: bool = False
+    complete_first: Future,
+    complete_after: Future,
+    *,
+    only_on_error: bool = False,
+    skip_log_already_complete: bool = False,
 ) -> None:
     def copy_result(future: Future):
         assert future is complete_first
         if complete_after.done():
-            logger.info(f"complete_after future already done: {complete_after}")
+            if not skip_log_already_complete:
+                logger.info(f"complete_after future already done: {complete_after}")
             return
         if error := complete_first.exception():
             safe_complete(complete_after, error=error)
@@ -43,6 +48,22 @@ def chain_future(
                 safe_complete(complete_after, result=complete_first.result())
 
     complete_first.add_done_callback(copy_result)
+
+
+def add_error_logging(
+    future: Future, *, error_logger: logging.Logger | None = None, error_hint: str = ""
+) -> None:
+    error_logger = error_logger or logger
+
+    def log_error_safely(error: BaseException):
+        with suppress(Exception):
+            if error_hint:
+                error_logger.error(error_hint)
+            error_logger.exception(error)
+
+    add_done_callback(
+        future, log_error_safely, _only_on_error=True, _include_error=True
+    )
 
 
 def add_done_callback(
@@ -55,6 +76,9 @@ def add_done_callback(
     _include_error_name: str = "error",
     **callback_kwargs,
 ) -> None:
+    """
+    Args starting with `_` use it to avoid accidental callback_kwargs clash
+    """
     assert not (_only_on_error and _only_on_ok), "only_on_xx is mutually exclusive"
 
     @wraps(call)

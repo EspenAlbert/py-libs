@@ -14,9 +14,9 @@ TOTAL_RUNTIME = 0.30
 
 
 @pytest.fixture(autouse=True, scope="module")
-def skip_if_not_RUN_SLOW():
-    if not want_bool(os.environ.get("RUN_SLOW")):
-        pytest.skip("Skipping tests unless RUN_SLOW=true")
+def skip_if_not_SLOW():
+    if not want_bool(os.environ.get("SLOW")):
+        pytest.skip("Skipping tests unless SLOW=true")
 
 
 @pytest.mark.parametrize(

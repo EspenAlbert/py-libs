@@ -6,6 +6,15 @@ repos:
   - id: no-commit-to-branch
 - repo: local
   hooks:
+    - id: pre-commit
+      name: quick
+      entry: bash -c 'just quick'
+      language: system
+      always_run: true
+      types: [file]
+      stages: [commit]
+- repo: local
+  hooks:
     - id: pre-push
       name: Lint & Test
       entry: bash -c 'just pre-push'

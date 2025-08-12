@@ -97,9 +97,14 @@ def render_live() -> None:
 
 
 class live_frozen:
+    def __init__(self) -> None:
+        self._render_on_exit = True
+
     def __enter__(self) -> None:
         """Freeze the live updates, preventing any changes to the live renderables."""
-        assert not _live_is_frozen(), "Live is already frozen"
+        if _live_is_frozen():
+            self._render_on_exit = False
+            return
         with _lock:
             live = get_live()
             if live.is_started:
@@ -107,6 +112,8 @@ class live_frozen:
             setattr(live, _live_is_frozen_attr_name, True)
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
+        if not self._render_on_exit:
+            return
         with _lock:
             live = get_live()
             setattr(live, _live_is_frozen_attr_name, False)

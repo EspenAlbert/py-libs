@@ -84,10 +84,22 @@ class SelectChosenOptions(BaseModel):
     use_jk_keys: bool
 
 
-class SelectOptions(BaseModel):
+@dataclass
+class NewHandlerChoice(Generic[T]):
+    # TODO: ADD MORE UNIT TESTS
+    constructor: Callable[[str], T]
+    new_prompt: str
+
+
+class SelectOptions(BaseModel, Generic[T]):
     use_search_filter: bool | object = _unset
     use_shortcuts: bool | object = _unset
     use_jk_keys: bool | object = _unset
+    new_handler_choice: NewHandlerChoice[T] | None = None
+
+    @property
+    def allow_new(self) -> bool:
+        return self.new_handler_choice is not None
 
     @model_validator(mode="after")
     def validate_compatibility(self) -> SelectOptions:
@@ -266,24 +278,36 @@ def select_list_choice(
     assert choices, f"choices must not be empty for {as_name(select_list_choice)}"
     options = options or SelectOptions()
     chosen = options.set_defaults(len(choices))
-    return _question_asker(
-        _select(
-            prompt_text,
-            default=default,  # type: ignore
-            choices=[
-                Choice(
-                    typed_choice.name,
-                    value=typed_choice.value,
-                    description=typed_choice.description,
-                )
-                for typed_choice in choices
-            ],
-            use_jk_keys=chosen.use_jk_keys,
-            use_shortcuts=chosen.use_shortcuts,
-            use_search_filter=chosen.use_search_filter,
-        ),
-        T,
-    )
+    if options.allow_new:
+        prompt_text += " (use ctrl+c to define a new instead)"
+    try:
+        return _question_asker(
+            _select(
+                prompt_text,
+                default=default,  # type: ignore
+                choices=[
+                    Choice(
+                        typed_choice.name,
+                        value=typed_choice.value,
+                        description=typed_choice.description,
+                    )
+                    for typed_choice in choices
+                ],
+                use_jk_keys=chosen.use_jk_keys,
+                use_shortcuts=chosen.use_shortcuts,
+                use_search_filter=chosen.use_search_filter,
+            ),
+            T,
+        )
+    except KeyboardInterrupt:
+        if not options.allow_new:
+            raise
+        new_handler_choice = options.new_handler_choice
+        assert new_handler_choice, (
+            "Should never happen, new_handler_choice must be set when allow_new is True"
+        )
+        new_text = text(new_handler_choice.new_prompt)
+        return new_handler_choice.constructor(new_text)
 
 
 class KeyInput:
@@ -353,6 +377,14 @@ class question_patcher:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
+    new_handler = NewHandlerChoice(str, new_prompt="choose different value")
+    logger.info(
+        select_list_choice(
+            "select me",
+            [ChoiceTyped(name="c1", value=1), ChoiceTyped(name="c2", value=2)],
+            options=SelectOptions(new_handler_choice=new_handler),
+        )
+    )
 
     async def async_main():
         logger.info(

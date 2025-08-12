@@ -23,9 +23,11 @@ from pkg_ext.gen_changelog import (
     dump_changelog_action,
     parse_changelog_actions,
 )
+from pkg_ext.interactive_choices import select_group
 from pkg_ext.models import (
     PkgSrcFile,
     PkgTestFile,
+    PublicGroups,
     RefState,
     RefStateType,
     RefStateWithSymbol,
@@ -205,28 +207,30 @@ def handle_removed_refs(
 
 
 def handle_added_refs(
-    pkg_state: PkgRefState, active_refs: dict[str, RefStateWithSymbol]
+    pkg_state: PkgRefState,
+    active_refs: dict[str, RefStateWithSymbol],
+    public_groups: PublicGroups,
 ) -> None:
     added_refs = pkg_state.added_refs(active_refs)
     if not added_refs:
         logger.info("No new references found in the package")
         return
 
-    def group_by_file(state: RefStateWithSymbol) -> str:
+    def group_by_module_path(state: RefStateWithSymbol) -> str:
         return state.symbol.rel_path
 
-    file_added_refs = group_by_once(added_refs.values(), key=group_by_file)
+    file_added_refs = group_by_once(added_refs.values(), key=group_by_module_path)
     with new_task(
         "New References expose decisions", total=len(file_added_refs), log_updates=True
     ) as task:
-        for file_name, file_states in file_added_refs.items():
-            run_and_wait(f"{get_editor()} {pkg_state.pkg_path / file_name}")
+        for rel_path, file_states in file_added_refs.items():
+            run_and_wait(f"{get_editor()} {pkg_state.pkg_path / rel_path}")
             choices = {
                 state.name: state.symbol.as_choice(checked=False)
                 for state in file_states
             }
             expose_refs = select_list_multiple_choices(
-                f"Select references to expose from {file_name} (if any):",
+                f"Select references to expose from {rel_path} (if any):",
                 choices=list(choices.values()),
                 default=[],
             )
@@ -240,9 +244,12 @@ def handle_added_refs(
                     ChangelogAction(
                         name=state.name,
                         action=action,
-                        details=f"Created in {file_name}",
+                        details=f"Created in {rel_path}",
                     )
                 )
+                if action == ChangelogActionType.EXPOSE:
+                    select_group(public_groups, rel_path, state.name)
+
             task.update(advance=1)
 
 

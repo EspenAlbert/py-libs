@@ -1,20 +1,47 @@
 from __future__ import annotations
 
 from contextlib import suppress
-from functools import total_ordering
+from functools import total_ordering, wraps
 from pathlib import Path
 from pydoc import locate
-from typing import Iterable
+from typing import Annotated, Any, Callable, ClassVar, Iterable, TypeAlias, TypeVar
 
 from ask_shell._internal.interactive import ChoiceTyped
 from model_lib.model_base import Entity
-from pydantic import Field, ValidationError, model_validator
+from model_lib.serialize import dump
+from pydantic import AfterValidator, Field, ValidationError, model_validator
+from zero_3rdparty import file_utils
 from zero_3rdparty.enum_utils import StrEnum
 
+from pkg_ext.errors import (
+    InvalidGroupSelectionError,
+    NoPublicGroupMatch,
+    PublicGroupAlreadyExist,
+)
 
-def ref_id(rel_path: str, symbol_name: str) -> str:
+
+def ref_id_format(original: str):
+    if ":" not in original:
+        raise ValueError(
+            f"A ref_id must use the form parent.child:function module format, got: {original}"
+        )
+    return original
+
+
+def as_module_path(rel_path: str) -> str:
+    return rel_path.removesuffix(".py").replace("/", ".")
+
+
+SymbolRefId: TypeAlias = Annotated[str, AfterValidator(ref_id_format)]
+
+
+def ref_id_module(ref_id: SymbolRefId) -> str:
+    return ref_id.split(":")[0]
+
+
+def ref_id(rel_path: str, symbol_name: str) -> SymbolRefId:
     """Generate a unique reference ID based on the relative path and symbol name."""
-    return f"{rel_path.removesuffix('.py')}:{symbol_name}"
+    return f"{as_module_path(rel_path)}:{symbol_name}"
 
 
 def is_test_file(path: Path) -> bool:
@@ -31,6 +58,7 @@ class SymbolType(StrEnum):
     FUNCTION = "function"
     CLASS = "class"
     EXCEPTION = "exception"
+    UNKNOWN = "unknown"
 
 
 @total_ordering
@@ -40,7 +68,7 @@ class RefSymbol(Entity):
         description=f"Type of the symbol, one of SymbolType: {list(SymbolType)}"
     )
     rel_path: str = Field(
-        description="Relative path to the file where the symbol is defined"
+        description="Relative path to the file where the symbol is defined without"
     )
     docstring: str = Field(
         default="", description="Docstring of the symbol, if available", init=False
@@ -76,9 +104,13 @@ class RefSymbol(Entity):
         return self
 
     @property
-    def local_id(self) -> str:
+    def local_id(self) -> SymbolRefId:
         """Without the top level package name."""
         return ref_id(self.rel_path, self.name)
+
+    @property
+    def module_path(self) -> str:
+        return as_module_path(self.rel_path)
 
     def full_id(self, pkg_import_name: str) -> str:
         """Full ID including the package name."""
@@ -225,3 +257,118 @@ class RefStateWithSymbol(RefState):
             value=self.name,
             description=self.symbol.docstring,
         )
+
+
+def is_root_identifier(value: str):
+    if value.isidentifier():
+        return value
+    raise ValueError(
+        f"invalid python identifier: {value}, must not use . and be valid module name"
+    )
+
+
+PyIdentifier: TypeAlias = Annotated[str, AfterValidator(is_root_identifier)]
+
+
+@total_ordering
+class PublicGroup(Entity):
+    ROOT_GROUP_NAME: ClassVar[str] = "__ROOT__"
+    name: PyIdentifier
+    owned_refs: list[SymbolRefId] = Field(default_factory=list)
+
+    @property
+    def is_root(self) -> bool:
+        return self.name == self.ROOT_GROUP_NAME
+
+    @property
+    def owned_modules(self) -> set[str]:
+        return {ref_id_module(ref) for ref in self.owned_refs}
+
+    def dump(self) -> dict:
+        return self.model_dump()
+
+    def __lt__(self, other) -> bool:
+        if not isinstance(other, PublicGroup):
+            raise TypeError
+        return self.name < other.name
+
+
+def _default_public_groups() -> list[PublicGroup]:
+    return [PublicGroup(name=PublicGroup.ROOT_GROUP_NAME)]
+
+
+T = TypeVar("T", bound=Callable)
+
+
+def ensure_disk_path_updated(func: T) -> T:
+    @wraps(func)
+    def wrapper(self_: PublicGroups, *args: Any, **kwargs: Any) -> Any:
+        try:
+            return func(self_, *args, **kwargs)
+        except BaseException:
+            raise
+        finally:
+            storage_path = self_.storage_path
+            if storage_path is None:
+                return
+            file_ext = storage_path.suffix
+            assert file_ext in (".yaml", ".yml"), (
+                "Disk path must have .yaml or .yml extension"
+            )
+            self_.groups.sort()
+            for group in self_.groups:
+                group.owned_refs = sorted(set(group.owned_refs))
+            self_dict = self_.model_dump(exclude={"storage_path"})
+            yaml_text = dump(self_dict, "yaml")
+            file_utils.ensure_parents_write_text(storage_path, yaml_text)
+
+    return wrapper  # type: ignore
+
+
+_INVALID_SYMBOL_NAME = "not-allowed"
+
+
+class PublicGroups(Entity):
+    STORAGE_FILENAME: ClassVar[str] = ".groups.yaml"
+    groups: list[PublicGroup] = Field(default_factory=_default_public_groups)
+    storage_path: Path | None = None
+
+    @property
+    def name_to_group(self) -> dict[str, PublicGroup]:
+        return {group.name: group for group in self.groups}
+
+    def matching_group(self, symbol_name: str, module_path: str) -> PublicGroup:
+        if match_by_module := [
+            group for group in self.groups if module_path in group.owned_modules
+        ]:
+            assert len(match_by_module) == 1, (
+                f"Expected exactly one matching group for {symbol_name} in {module_path}, got {len(match_by_module)}"
+            )
+            return match_by_module[0]
+        raise NoPublicGroupMatch(
+            f"No public group found for symbol {symbol_name} in module {module_path}"
+        )
+
+    @ensure_disk_path_updated
+    def add_group(self, group: PublicGroup) -> PublicGroup:
+        if group.name in self.name_to_group:
+            raise PublicGroupAlreadyExist(group.name)
+        self.groups.append(group)
+        return group
+
+    @ensure_disk_path_updated
+    def add_ref(self, ref: RefSymbol, group_name: str) -> PublicGroup:
+        group = self.name_to_group.get(group_name)
+        if not group:
+            group = PublicGroup(name=group_name)
+            self.add_group(group)
+        try:
+            matching_group = self.matching_group(ref.name, ref.module_path)
+            if matching_group.name != group_name:
+                raise InvalidGroupSelectionError(
+                    reason=f"existing_group: {matching_group.name} matched for {ref.local_id}"
+                )
+            group.owned_refs.append(ref.local_id)
+        except NoPublicGroupMatch:
+            group.owned_refs.append(ref.local_id)
+        return group

@@ -9,14 +9,27 @@ from typing import Annotated, Any, Callable, ClassVar, Iterable, TypeAlias, Type
 from ask_shell._internal.interactive import ChoiceTyped
 from model_lib.model_base import Entity
 from model_lib.serialize import dump
-from pydantic import AfterValidator, Field, ValidationError, model_validator
+from pydantic import (
+    AfterValidator,
+    DirectoryPath,
+    Field,
+    ValidationError,
+    model_validator,
+)
 from zero_3rdparty import file_utils
 from zero_3rdparty.enum_utils import StrEnum
+from zero_3rdparty.iter_utils import group_by_once
 
 from pkg_ext.errors import (
     InvalidGroupSelectionError,
     NoPublicGroupMatch,
     PublicGroupAlreadyExist,
+)
+from pkg_ext.gen_changelog import (
+    ChangelogAction,
+    ChangelogActionType,
+    OldNameNewName,
+    dump_changelog_action,
 )
 
 
@@ -372,3 +385,107 @@ class PublicGroups(Entity):
         except NoPublicGroupMatch:
             group.owned_refs.append(ref.local_id)
         return group
+
+
+class PkgCodeState(Entity):
+    """Currently, we don't allow any shared names. E.g., mod1.Name1, mod2.Name2, Name1 != Name2"""
+
+    import_id_refs: dict[str, RefSymbol]
+
+    @model_validator(mode="after")
+    def ensure_no_duplicate_names(self):
+        active_refs = group_by_once(
+            self.import_id_refs.values(), key=lambda ref: ref.name
+        )
+        duplicated_refs = [
+            f"duplicated refs for {name}: "
+            + ", ".join(str(ref) for ref in duplicated_refs)
+            for name, duplicated_refs in active_refs.items()
+            if len(duplicated_refs) > 1
+        ]
+        duplicated_refs_lines = "\n".join(duplicated_refs)
+        assert not duplicated_refs, (
+            f"Found duplicated references: {duplicated_refs_lines}"
+        )
+        return self
+
+    @property
+    def named_refs(self) -> dict[str, RefStateWithSymbol]:
+        return {
+            ref.name: RefStateWithSymbol(name=ref.name, symbol=ref)
+            for ref in self.import_id_refs.values()
+        }
+
+
+class PkgExtState(Entity):
+    refs: dict[str, RefState] = Field(
+        default_factory=dict, description="Mapping of reference names to their states"
+    )
+    changelog_dir: DirectoryPath
+    pkg_path: DirectoryPath
+    groups: PublicGroups
+
+    def current_state(self, ref_name: str) -> RefState:
+        if state := self.refs.get(ref_name):
+            return state
+        self.refs[ref_name] = state = RefState(name=ref_name)
+        return state
+
+    def update_state(self, action: ChangelogAction) -> None:
+        """Update the state of a reference based on a changelog action."""
+        state = self.current_state(action.name)
+        match action.action:
+            case ChangelogActionType.EXPOSE:
+                state.type = RefStateType.EXPOSED
+            case ChangelogActionType.HIDE:
+                state.type = RefStateType.HIDDEN
+            case ChangelogActionType.DEPRECATE:
+                state.type = RefStateType.DEPRECATED
+            case ChangelogActionType.DELETE:
+                state.type = RefStateType.DELETED
+            case ChangelogActionType.RENAME_AND_DELETE:
+                details = action.details
+                if isinstance(details, OldNameNewName):
+                    old_state = self.current_state(details.old_name)
+                    old_state.type = RefStateType.DELETED
+                    state.type = RefStateType.EXPOSED
+
+    def removed_refs(self, code: PkgCodeState) -> dict[str, str]:
+        named_refs = code.named_refs
+        return {
+            ref_name: f"{state.type.value} -> removed"
+            for ref_name, state in self.refs.items()
+            if state.type in {RefStateType.EXPOSED, RefStateType.DEPRECATED}
+            and ref_name not in named_refs
+        }
+
+    def added_refs(
+        self, active_refs: dict[str, RefStateWithSymbol]
+    ) -> dict[str, RefStateWithSymbol]:
+        """Get references that were added to the package."""
+        return {
+            ref_name: ref_symbol
+            for ref_name, ref_symbol in active_refs.items()
+            if ref_name not in self.refs
+            or (self.refs[ref_name].type == RefStateType.UNSET)
+        }
+
+    def add_action(self, action: ChangelogAction) -> None:
+        self.update_state(action)
+        path = self.changelog_dir / action.filename
+        dump_changelog_action(path, action)
+
+    def is_exposed(self, ref_name: str) -> bool:
+        return self.current_state(ref_name).type in {
+            RefStateType.EXPOSED,
+            RefStateType.DEPRECATED,
+        }
+
+    def exposed_refs(
+        self, active_refs: dict[str, RefStateWithSymbol]
+    ) -> dict[str, RefSymbol]:
+        return {
+            name: state.symbol
+            for name, state in active_refs.items()
+            if self.is_exposed(name)
+        }

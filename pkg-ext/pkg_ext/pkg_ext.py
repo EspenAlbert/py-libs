@@ -22,11 +22,11 @@ from pkg_ext.models import (
     PkgSrcFile,
     PublicGroups,
 )
-from pkg_ext.ref_processor import (
+from pkg_ext.ref_added import (
     handle_added_refs,
-    handle_removed_refs,
     parse_code_symbols,
 )
+from pkg_ext.ref_removed import handle_removed_refs
 from pkg_ext.settings import PkgSettings, pkg_settings
 
 app = Typer(name="pkg-ext", help="Generate public API for a package and more!")

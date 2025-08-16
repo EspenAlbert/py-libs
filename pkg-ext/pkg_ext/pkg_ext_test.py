@@ -5,7 +5,7 @@ from ask_shell._internal import _run_env, models
 
 from pkg_ext.file_parser import parse_symbols
 from pkg_ext.models import PkgSrcFile
-from pkg_ext.ref_processor import parse_code_symbols
+from pkg_ext.ref_added import parse_code_symbols
 
 ASK_SHELL_PKG_IMPORT_NAME = "ask_shell"
 

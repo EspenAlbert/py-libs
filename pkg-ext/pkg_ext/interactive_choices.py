@@ -1,3 +1,5 @@
+import contextlib
+
 from ask_shell._internal.interactive import (
     ChoiceTyped,
     NewHandlerChoice,
@@ -48,15 +50,13 @@ def new_public_group_constructor(
 
 
 def select_group(groups: PublicGroups, rel_path: str, symbol_name: str) -> PublicGroup:
-    try:
+    with contextlib.suppress(NoPublicGroupMatch):
         group = groups.matching_group(symbol_name, rel_path)
         if confirm(
             f"group {group.name} is ok for {ref_id(rel_path, symbol_name)}?",
             default=True,
         ):
             return group
-    except NoPublicGroupMatch:
-        pass
     choices = as_choices(groups)
     return select_list_choice(
         "Choose public API group name",

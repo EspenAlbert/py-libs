@@ -13,7 +13,7 @@ from model_lib.serialize.parse import parse_model
 from typer import Typer
 from zero_3rdparty.file_utils import iter_paths_and_relative
 
-from pkg_ext.file_parser import parse_symbols
+from pkg_ext.file_parser import parse_code_symbols, parse_symbols
 from pkg_ext.gen_changelog import parse_changelog_actions
 from pkg_ext.gen_init import write_init
 from pkg_ext.models import (
@@ -24,7 +24,6 @@ from pkg_ext.models import (
 )
 from pkg_ext.ref_added import (
     handle_added_refs,
-    parse_code_symbols,
 )
 from pkg_ext.ref_removed import handle_removed_refs
 from pkg_ext.settings import PkgSettings, pkg_settings

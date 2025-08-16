@@ -141,20 +141,6 @@ class RefSymbol(Entity):
         """Full ID including the package name."""
         return f"{pkg_import_name}.{self.local_id}"
 
-    def as_choice(self, checked: bool) -> ChoiceTyped:
-        test_usages_str = (
-            ", ".join(self.test_usages) if self.test_usages else "No test usages"
-        )
-        src_usages_str = (
-            ", ".join(self.src_usages) if self.src_usages else "No source usages"
-        )
-        return ChoiceTyped(
-            name=f"{self.name} {self.type} {len(self.src_usages)} src usages {len(self.test_usages)} test usages",
-            value=self.name,
-            description=f"{self.docstring}\nSource usages: {src_usages_str}\nTest usages: {test_usages_str}",
-            checked=checked,
-        )
-
     @property
     def is_type_alias(self) -> bool:
         return self.type == SymbolType.TYPE_ALIAS
@@ -491,14 +477,14 @@ class PkgExtState(Entity):
                     old_state.type = RefStateType.DELETED
                     state.type = RefStateType.EXPOSED
 
-    def removed_refs(self, code: PkgCodeState) -> dict[str, str]:
+    def removed_refs(self, code: PkgCodeState) -> list[RefState]:
         named_refs = code.named_refs
-        return {
-            ref_name: f"{state.type.value} -> removed"
+        return [
+            state
             for ref_name, state in self.refs.items()
             if state.type in {RefStateType.EXPOSED, RefStateType.DEPRECATED}
             and ref_name not in named_refs
-        }
+        ]
 
     def added_refs(
         self, active_refs: dict[str, RefStateWithSymbol]

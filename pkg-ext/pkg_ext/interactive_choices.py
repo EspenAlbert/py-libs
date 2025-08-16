@@ -10,6 +10,7 @@ from pkg_ext.errors import NoPublicGroupMatch
 from pkg_ext.models import (
     PublicGroup,
     PublicGroups,
+    RefState,
     RefStateWithSymbol,
     RefSymbol,
     SymbolType,
@@ -68,10 +69,41 @@ def select_groups(groups: PublicGroups, refs: list[RefStateWithSymbol]) -> None:
     raise NotImplementedError
 
 
+def as_choice(ref: RefSymbol, checked: bool) -> ChoiceTyped:
+    test_usages_str = (
+        ", ".join(ref.test_usages) if ref.test_usages else "No test usages"
+    )
+    src_usages_str = ", ".join(ref.src_usages) if ref.src_usages else "No source usages"
+    return ChoiceTyped(
+        name=f"{ref.name} {ref.type} {len(ref.src_usages)} src usages {len(ref.test_usages)} test usages",
+        value=ref.name,
+        description=f"{ref.docstring}\nSource usages: {src_usages_str}\nTest usages: {test_usages_str}",
+        checked=checked,
+    )
+
+
 def select_multiple_refs(
     prompt_text: str, refs: list[RefStateWithSymbol]
 ) -> list[RefStateWithSymbol]:
-    choices = {state.name: state.symbol.as_choice(checked=False) for state in refs}
+    choices = {state.name: as_choice(state.symbol, checked=False) for state in refs}
     assert choices, "todo"
     assert prompt_text, "todo"
     raise NotImplementedError()
+
+
+def select_multiple_ref_state(prompt_text: str, refs: list[RefState]) -> list[RefState]:
+    raise NotImplementedError
+
+
+def select_ref(prompt_text: str, refs: list[RefStateWithSymbol]) -> RefStateWithSymbol:
+    raise NotImplementedError
+
+
+def confirm_create_alias(ref: RefState, new_ref: RefStateWithSymbol) -> bool:
+    # todo:
+    return False
+
+
+def confirm_delete(refs: list[RefState]) -> bool:
+    delete_names = ", ".join(ref.name for ref in refs)
+    return confirm(f"Confirm deleting remaining refs: {delete_names}")

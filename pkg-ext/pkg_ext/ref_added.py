@@ -3,7 +3,6 @@ import logging
 from ask_shell._internal._run import run_and_wait
 from ask_shell._internal.rich_progress import new_task
 from zero_3rdparty.iter_utils import (
-    flat_map,
     group_by_once,
 )
 
@@ -18,10 +17,7 @@ from pkg_ext.models import (
     AddChangelogAction,
     PkgCodeState,
     PkgExtState,
-    PkgSrcFile,
-    PkgTestFile,
     RefStateWithSymbol,
-    RefSymbol,
     SymbolType,
 )
 from pkg_ext.settings import get_editor
@@ -133,37 +129,3 @@ def handle_added_refs(
     if added_refs:
         remaining_str = "\n".join(str(ref) for ref in added_refs.values())
         logger.info(f"still has {len(added_refs)} remaining:\n{remaining_str}")
-
-
-def parse_code_symbols(
-    parsed_files: list[PkgSrcFile | PkgTestFile], pkg_import_name: str
-) -> dict[str, RefSymbol]:
-    refs = {
-        symbol.full_id(pkg_import_name): symbol
-        for symbol in flat_map(file.iterate_ref_symbols() for file in parsed_files)
-    }
-    globals_added: set[str] = set()
-    for symbol in list(refs.values()):
-        global_import = f"{pkg_import_name}:{symbol.name}"
-        globals_added.add(global_import)
-        refs[global_import] = symbol
-
-    for file in parsed_files:
-        for ref_usage in file.iterate_usage_ids():
-            ref = refs.get(ref_usage)
-            if not ref:
-                if "conftest" in ref_usage and isinstance(file, PkgTestFile):
-                    logger.debug(
-                        f"Skipping conftest usage {ref_usage} in {file.relative_path}"
-                    )
-                    continue
-                logger.warning(f"Reference {ref_usage} not found in parsed files")
-                continue
-            match file:
-                case PkgTestFile():
-                    ref.test_usages.append(file.relative_path)
-                case PkgSrcFile():
-                    ref.src_usages.append(file.relative_path)
-    for global_import in globals_added:
-        refs.pop(global_import, None)
-    return refs

@@ -1,18 +1,19 @@
 import logging
 
-from ask_shell._internal.interactive import (
-    ChoiceTyped,
-    confirm,
-    select_list_choice,
-    select_list_multiple_choices,
-)
 from ask_shell._internal.rich_progress import new_task
 
 from pkg_ext.gen_changelog import ChangelogActionType, OldNameNewName
+from pkg_ext.interactive_choices import (
+    confirm_create_alias,
+    confirm_delete,
+    select_multiple_ref_state,
+    select_ref,
+)
 from pkg_ext.models import (
     AddChangelogAction,
     PkgCodeState,
     PkgExtState,
+    RefState,
     RefStateWithSymbol,
 )
 
@@ -21,34 +22,31 @@ logger = logging.getLogger(__name__)
 
 def process_reference_renames(
     active_refs: dict[str, RefStateWithSymbol],
-    renames: list[str],
+    renames: list[RefState],
     task: new_task,
     add_changelog: AddChangelogAction,
-) -> set[str]:
+) -> set[RefState]:
     renamed_refs = set()
     used_active: set[str] = set()
-    for ref_name in renames:
+    for ref in renames:
         rename_choices = [
-            state.as_choice()
-            for name, state in active_refs.items()
-            if name not in used_active
+            state for name, state in active_refs.items() if name not in used_active
         ]
-        new_state = select_list_choice(
-            f"Select new name for the reference {ref_name}",
-            choices=rename_choices,
+        new_ref = select_ref(
+            f"Select new name for the reference {ref.name} with type: {ref.type}",
+            rename_choices,
         )
-        if confirm(
-            f"Rename {ref_name} to {new_state}, should we create an alias to avoid a breaking change?",
-            default=False,
-        ):
+        new_name = new_ref.name
+        used_active.add(new_name)
+        if confirm_create_alias(ref, new_ref):
             raise NotImplementedError("Alias creation is not implemented yet")
             # Any DELETE is a breaking change? Or also add that entry?
         add_changelog(
-            new_state,
+            new_name,
             ChangelogActionType.RENAME_AND_DELETE,
-            OldNameNewName(old_name=ref_name, new_name=new_state),
+            OldNameNewName(old_name=ref.name, new_name=new_name),
         )
-        renamed_refs.add(ref_name)
+        renamed_refs.add(ref)
         task.update(advance=1)
     return renamed_refs
 
@@ -60,9 +58,8 @@ def handle_removed_refs(
     if not removed_refs:
         logger.info("No removed references found in the package")
         return
-    if renames := select_list_multiple_choices(
-        "Select references that have been renamed (if any):",
-        choices=ChoiceTyped.from_descriptions(removed_refs),
+    if renames := select_multiple_ref_state(
+        "Select references that have been renamed (if any):", removed_refs
     ):
         with new_task(
             "Renaming references", total=len(renames), log_updates=True
@@ -70,12 +67,11 @@ def handle_removed_refs(
             renamed_refs = process_reference_renames(
                 code_state.named_refs, renames, task, add_changelog
             )
-            for ref_name in renamed_refs:
-                removed_refs.pop(ref_name, None)
-    assert confirm(
-        "Confirm deleting remaining refs: " + ", ".join(removed_refs.keys()),
-    ), (
-        f"Old references {', '.join(removed_refs.keys())} were not confirmed for deletion"
-    )
-    for ref_name, reason in removed_refs.items():
-        add_changelog(ref_name, ChangelogActionType.DELETE, details=reason)
+            for ref in renamed_refs:
+                removed_refs.remove(ref)
+    delete_names = ", ".join(ref.name for ref in removed_refs)
+    if confirm_delete(removed_refs):
+        for ref in removed_refs:
+            add_changelog(ref.name, ChangelogActionType.DELETE)
+    else:
+        assert False, f"Old references {delete_names} were not confirmed for deletion"

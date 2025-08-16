@@ -172,7 +172,7 @@ class SelectOptions(BaseModel, Generic[T]):
         new_text = text(new_handler_choice.new_prompt)
         return new_handler_choice.constructor(new_text)
 
-    def select(self, prompt_text: str, choices: list[ChoiceTyped[T]]) -> T:
+    def _select(self, prompt_text: str, choices: list[ChoiceTyped[T]]) -> T:
         chosen = self.set_defaults(len(choices))
         if self.allow_new:
             prompt_text += " (use ctrl+c to define a new instead)"
@@ -194,7 +194,7 @@ class SelectOptions(BaseModel, Generic[T]):
                 raise
             return self._ask_for_new_value()
 
-    def select_multiple(
+    def _select_multiple(
         self, prompt_text: str, choices: list[ChoiceTyped[T]]
     ) -> list[T]:
         chosen = self.set_defaults(len(choices))
@@ -219,7 +219,7 @@ class SelectOptions(BaseModel, Generic[T]):
                 checked=True,
             )
             choices.insert(0, new_choice)
-            return self.select_multiple(prompt_text, choices=choices)
+            return self._select_multiple(prompt_text, choices=choices)
 
 
 @pause_live
@@ -238,7 +238,7 @@ def select_list_multiple(
         ChoiceTyped(option, checked=option in default, value=option)
         for option in choices
     ]
-    return options.select_multiple(prompt_text, default_choices)
+    return options._select_multiple(prompt_text, default_choices)
 
 
 @pause_live
@@ -255,7 +255,7 @@ def select_list_multiple_choices(
         f"choices must not be empty for {as_name(select_list_multiple_choices)}"
     )
     options = options or SelectOptions()
-    return options.select_multiple(prompt_text, choices)
+    return options._select_multiple(prompt_text, choices)
 
 
 @pause_live
@@ -274,7 +274,7 @@ def select_dict(
         ChoiceTyped(name=key, value=value, checked=key == default_safe)
         for key, value in choices.items()
     ]
-    return options.select(prompt_text, choices_typed)
+    return options._select(prompt_text, choices_typed)
 
 
 @pause_live
@@ -313,7 +313,7 @@ def select_list_choice(
 ) -> T:
     assert choices, f"choices must not be empty for {as_name(select_list_choice)}"
     options = options or SelectOptions()
-    return options.select(prompt_text, choices)
+    return options._select(prompt_text, choices)
 
 
 class KeyInput:

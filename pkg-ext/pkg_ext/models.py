@@ -1,10 +1,21 @@
 from __future__ import annotations
 
 from contextlib import suppress
+from dataclasses import dataclass, field
 from functools import total_ordering, wraps
 from pathlib import Path
 from pydoc import locate
-from typing import Annotated, Any, Callable, ClassVar, Iterable, TypeAlias, TypeVar
+from typing import (
+    Annotated,
+    Any,
+    Callable,
+    ClassVar,
+    ContextManager,
+    Iterable,
+    Protocol,
+    TypeAlias,
+    TypeVar,
+)
 
 from ask_shell._internal.interactive import ChoiceTyped
 from model_lib.model_base import Entity
@@ -28,8 +39,9 @@ from pkg_ext.errors import (
 from pkg_ext.gen_changelog import (
     ChangelogAction,
     ChangelogActionType,
+    ChangelogDetailsT,
     OldNameNewName,
-    dump_changelog_action,
+    dump_changelog_actions,
 )
 
 
@@ -142,6 +154,26 @@ class RefSymbol(Entity):
             description=f"{self.docstring}\nSource usages: {src_usages_str}\nTest usages: {test_usages_str}",
             checked=checked,
         )
+
+    @property
+    def is_type_alias(self) -> bool:
+        return self.type == SymbolType.TYPE_ALIAS
+
+    @property
+    def is_global_var(self) -> bool:
+        return self.type == SymbolType.GLOBAL_VAR
+
+    @property
+    def is_function(self) -> bool:
+        return self.type == SymbolType.FUNCTION
+
+    @property
+    def is_exception(self) -> bool:
+        return self.type == SymbolType.EXCEPTION
+
+    @property
+    def is_unknown(self) -> bool:
+        return self.type == SymbolType.UNKNOWN
 
     def __lt__(self, other) -> bool:
         if not isinstance(other, RefSymbol):
@@ -417,6 +449,15 @@ class PkgCodeState(Entity):
         }
 
 
+class AddChangelogAction(Protocol):
+    def __call__(
+        self,
+        name: str,
+        type: ChangelogActionType,
+        details: ChangelogDetailsT | None = None,
+    ) -> Any: ...
+
+
 class PkgExtState(Entity):
     refs: dict[str, RefState] = Field(
         default_factory=dict, description="Mapping of reference names to their states"
@@ -470,10 +511,13 @@ class PkgExtState(Entity):
             or (self.refs[ref_name].type == RefStateType.UNSET)
         }
 
-    def add_action(self, action: ChangelogAction) -> None:
-        self.update_state(action)
+    def add_changelog_actions(self, actions: list[ChangelogAction]) -> None:
+        assert actions, "must add at least one action"
+        for action in actions:
+            self.update_state(action)
+        action = min(actions)
         path = self.changelog_dir / action.filename
-        dump_changelog_action(path, action)
+        dump_changelog_actions(path, actions)
 
     def is_exposed(self, ref_name: str) -> bool:
         return self.current_state(ref_name).type in {
@@ -489,3 +533,25 @@ class PkgExtState(Entity):
             for name, state in active_refs.items()
             if self.is_exposed(name)
         }
+
+    def changelog_updater(self) -> ContextManager[AddChangelogAction]:
+        return changelog_updater(self)
+
+
+@dataclass
+class changelog_updater:
+    state: PkgExtState
+    _actions: list[ChangelogAction] = field(default_factory=list)
+
+    def add_action(
+        self, name: str, type: ChangelogActionType, details: str | None = None
+    ) -> ChangelogAction:
+        action = ChangelogAction(name=name, action=type, details=details)
+        self._actions.append(action)
+        return action
+
+    def __enter__(self) -> AddChangelogAction:
+        return self.add_action
+
+    def __exit__(self, *_):
+        self.state.add_changelog_actions(self._actions)

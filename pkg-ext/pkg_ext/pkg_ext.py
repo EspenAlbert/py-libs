@@ -23,9 +23,9 @@ from pkg_ext.models import (
     PublicGroups,
 )
 from pkg_ext.ref_processor import (
-    create_refs,
     handle_added_refs,
     handle_removed_refs,
+    parse_code_symbols,
 )
 from pkg_ext.settings import PkgSettings, pkg_settings
 
@@ -45,7 +45,7 @@ def parse_pkg_code_state(settings: PkgSettings) -> PkgCodeState:
         if (parsed := parse_symbols(path, rel_path, pkg_import_name))
     )
 
-    import_id_symbols = create_refs(files, pkg_import_name)
+    import_id_symbols = parse_code_symbols(files, pkg_import_name)
     return PkgCodeState(import_id_refs=import_id_symbols)
 
 
@@ -92,10 +92,13 @@ def generate_api(
     code_state = parse_pkg_code_state(settings)
     tool_state = parse_pkg_ext_state(settings)
     try:
-        handle_removed_refs(tool_state, code_state)  # updates the changelog state
-        handle_added_refs(
-            tool_state, code_state
-        )  # updates the changelog and group state
+        with tool_state.changelog_updater() as add_changelog_action:
+            handle_removed_refs(
+                tool_state, code_state, add_changelog_action
+            )  # updates the changelog state
+            handle_added_refs(
+                tool_state, code_state, add_changelog_action
+            )  # updates the changelog and group state
     except KeyboardInterrupt:
         logger.warning("Interrupted while handling added references")
     # todo: Change me to be grouped instead!

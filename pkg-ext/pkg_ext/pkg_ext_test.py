@@ -5,7 +5,7 @@ from ask_shell._internal import _run_env, models
 
 from pkg_ext.file_parser import parse_symbols
 from pkg_ext.models import PkgSrcFile
-from pkg_ext.ref_processor import create_refs
+from pkg_ext.ref_processor import parse_code_symbols
 
 ASK_SHELL_PKG_IMPORT_NAME = "ask_shell"
 
@@ -68,7 +68,9 @@ def test_parse_type_aliases():
 def test_create_refs():
     models_parsed = _parse_src_module(models)
     settings_parsed = _parse_src_module(settings)
-    refs = create_refs([models_parsed, settings_parsed], ASK_SHELL_PKG_IMPORT_NAME)
+    refs = parse_code_symbols(
+        [models_parsed, settings_parsed], ASK_SHELL_PKG_IMPORT_NAME
+    )
     assert refs
     settings_ref = "ask_shell.settings:AskShellSettings"
     actual_ref = refs.get(settings_ref)

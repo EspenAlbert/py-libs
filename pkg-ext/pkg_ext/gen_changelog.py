@@ -13,6 +13,7 @@ from zero_3rdparty.datetime_utils import (
     utc_now,
 )
 from zero_3rdparty.enum_utils import StrEnum
+from zero_3rdparty.file_utils import ensure_parents_write_text
 
 ACTION_FILE_SPLIT = "---\n"
 
@@ -86,7 +87,7 @@ class ChangelogAction(Entity):
         return (self.ts, self.name) < (other.ts, other.name)
 
 
-def parse_changelog_action(path: Path) -> list[ChangelogAction]:
+def parse_changelog_file_path(path: Path) -> list[ChangelogAction]:
     ts = parse_date_filename_with_seconds(path.stem)
     return [
         parse_model(
@@ -103,18 +104,16 @@ def parse_changelog_action(path: Path) -> list[ChangelogAction]:
 def parse_changelog_actions(changelog_dir_path: Path) -> list[ChangelogAction]:
     actions: list[ChangelogAction] = []
     for path in changelog_dir_path.glob("*.yaml"):
-        actions.extend(parse_changelog_action(path))
+        actions.extend(parse_changelog_file_path(path))
     return sorted(actions)
 
 
-def dump_changelog_action(path: Path, action: ChangelogAction) -> None:
-    if not path.exists():
-        path.write_text(action.file_content)
-        return
-    existing_actions = parse_changelog_action(path)
-    existing_actions.append(action)
-    existing_actions.sort()
+def dump_changelog_actions(path: Path, actions: list[ChangelogAction]) -> None:
+    assert actions, f"no actions to dump to {path}"
+    if path.exists():
+        existing_actions = parse_changelog_file_path(path)
+        actions.extend(existing_actions)
     yaml_content = ACTION_FILE_SPLIT.join(
-        action.file_content for action in existing_actions
+        action.file_content for action in sorted(actions)
     )
-    path.write_text(yaml_content)
+    ensure_parents_write_text(path, yaml_content)

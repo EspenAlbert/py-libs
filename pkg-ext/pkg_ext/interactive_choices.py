@@ -10,6 +10,7 @@ from pkg_ext.errors import NoPublicGroupMatch
 from pkg_ext.models import (
     PublicGroup,
     PublicGroups,
+    RefStateWithSymbol,
     RefSymbol,
     SymbolType,
     ref_id,
@@ -61,3 +62,16 @@ def select_group(groups: PublicGroups, rel_path: str, symbol_name: str) -> Publi
         choices,
         options=new_public_group_constructor(groups, rel_path, symbol_name),
     )
+
+
+def select_groups(groups: PublicGroups, refs: list[RefStateWithSymbol]) -> None:
+    raise NotImplementedError
+
+
+def select_multiple_refs(
+    prompt_text: str, refs: list[RefStateWithSymbol]
+) -> list[RefStateWithSymbol]:
+    choices = {state.name: state.symbol.as_choice(checked=False) for state in refs}
+    assert choices, "todo"
+    assert prompt_text, "todo"
+    raise NotImplementedError()

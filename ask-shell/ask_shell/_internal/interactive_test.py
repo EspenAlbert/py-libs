@@ -4,6 +4,7 @@ from ask_shell._internal.interactive import (
     SEARCH_ENABLED_AFTER_CHOICES,
     ChoiceTyped,
     KeyInput,
+    NewHandlerChoice,
     SelectOptions,
     confirm,
     question_patcher,
@@ -184,3 +185,36 @@ def test_select_list_typed():
 async def test_confirm_async():
     with question_patcher([""]):
         assert confirm("Confirm from async", default=True)
+
+
+def test_new_handler_choice():
+    new_handler = NewHandlerChoice(int, new_prompt="choose different value")
+    with question_patcher([KeyInput.CONTROLC, "3"]):
+        choice = select_list_choice(
+            "select me",
+            [ChoiceTyped(name="c1", value=1), ChoiceTyped(name="c2", value=2)],
+            options=SelectOptions(new_handler_choice=new_handler),
+        )
+    assert choice == 3
+
+
+def test_new_handler_choice_multiple():
+    new_handler = NewHandlerChoice(int, new_prompt="choose different value")
+    with question_patcher([KeyInput.CONTROLC, "3", ""]):
+        choice = select_list_multiple_choices(
+            "select me",
+            [ChoiceTyped(name="c1", value=1), ChoiceTyped(name="c2", value=2)],
+            options=SelectOptions(new_handler_choice=new_handler),
+        )
+    assert choice == [3]
+
+
+def test_new_handler_choice_multiple_with_extra():
+    new_handler = NewHandlerChoice(int, new_prompt="choose different value")
+    with question_patcher([KeyInput.CONTROLC, "3", f"{KeyInput.DOWN} "]):
+        choice = select_list_multiple_choices(
+            "select me",
+            [ChoiceTyped(name="c1", value=1), ChoiceTyped(name="c2", value=2)],
+            options=SelectOptions(new_handler_choice=new_handler),
+        )
+    assert choice == [3, 1]

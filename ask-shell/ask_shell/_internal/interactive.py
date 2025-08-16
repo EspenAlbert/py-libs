@@ -17,6 +17,7 @@ from questionary import confirm as _confirm
 from questionary import select as _select
 from questionary import text as _text
 from zero_3rdparty.object_name import as_name, func_arg_names
+from zero_3rdparty.str_utils import ensure_suffix
 
 from ask_shell._internal._run import get_pool
 from ask_shell._internal._run_env import (
@@ -86,9 +87,40 @@ class SelectChosenOptions(BaseModel):
 
 @dataclass
 class NewHandlerChoice(Generic[T]):
-    # TODO: ADD MORE UNIT TESTS
     constructor: Callable[[str], T]
     new_prompt: str
+
+
+@dataclass
+class ChoiceTyped(Generic[T]):
+    name: str
+    value: T
+    description: str | None = None
+    checked: bool = False
+
+    @classmethod
+    def from_descriptions(cls, descriptions: dict[str, str]) -> list[ChoiceTyped[str]]:
+        return [
+            cls(name=name, value=name, description=description)  # type: ignore
+            for name, description in descriptions.items()
+        ]  # type: ignore
+
+    def as_choice(self) -> Choice:
+        return Choice(
+            title=self.name,
+            value=self.value,
+            description=self.description,
+            checked=self.checked,
+        )
+
+
+@pause_live
+@return_default_if_not_interactive
+def text(
+    prompt_text: str,
+    default: str = "",
+) -> str:
+    return _question_asker(_text(prompt_text, default=default), str)
 
 
 class SelectOptions(BaseModel, Generic[T]):
@@ -132,6 +164,63 @@ class SelectOptions(BaseModel, Generic[T]):
             use_jk_keys=self.use_jk_keys,
         )
 
+    def _ask_for_new_value(self) -> T:
+        new_handler_choice = self.new_handler_choice
+        assert new_handler_choice, (
+            "Should never happen, new_handler_choice must be set when allow_new is True"
+        )
+        new_text = text(new_handler_choice.new_prompt)
+        return new_handler_choice.constructor(new_text)
+
+    def select(self, prompt_text: str, choices: list[ChoiceTyped[T]]) -> T:
+        chosen = self.set_defaults(len(choices))
+        if self.allow_new:
+            prompt_text += " (use ctrl+c to define a new instead)"
+        _questionary_choices = [typed_choice.as_choice() for typed_choice in choices]
+        question = _select(
+            prompt_text,
+            default=next(
+                (choice for choice in _questionary_choices if choice.checked), None
+            ),
+            choices=_questionary_choices,
+            use_jk_keys=chosen.use_jk_keys,
+            use_shortcuts=chosen.use_shortcuts,
+            use_search_filter=chosen.use_search_filter,
+        )
+        try:
+            return _question_asker(question, T)
+        except KeyboardInterrupt:
+            if not self.allow_new:
+                raise
+            return self._ask_for_new_value()
+
+    def select_multiple(
+        self, prompt_text: str, choices: list[ChoiceTyped[T]]
+    ) -> list[T]:
+        chosen = self.set_defaults(len(choices))
+        if self.allow_new:
+            prompt_text = ensure_suffix(prompt_text, " (use ctrl+c to add new choice)")
+        question = checkbox(
+            prompt_text,
+            choices=[typed_choice.as_choice() for typed_choice in choices],
+            use_jk_keys=chosen.use_jk_keys,
+            use_search_filter=chosen.use_search_filter,
+        )
+        try:
+            return _question_asker(question, list[T])
+        except KeyboardInterrupt:
+            if not self.allow_new:
+                raise
+            new_option = self._ask_for_new_value()
+            new_choice = ChoiceTyped(
+                str(new_option),
+                value=new_option,
+                description="just added",
+                checked=True,
+            )
+            choices.insert(0, new_choice)
+            return self.select_multiple(prompt_text, choices=choices)
+
 
 @pause_live
 @return_default_if_not_interactive
@@ -144,33 +233,12 @@ def select_list_multiple(
 ) -> list[str]:
     assert choices, f"choices must not be empty for {as_name(select_list_multiple)}"
     options = options or SelectOptions()
-    chosen = options.set_defaults(len(choices))
     default = default or []
-    default_choices = [Choice(option, checked=option in default) for option in choices]
-    return _question_asker(
-        checkbox(
-            prompt_text,
-            choices=default_choices,
-            use_jk_keys=chosen.use_jk_keys,
-            use_search_filter=chosen.use_search_filter,
-        ),
-        list[str],
-    )
-
-
-@dataclass
-class ChoiceTyped(Generic[T]):
-    name: str
-    value: T
-    description: str | None = None
-    checked: bool = False
-
-    @classmethod
-    def from_descriptions(cls, descriptions: dict[str, str]) -> list[ChoiceTyped[str]]:
-        return [
-            cls(name=name, value=name, description=description)  # type: ignore
-            for name, description in descriptions.items()
-        ]  # type: ignore
+    default_choices = [
+        ChoiceTyped(option, checked=option in default, value=option)
+        for option in choices
+    ]
+    return options.select_multiple(prompt_text, default_choices)
 
 
 @pause_live
@@ -178,7 +246,8 @@ class ChoiceTyped(Generic[T]):
 def select_list_multiple_choices(
     prompt_text: str,
     choices: list[ChoiceTyped[T]],
-    default: list[T] | None = None,  # return if not interactive and not None
+    default: list[T]
+    | None = None,  # return if not interactive and not None, use choices.*.checked to set the actual default
     *,
     options: SelectOptions | None = None,
 ) -> list[T]:
@@ -186,33 +255,7 @@ def select_list_multiple_choices(
         f"choices must not be empty for {as_name(select_list_multiple_choices)}"
     )
     options = options or SelectOptions()
-    chosen = options.set_defaults(len(choices))
-    return _question_asker(
-        checkbox(
-            prompt_text,
-            choices=[
-                Choice(
-                    typed_choice.name,
-                    value=typed_choice.value,
-                    description=typed_choice.description,
-                    checked=typed_choice.checked,
-                )
-                for typed_choice in choices
-            ],
-            use_jk_keys=chosen.use_jk_keys,
-            use_search_filter=chosen.use_search_filter,
-        ),
-        list[T],
-    )
-
-
-@pause_live
-@return_default_if_not_interactive
-def text(
-    prompt_text: str,
-    default: str = "",
-) -> str:
-    return _question_asker(_text(prompt_text, default=default), str)
+    return options.select_multiple(prompt_text, choices)
 
 
 @pause_live
@@ -226,19 +269,12 @@ def select_dict(
 ) -> T:
     assert choices, f"choices must not be empty for {as_name(select_dict)}"
     options = options or SelectOptions()
-    chosen = options.set_defaults(len(choices))
-    selection = _question_asker(
-        _select(
-            prompt_text,
-            default=default,
-            choices=list(choices),
-            use_jk_keys=chosen.use_jk_keys,
-            use_shortcuts=chosen.use_shortcuts,
-            use_search_filter=chosen.use_search_filter,
-        ),
-        str,
-    )
-    return choices[selection]
+    default_safe = default or ""
+    choices_typed = [
+        ChoiceTyped(name=key, value=value, checked=key == default_safe)
+        for key, value in choices.items()
+    ]
+    return options.select(prompt_text, choices_typed)
 
 
 @pause_live
@@ -277,37 +313,7 @@ def select_list_choice(
 ) -> T:
     assert choices, f"choices must not be empty for {as_name(select_list_choice)}"
     options = options or SelectOptions()
-    chosen = options.set_defaults(len(choices))
-    if options.allow_new:
-        prompt_text += " (use ctrl+c to define a new instead)"
-    try:
-        return _question_asker(
-            _select(
-                prompt_text,
-                default=default,  # type: ignore
-                choices=[
-                    Choice(
-                        typed_choice.name,
-                        value=typed_choice.value,
-                        description=typed_choice.description,
-                    )
-                    for typed_choice in choices
-                ],
-                use_jk_keys=chosen.use_jk_keys,
-                use_shortcuts=chosen.use_shortcuts,
-                use_search_filter=chosen.use_search_filter,
-            ),
-            T,
-        )
-    except KeyboardInterrupt:
-        if not options.allow_new:
-            raise
-        new_handler_choice = options.new_handler_choice
-        assert new_handler_choice, (
-            "Should never happen, new_handler_choice must be set when allow_new is True"
-        )
-        new_text = text(new_handler_choice.new_prompt)
-        return new_handler_choice.constructor(new_text)
+    return options.select(prompt_text, choices)
 
 
 class KeyInput:

@@ -6,6 +6,7 @@ from ask_shell._internal.interactive import (
     SelectOptions,
     confirm,
     select_list_choice,
+    select_list_multiple_choices,
 )
 
 from pkg_ext.errors import NoPublicGroupMatch
@@ -66,29 +67,39 @@ def select_group(groups: PublicGroups, rel_path: str, symbol_name: str) -> Publi
 
 
 def select_groups(groups: PublicGroups, refs: list[RefStateWithSymbol]) -> None:
-    raise NotImplementedError
+    for ref in refs:
+        symbol = ref.symbol
+        select_group(groups, rel_path=symbol.rel_path, symbol_name=symbol.name)
 
 
-def as_choice(ref: RefSymbol, checked: bool) -> ChoiceTyped:
+def _as_choice_ref_symbol(ref: RefSymbol, checked: bool) -> ChoiceTyped[RefSymbol]:
     test_usages_str = (
         ", ".join(ref.test_usages) if ref.test_usages else "No test usages"
     )
     src_usages_str = ", ".join(ref.src_usages) if ref.src_usages else "No source usages"
     return ChoiceTyped(
         name=f"{ref.name} {ref.type} {len(ref.src_usages)} src usages {len(ref.test_usages)} test usages",
-        value=ref.name,
+        value=ref,
         description=f"{ref.docstring}\nSource usages: {src_usages_str}\nTest usages: {test_usages_str}",
         checked=checked,
     )
 
 
+def _as_choice_ref_state(
+    state: RefStateWithSymbol, checked: bool
+) -> ChoiceTyped[RefStateWithSymbol]:
+    symbol_choice = _as_choice_ref_symbol(state.symbol, checked)
+    symbol_choice.value = state  # type: ignore
+    return symbol_choice  # type: ignore
+
+
 def select_multiple_refs(
     prompt_text: str, refs: list[RefStateWithSymbol]
 ) -> list[RefStateWithSymbol]:
-    choices = {state.name: as_choice(state.symbol, checked=False) for state in refs}
+    choices = [_as_choice_ref_state(state, checked=False) for state in refs]
     assert choices, "todo"
     assert prompt_text, "todo"
-    raise NotImplementedError()
+    return select_list_multiple_choices(prompt_text, choices)
 
 
 def select_multiple_ref_state(prompt_text: str, refs: list[RefState]) -> list[RefState]:

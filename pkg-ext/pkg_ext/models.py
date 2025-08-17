@@ -30,9 +30,11 @@ from pydantic import (
 from zero_3rdparty import file_utils
 from zero_3rdparty.enum_utils import StrEnum
 from zero_3rdparty.iter_utils import group_by_once
+from zero_3rdparty.object_name import as_name
 
 from pkg_ext.errors import (
     InvalidGroupSelectionError,
+    LocateError,
     NoPublicGroupMatch,
     PublicGroupAlreadyExist,
 )
@@ -129,6 +131,11 @@ class RefSymbol(Entity):
         return self
 
     @property
+    def locate_id(self) -> str:
+        """pydoc.locate('module_name.func_name')"""
+        return self.local_id.replace(":", ".")
+
+    @property
     def local_id(self) -> SymbolRefId:
         """Without the top level package name."""
         return ref_id(self.rel_path, self.name)
@@ -140,6 +147,9 @@ class RefSymbol(Entity):
     def full_id(self, pkg_import_name: str) -> str:
         """Full ID including the package name."""
         return f"{pkg_import_name}.{self.local_id}"
+
+    def full_locate_id(self, pkg_import_name: str) -> str:
+        return f"{pkg_import_name}.{self.locate_id}"
 
     @property
     def is_type_alias(self) -> bool:
@@ -360,7 +370,6 @@ _INVALID_SYMBOL_NAME = "not-allowed"
 
 
 class PublicGroups(Entity):
-    STORAGE_FILENAME: ClassVar[str] = ".groups.yaml"
     groups: list[PublicGroup] = Field(default_factory=_default_public_groups)
     storage_path: Path | None = None
 
@@ -408,6 +417,7 @@ class PublicGroups(Entity):
 class PkgCodeState(Entity):
     """Currently, we don't allow any shared names. E.g., mod1.Name1, mod2.Name2, Name1 != Name2"""
 
+    pkg_import_name: str
     import_id_refs: dict[str, RefSymbol]
 
     @model_validator(mode="after")
@@ -425,6 +435,8 @@ class PkgCodeState(Entity):
         assert not duplicated_refs, (
             f"Found duplicated references: {duplicated_refs_lines}"
         )
+        if not self.import_id_refs:
+            raise ValueError("No code state found")
         return self
 
     @property
@@ -433,6 +445,19 @@ class PkgCodeState(Entity):
             ref.name: RefStateWithSymbol(name=ref.name, symbol=ref)
             for ref in self.import_id_refs.values()
         }
+
+    def lookup(self, ref: RefSymbol) -> Any:
+        full_reference_id = ref.full_locate_id(self.pkg_import_name)
+        py_any = locate(full_reference_id)
+        if py_any is None:
+            raise LocateError(full_reference_id)
+        return py_any
+
+    def as_local_ref(self, any: Any) -> RefSymbol | None:
+        name = as_name(any)
+        pkg_prefix = f"{self.pkg_import_name}."
+        if name.startswith(pkg_prefix):
+            return self.import_id_refs[name.removeprefix(pkg_prefix)]
 
 
 class AddChangelogAction(Protocol):
@@ -530,7 +555,10 @@ class changelog_updater:
     _actions: list[ChangelogAction] = field(default_factory=list)
 
     def add_action(
-        self, name: str, type: ChangelogActionType, details: str | None = None
+        self,
+        name: str,
+        type: ChangelogActionType,
+        details: ChangelogDetailsT | None = None,
     ) -> ChangelogAction:
         action = ChangelogAction(name=name, action=type, details=details)
         self._actions.append(action)
@@ -540,4 +568,5 @@ class changelog_updater:
         return self.add_action
 
     def __exit__(self, *_):
-        self.state.add_changelog_actions(self._actions)
+        if self._actions:
+            self.state.add_changelog_actions(self._actions)

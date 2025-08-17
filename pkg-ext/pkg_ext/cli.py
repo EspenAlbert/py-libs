@@ -4,7 +4,6 @@ import logging
 from pathlib import Path
 
 import typer
-from ask_shell._internal._run import run
 from ask_shell._internal.interactive import (
     confirm,
 )
@@ -45,13 +44,14 @@ def parse_pkg_code_state(settings: PkgSettings) -> PkgCodeState:
     )
 
     import_id_symbols = parse_code_symbols(files, pkg_import_name)
-    return PkgCodeState(import_id_refs=import_id_symbols)
+    return PkgCodeState(
+        pkg_import_name=pkg_import_name, import_id_refs=import_id_symbols
+    )
 
 
 def parse_pkg_ext_state(settings: PkgSettings) -> PkgExtState:
     """The internal state used by pkg-ext to generate files"""
-    state_dir = settings.state_dir
-    public_groups_path = state_dir / PublicGroups.STORAGE_FILENAME
+    public_groups_path = settings.public_groups_path
     if public_groups_path.exists():
         public_groups = parse_model(public_groups_path, t=PublicGroups)
         public_groups.storage_path = public_groups_path
@@ -82,12 +82,13 @@ def generate_api(
         "--repo-root",
         default_factory=Path.cwd,
     ),
+    skip_open_in_editor: bool = typer.Option(
+        False,
+        "--skip-open",
+        help="By default files are opened in $EDITOR when asked to expose/hide",
+    ),
 ):
-    settings = pkg_settings(repo_root, pkg_path_str)
-    repo_dir = settings.repo_root
-    pre_push = run("just pre-push", cwd=repo_dir)
-    cov_full = run("just cov-full xml", cwd=repo_dir)
-    assert pre_push or cov_full, "todo: use results instead"
+    settings = pkg_settings(repo_root, pkg_path_str, skip_open_in_editor)
     code_state = parse_pkg_code_state(settings)
     tool_state = parse_pkg_ext_state(settings)
     try:
@@ -96,7 +97,7 @@ def generate_api(
                 tool_state, code_state, add_changelog_action
             )  # updates the changelog state
             handle_added_refs(
-                tool_state, code_state, add_changelog_action
+                tool_state, code_state, add_changelog_action, settings
             )  # updates the changelog and group state
     except KeyboardInterrupt:
         logger.warning("Interrupted while handling added references")

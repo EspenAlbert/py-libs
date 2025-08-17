@@ -1,4 +1,6 @@
 import logging
+from collections import defaultdict
+from typing import get_type_hints
 
 from ask_shell._internal._run import run_and_wait
 from ask_shell._internal.rich_progress import new_task
@@ -18,17 +20,26 @@ from pkg_ext.models import (
     PkgCodeState,
     PkgExtState,
     RefStateWithSymbol,
+    RefSymbol,
     SymbolType,
 )
-from pkg_ext.settings import get_editor
+from pkg_ext.settings import PkgSettings, get_editor
 
 logger = logging.getLogger(__name__)
 
 
 def ensure_function_args_exposed(
     code_state: PkgCodeState, function_refs: list[RefStateWithSymbol]
-) -> dict[RefStateWithSymbol, list[RefStateWithSymbol]]:
-    raise NotImplementedError
+) -> dict[RefStateWithSymbol, list[RefSymbol]]:
+    func_arg_symbols: dict[RefStateWithSymbol, list[RefSymbol]] = defaultdict(list)
+    for func_ref in function_refs:
+        func = code_state.lookup(func_ref.symbol)
+        type_hints = get_type_hints(func)
+        for name, type in type_hints.items():
+            if local_ref := code_state.as_local_ref(type):
+                logger.info(f"auto exposing arg {name} on func {func_ref.name}")
+                func_arg_symbols[func_ref].append(local_ref)
+    return func_arg_symbols
 
 
 def make_expose_decisions(
@@ -37,10 +48,12 @@ def make_expose_decisions(
     tool_state: PkgExtState,
     code_state: PkgCodeState,
     symbol_type: str,
-) -> list[RefStateWithSymbol]:
-    decided_refs: list[RefStateWithSymbol] = []
+    settings: PkgSettings,
+) -> list[RefStateWithSymbol | RefSymbol]:
+    decided_refs: list[RefStateWithSymbol | RefSymbol] = []
     for rel_path, file_states in refs.items():
-        run_and_wait(f"{get_editor()} {tool_state.pkg_path / rel_path}")
+        if not settings.skip_open_in_editor:
+            run_and_wait(f"{get_editor()} {tool_state.pkg_path / rel_path}")
         exposed = select_multiple_refs(
             f"Select references of type {symbol_type} to expose from {rel_path} (if any):",
             file_states,
@@ -73,6 +86,7 @@ def handle_added_refs(
     tool_state: PkgExtState,
     code_state: PkgCodeState,
     add_changelog: AddChangelogAction,
+    settings: PkgSettings,
 ) -> None:
     """
     # Processing Order
@@ -100,7 +114,7 @@ def handle_added_refs(
     def group_by_module_path(state: RefStateWithSymbol) -> str:
         return state.symbol.rel_path
 
-    def decide_refs(refs: list[RefStateWithSymbol]) -> None:
+    def decide_refs(refs: list[RefStateWithSymbol | RefSymbol]) -> None:
         for ref in refs:
             added_refs.pop(ref.name, None)
 
@@ -121,7 +135,7 @@ def handle_added_refs(
                 continue
             file_added = group_by_once(relevant_refs, key=group_by_module_path)
             extra_refs_decided = make_expose_decisions(
-                file_added, add_changelog, tool_state, code_state, symbol_type
+                file_added, add_changelog, tool_state, code_state, symbol_type, settings
             )
             all_refs_decided = relevant_refs + extra_refs_decided
             decide_refs(all_refs_decided)

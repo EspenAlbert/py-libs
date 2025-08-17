@@ -1,4 +1,4 @@
-from pkg_ext.pkg_ext import main
+from pkg_ext.cli import main
 
 if __name__ == "__main__":
     main()

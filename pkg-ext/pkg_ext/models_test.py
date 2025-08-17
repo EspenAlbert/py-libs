@@ -4,11 +4,12 @@ import pytest
 from model_lib.serialize.parse import parse_model
 
 from pkg_ext.models import PublicGroup, PublicGroups, RefSymbol, SymbolType
+from pkg_ext.settings import PkgSettings
 
 
 @pytest.fixture()
 def _public_groups(tmp_path) -> PublicGroups:
-    path = tmp_path / PublicGroups.STORAGE_FILENAME
+    path = tmp_path / PkgSettings.PUBLIC_GROUPS_STORAGE_FILENAME
     return PublicGroups(storage_path=path)
 
 

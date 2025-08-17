@@ -4,9 +4,6 @@ import logging
 from pathlib import Path
 
 import typer
-from ask_shell._internal.interactive import (
-    confirm,
-)
 from ask_shell._internal.typer_command import configure_logging
 from model_lib.serialize.parse import parse_model
 from typer import Typer
@@ -14,11 +11,11 @@ from zero_3rdparty.file_utils import iter_paths_and_relative
 
 from pkg_ext.file_parser import parse_code_symbols, parse_symbols
 from pkg_ext.gen_changelog import parse_changelog_actions
+from pkg_ext.gen_group import write_groups
 from pkg_ext.gen_init import write_init
 from pkg_ext.models import (
     PkgCodeState,
     PkgExtState,
-    PkgSrcFile,
     PublicGroups,
 )
 from pkg_ext.ref_added import (
@@ -45,7 +42,9 @@ def parse_pkg_code_state(settings: PkgSettings) -> PkgCodeState:
 
     import_id_symbols = parse_code_symbols(files, pkg_import_name)
     return PkgCodeState(
-        pkg_import_name=pkg_import_name, import_id_refs=import_id_symbols
+        pkg_import_name=pkg_import_name,
+        import_id_refs=import_id_symbols,
+        files=files,
     )
 
 
@@ -101,20 +100,8 @@ def generate_api(
             )  # updates the changelog and group state
     except KeyboardInterrupt:
         logger.warning("Interrupted while handling added references")
-    # todo: Change me to be grouped instead!
-    if exposed_refs := tool_state.exposed_refs(code_state.named_refs):
-        if confirm(
-            "Do you want to write __init__.py with exposed references?", default=True
-        ):
-            write_init(
-                settings.init_path,
-                exposed_refs,
-                [
-                    src_file
-                    for src_file in code_state
-                    if isinstance(src_file, PkgSrcFile)
-                ],
-            )
+    write_groups(tool_state, code_state, settings)
+    write_init(tool_state, code_state, settings)
 
 
 def main():

@@ -66,6 +66,10 @@ def ref_id_module(ref_id: SymbolRefId) -> str:
     return ref_id.split(":")[0]
 
 
+def ref_id_name(ref_id: SymbolRefId) -> str:
+    return ref_id.split(":")[-1]
+
+
 def ref_id(rel_path: str, symbol_name: str) -> SymbolRefId:
     """Generate a unique reference ID based on the relative path and symbol name."""
     return f"{as_module_path(rel_path)}:{symbol_name}"
@@ -190,9 +194,13 @@ class PkgFileBase(Entity):
     )  # should be in the format of ref_id (see `ref_id` function)
 
     @property
+    def module_local_path(self) -> str:
+        return as_module_path(self.relative_path)
+
+    @property
     def module_full_name(self) -> str:
         """Get the module name based on the package import name and relative path."""
-        return f"{self.pkg_import_name}.{self.relative_path.removesuffix('.py').replace('/', '.')}"
+        return f"{self.pkg_import_name}.{self.module_local_path}"
 
     def depends_on(self, other: PkgFileBase) -> bool:
         """Check if this package file depends on another package file."""
@@ -377,6 +385,16 @@ class PublicGroups(Entity):
     def name_to_group(self) -> dict[str, PublicGroup]:
         return {group.name: group for group in self.groups}
 
+    @property
+    def groups_no_root(self) -> list[PublicGroup]:
+        return sorted(group for group in self.groups if not group.is_root)
+
+    @property
+    def root_group(self) -> PublicGroup:
+        root = next((group for group in self.groups if group.is_root), None)
+        assert root, "root group not found"
+        return root
+
     def matching_group(self, symbol_name: str, module_path: str) -> PublicGroup:
         if match_by_module := [
             group for group in self.groups if module_path in group.owned_modules
@@ -419,6 +437,7 @@ class PkgCodeState(Entity):
 
     pkg_import_name: str
     import_id_refs: dict[str, RefSymbol]
+    files: list[PkgSrcFile | PkgTestFile]
 
     @model_validator(mode="after")
     def ensure_no_duplicate_names(self):
@@ -437,6 +456,7 @@ class PkgCodeState(Entity):
         )
         if not self.import_id_refs:
             raise ValueError("No code state found")
+        self.files = sorted(self.files)
         return self
 
     @property
@@ -458,6 +478,21 @@ class PkgCodeState(Entity):
         pkg_prefix = f"{self.pkg_import_name}."
         if name.startswith(pkg_prefix):
             return self.import_id_refs[name.removeprefix(pkg_prefix)]
+
+    def sort_refs(self, refs: Iterable[SymbolRefId]) -> list[SymbolRefId]:
+        def lookup_in_file(ref: SymbolRefId) -> tuple[int, str]:
+            module_name = ref_id_module(ref)
+            ref_name = ref_id_name(ref)
+            for i, file in enumerate(self.files):
+                for symbol in file.iterate_ref_symbols():
+                    if (
+                        symbol.name == ref_name
+                        and file.module_local_path == module_name
+                    ):
+                        return i, ref_name
+            raise ValueError(f"ref not found in any file: {ref}")
+
+        return sorted(refs, key=lookup_in_file)
 
 
 class AddChangelogAction(Protocol):

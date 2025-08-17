@@ -41,7 +41,7 @@ def run_e2e(
     monkeypatch.syspath_prepend(e2e_dir)
     logger.info(f"adding to path: {e2e_dir}")
     clean_dir(settings.changelog_path, recreate=False)
-    settings.public_groups_path.unlink()
+    settings.public_groups_path.unlink(missing_ok=True)
     settings.check_paths
     command = f"--repo-root {e2e_dir} {pkg_path_relative} --skip-open"
     logger.info(f"running command: {command}")

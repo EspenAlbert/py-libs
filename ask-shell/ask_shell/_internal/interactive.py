@@ -70,10 +70,20 @@ def return_default_if_not_interactive(func: FuncT) -> FuncT:
     return return_default  # type: ignore
 
 
+_PROMPT_TEXT_ATTR_NAME = "__prompt_text__"
+
+
+def _set_prompt_text(q: Question, prompt_text: str) -> None:
+    setattr(q, _PROMPT_TEXT_ATTR_NAME, prompt_text)
+
+
 def confirm(prompt_text: str, *, default: bool | None = None) -> bool:
     if default is None:
-        return _question_asker(_confirm(prompt_text), bool)
-    return _question_asker(_confirm(prompt_text, default=default), bool)
+        question = _confirm(prompt_text)
+    else:
+        question = _confirm(prompt_text, default=default)
+    _set_prompt_text(question, prompt_text)
+    return _question_asker(question, bool)
 
 
 _unset = object()
@@ -120,7 +130,9 @@ def text(
     prompt_text: str,
     default: str = "",
 ) -> str:
-    return _question_asker(_text(prompt_text, default=default), str)
+    question = _text(prompt_text, default=default)
+    _set_prompt_text(question, prompt_text)
+    return _question_asker(question, str)
 
 
 class SelectOptions(BaseModel, Generic[T]):
@@ -187,6 +199,7 @@ class SelectOptions(BaseModel, Generic[T]):
             use_shortcuts=chosen.use_shortcuts,
             use_search_filter=chosen.use_search_filter,
         )
+        _set_prompt_text(question, prompt_text)
         try:
             return _question_asker(question, T)
         except KeyboardInterrupt:
@@ -206,6 +219,7 @@ class SelectOptions(BaseModel, Generic[T]):
             use_jk_keys=chosen.use_jk_keys,
             use_search_filter=chosen.use_search_filter,
         )
+        _set_prompt_text(question, prompt_text)
         try:
             return _question_asker(question, list[T])
         except KeyboardInterrupt:
@@ -334,27 +348,88 @@ class KeyInput:
     THREE = "3"
 
 
+def _get_prompt_text(q: Question) -> str:
+    return getattr(q, _PROMPT_TEXT_ATTR_NAME, "")
+
+
+@dataclass
+class PromptMatch:
+    substring: str = ""
+    exact: str = ""
+    max_matches: int = 1
+    matches_so_far: int = field(init=False, default=0)
+
+    @property
+    def match_exhausted(self) -> bool:
+        return self.matches_so_far >= self.max_matches
+
+    def __call__(self, prompt_text: str) -> bool:
+        if self.match_exhausted:
+            return False
+        if (substr := self.substring) and substr in prompt_text:
+            self.matches_so_far += 1
+            return True
+        if (exact := self.exact) and exact == prompt_text:
+            self.matches_so_far += 1
+            return True
+        return False
+
+    def __eq__(self, value: object) -> bool:
+        if not isinstance(value, PromptMatch):
+            return NotImplemented
+        return (
+            self.substring == value.substring
+            and self.exact == value.exact
+            and self.max_matches == value.max_matches
+        )
+
+    def __hash__(self) -> int:
+        return hash((self.substring, self.exact, self.max_matches))
+
+
 @dataclass
 class question_patcher:
     """Context manager to patch the questionary.ask_question, useful for testing."""
 
-    responses: list[str]
+    responses: list[str] = field(default_factory=list)
     next_response: int = 0
+    dynamic_responses: dict[PromptMatch, str] = field(default_factory=dict)
     settings: AskShellSettings = field(default_factory=AskShellSettings.from_env)
 
     _old_force_interactive_env_str: str = field(default="", init=False, repr=False)
+
+    def _dynamic_match(self, prompt_text: str) -> str | None:
+        return next(
+            (
+                response
+                for matcher, response in self.dynamic_responses.items()
+                if matcher(prompt_text)
+            ),
+            None,
+        )
+
+    def _next_index_response(self, prompt_text: str) -> str:
+        try:
+            input_response = self.responses[self.next_response]
+        except IndexError:
+            raise ValueError(
+                f"Not enough responses provided. Expected {len(self.responses)}, got {self.next_response + 1} questions. Last prompt: '{prompt_text}'"
+            )
+        self.next_response += 1
+        return input_response
+
+    def _next_response(self, q: Question) -> str:
+        if prompt_text := _get_prompt_text(q):
+            if dynamic := self._dynamic_match(prompt_text):
+                return dynamic
+            return self._next_index_response(prompt_text)
+        return self._next_index_response("")
 
     def ask_question(self, q: Question, response_type: type[T]) -> T:
         q.application.output = DummyOutput()
 
         def run(inp) -> T:
-            try:
-                input_response = self.responses[self.next_response]
-            except IndexError:
-                raise ValueError(
-                    f"Not enough responses provided. Expected {len(self.responses)}, got {self.next_response + 1} questions."
-                )
-            self.next_response += 1
+            input_response = self._next_response(q)
             inp.send_text(input_response + KeyInput.ENTER + "\r")
             q.application.output = DummyOutput()
             q.application.input = inp

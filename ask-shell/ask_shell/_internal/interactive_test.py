@@ -5,6 +5,7 @@ from ask_shell._internal.interactive import (
     ChoiceTyped,
     KeyInput,
     NewHandlerChoice,
+    PromptMatch,
     SelectOptions,
     confirm,
     question_patcher,
@@ -218,3 +219,48 @@ def test_new_handler_choice_multiple_with_extra():
             options=SelectOptions(new_handler_choice=new_handler),
         )
     assert choice == [3, 1]
+
+
+def test_prompt_match_exact():
+    match = PromptMatch(exact="exact")
+    assert match("exact")
+    assert not match("not exact")
+
+
+def test_prompt_match_substring():
+    match = PromptMatch(substring="sub")
+    assert match("this is a substring match")
+    assert not match("no match here")
+
+
+def test_prompt_match_once_only():
+    match = PromptMatch(substring="once", max_matches=1)
+    assert match("this will match once")
+    assert not match("this will match once")
+
+
+def test_prompt_match_twiche():
+    match = PromptMatch(substring="once", max_matches=2)
+    assert match("this will match once")
+    assert match("this will match once")
+    assert not match("this will match once")
+
+
+def test_prompt_dynamic_match():
+    prompt_text = "my prompt"
+    response_expected = "hello world!"
+    with question_patcher(
+        dynamic_responses={PromptMatch(exact=prompt_text): response_expected}
+    ):
+        response = text(prompt_text)
+    assert response_expected == response
+
+
+def test_no_dynamic_match():
+    prompt_text = "my prompt"
+    with pytest.raises(
+        ValueError,
+        match="Not enough responses provided. Expected 0, got 1 questions. Last prompt: 'my prompt'",
+    ):
+        with question_patcher():
+            text(prompt_text)

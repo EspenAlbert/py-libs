@@ -1,0 +1,6 @@
+groups:
+- name: __ROOT__
+  owned_refs: []
+- name: my_group
+  owned_refs:
+  - _internal:expose

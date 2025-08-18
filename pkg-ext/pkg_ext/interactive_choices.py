@@ -16,8 +16,6 @@ from pkg_ext.models import (
     RefState,
     RefStateWithSymbol,
     RefSymbol,
-    SymbolType,
-    ref_id,
 )
 
 
@@ -35,13 +33,10 @@ def as_choices(groups: PublicGroups) -> list[ChoiceTyped[PublicGroup]]:
 
 
 def new_public_group_constructor(
-    groups: PublicGroups, rel_path: str, symbol_name: str
+    groups: PublicGroups, ref: RefSymbol
 ) -> SelectOptions[PublicGroup]:
     def new_public_group(name: str) -> PublicGroup:
-        group = groups.add_group(PublicGroup(name=name))
-        ref = RefSymbol(name=symbol_name, type=SymbolType.UNKNOWN, rel_path=rel_path)
-        groups.add_ref(ref, name)
-        return group
+        return groups.add_ref(ref, name)
 
     return SelectOptions(
         new_handler_choice=NewHandlerChoice(
@@ -50,26 +45,27 @@ def new_public_group_constructor(
     )
 
 
-def select_group(groups: PublicGroups, rel_path: str, symbol_name: str) -> PublicGroup:
+def select_group(groups: PublicGroups, ref: RefSymbol) -> PublicGroup:
     with contextlib.suppress(NoPublicGroupMatch):
-        group = groups.matching_group(symbol_name, rel_path)
-        if confirm(
-            f"group {group.name} is ok for {ref_id(rel_path, symbol_name)}?",
-            default=True,
-        ):
-            return group
+        group = groups.matching_group(ref)
+        return groups.add_ref(ref, group.name)
     choices = as_choices(groups)
     return select_list_choice(
         "Choose public API group name",
         choices,
-        options=new_public_group_constructor(groups, rel_path, symbol_name),
+        options=new_public_group_constructor(groups, ref),
     )
 
 
-def select_groups(groups: PublicGroups, refs: list[RefStateWithSymbol]) -> None:
+def select_groups(
+    groups: PublicGroups,
+    refs: list[RefStateWithSymbol | RefSymbol] | list[RefStateWithSymbol],
+) -> None:
     for ref in refs:
-        symbol = ref.symbol
-        select_group(groups, rel_path=symbol.rel_path, symbol_name=symbol.name)
+        if isinstance(ref, RefSymbol):
+            select_group(groups, ref)
+        else:
+            select_group(groups, ref.symbol)
 
 
 def _as_choice_ref_symbol(ref: RefSymbol, checked: bool) -> ChoiceTyped[RefSymbol]:

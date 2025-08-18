@@ -48,7 +48,7 @@ from pkg_ext.gen_changelog import (
 
 
 def ref_id_format(original: str):
-    if ":" not in original:
+    if "." not in original:
         raise ValueError(
             f"A ref_id must use the form parent.child:function module format, got: {original}"
         )
@@ -63,16 +63,16 @@ SymbolRefId: TypeAlias = Annotated[str, AfterValidator(ref_id_format)]
 
 
 def ref_id_module(ref_id: SymbolRefId) -> str:
-    return ref_id.split(":")[0]
+    return ref_id.rsplit(".")[0]
 
 
 def ref_id_name(ref_id: SymbolRefId) -> str:
-    return ref_id.split(":")[-1]
+    return ref_id.rsplit(".", maxsplit=1)[-1]
 
 
 def ref_id(rel_path: str, symbol_name: str) -> SymbolRefId:
-    """Generate a unique reference ID based on the relative path and symbol name."""
-    return f"{as_module_path(rel_path)}:{symbol_name}"
+    """Generate a pydoc.locate(ref_id) compatible id."""
+    return f"{as_module_path(rel_path)}.{symbol_name}"
 
 
 def is_test_file(path: Path) -> bool:
@@ -135,11 +135,6 @@ class RefSymbol(Entity):
         return self
 
     @property
-    def locate_id(self) -> str:
-        """pydoc.locate('module_name.func_name')"""
-        return self.local_id.replace(":", ".")
-
-    @property
     def local_id(self) -> SymbolRefId:
         """Without the top level package name."""
         return ref_id(self.rel_path, self.name)
@@ -151,9 +146,6 @@ class RefSymbol(Entity):
     def full_id(self, pkg_import_name: str) -> str:
         """Full ID including the package name."""
         return f"{pkg_import_name}.{self.local_id}"
-
-    def full_locate_id(self, pkg_import_name: str) -> str:
-        return f"{pkg_import_name}.{self.locate_id}"
 
     @property
     def is_type_alias(self) -> bool:
@@ -207,7 +199,7 @@ class PkgFileBase(Entity):
         if not isinstance(other, PkgFileBase):
             raise TypeError(f"Expected PkgFileBase, got {type(other)}")
         other_import_name = other.module_full_name
-        other_import_ref = f"{other_import_name}:"
+        other_import_ref = f"{other_import_name}."
         return any(
             ref.startswith(other_import_ref) or ref == other_import_name
             for ref in self.local_imports
@@ -307,6 +299,14 @@ class RefStateWithSymbol(RefState):
             description=self.symbol.docstring,
         )
 
+    def __eq__(self, value: object) -> bool:
+        if not isinstance(value, RefStateWithSymbol):
+            return False
+        return str(self.symbol) == str(value.symbol)
+
+    def __hash__(self) -> int:
+        return hash(str(self.symbol))
+
 
 def is_root_identifier(value: str):
     if value.isidentifier():
@@ -395,16 +395,16 @@ class PublicGroups(Entity):
         assert root, "root group not found"
         return root
 
-    def matching_group(self, symbol_name: str, module_path: str) -> PublicGroup:
+    def matching_group(self, ref: RefSymbol) -> PublicGroup:
         if match_by_module := [
-            group for group in self.groups if module_path in group.owned_modules
+            group for group in self.groups if ref.module_path in group.owned_modules
         ]:
             assert len(match_by_module) == 1, (
-                f"Expected exactly one matching group for {symbol_name} in {module_path}, got {len(match_by_module)}"
+                f"Expected exactly one matching group for {ref.name} in {ref.module_path}, got {len(match_by_module)}"
             )
             return match_by_module[0]
         raise NoPublicGroupMatch(
-            f"No public group found for symbol {symbol_name} in module {module_path}"
+            f"No public group found for symbol {ref.name} in module {ref.module_path}"
         )
 
     @ensure_disk_path_updated
@@ -421,7 +421,7 @@ class PublicGroups(Entity):
             group = PublicGroup(name=group_name)
             self.add_group(group)
         try:
-            matching_group = self.matching_group(ref.name, ref.module_path)
+            matching_group = self.matching_group(ref)
             if matching_group.name != group_name:
                 raise InvalidGroupSelectionError(
                     reason=f"existing_group: {matching_group.name} matched for {ref.local_id}"
@@ -467,7 +467,7 @@ class PkgCodeState(Entity):
         }
 
     def lookup(self, ref: RefSymbol) -> Any:
-        full_reference_id = ref.full_locate_id(self.pkg_import_name)
+        full_reference_id = ref.full_id(self.pkg_import_name)
         py_any = locate(full_reference_id)
         if py_any is None:
             raise LocateError(full_reference_id)
@@ -477,7 +477,7 @@ class PkgCodeState(Entity):
         name = as_name(any)
         pkg_prefix = f"{self.pkg_import_name}."
         if name.startswith(pkg_prefix):
-            return self.import_id_refs[name.removeprefix(pkg_prefix)]
+            return self.import_id_refs[name]
 
     def sort_refs(self, refs: Iterable[SymbolRefId]) -> list[SymbolRefId]:
         def lookup_in_file(ref: SymbolRefId) -> tuple[int, str]:

@@ -39,6 +39,17 @@ def test_public_groups_dumping_after_new_ref_symbol(
     ref = RefSymbol(name="my_func", type=SymbolType.FUNCTION, rel_path="my_module")
     _public_groups.add_ref(ref, "test")
     groups = _public_group_check()
-    test_group = groups.matching_group(ref.name, ref.module_path)
+    test_group = groups.matching_group(ref)
     assert test_group.name == "test"
-    assert test_group.owned_refs == ["my_module:my_func"]
+    assert test_group.owned_refs == ["my_module.my_func"]
+
+
+def test_public_groups_add_to_existing_group(_public_groups, _public_group_check):
+    ref = RefSymbol(name="my_func", type=SymbolType.FUNCTION, rel_path="my_module")
+    group = PublicGroup(name="test")
+    added_group = _public_groups.add_group(group)
+    assert added_group == group
+    _public_groups.add_ref(ref, "test")
+    assert _public_groups.groups_no_root == [
+        PublicGroup(name="test", owned_refs=["my_module.my_func"])
+    ]

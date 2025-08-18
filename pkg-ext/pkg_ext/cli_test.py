@@ -62,7 +62,7 @@ def test_01_initial(e2e_dirs, file_regression_e2e, monkeypatch):
         dynamic_responses={
             PromptMatch(
                 substring="Select references of type function to expose from _internal.py"
-            ): " ",
+            ): f" {KeyInput.DOWN} ",
             PromptMatch(
                 substring="Choose public API group name"
             ): f"{KeyInput.CONTROLC}",

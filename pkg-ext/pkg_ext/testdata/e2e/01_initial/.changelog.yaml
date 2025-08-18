@@ -2,6 +2,14 @@ name: expose
 action: expose
 details: created in _internal.py
 ---
+name: expose_with_arg
+action: expose
+details: created in _internal.py
+---
 name: hidden
 action: hide
 details: created in _internal.py
+---
+name: MyCls
+action: expose
+details: exposed in the function _internal.expose_with_arg

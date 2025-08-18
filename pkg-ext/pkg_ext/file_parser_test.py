@@ -32,7 +32,7 @@ def test_parse_symbols():
 
 def test_parse_type_aliases():
     symbols = _parse_src_module(models)
-    assert "ask_shell.settings:AskShellSettings" in symbols.local_imports
+    assert "ask_shell.settings.AskShellSettings" in symbols.local_imports
     assert "OutputCallbackT" in symbols.type_aliases
     assert "ShellRunEventT" in symbols.type_aliases
     assert "ERROR_MESSAGE_INTERACTIVE_SHELL" in symbols.global_vars
@@ -71,7 +71,7 @@ def test_create_refs():
         [models_parsed, settings_parsed], ASK_SHELL_PKG_IMPORT_NAME
     )
     assert refs
-    settings_ref = "ask_shell.settings:AskShellSettings"
+    settings_ref = "ask_shell.settings.AskShellSettings"
     actual_ref = refs.get(settings_ref)
     assert actual_ref is not None, f"Reference for {settings_ref} not found"
     assert actual_ref.src_usages == ["models.py"]

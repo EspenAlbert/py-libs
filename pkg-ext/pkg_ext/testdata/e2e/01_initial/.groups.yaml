@@ -3,4 +3,6 @@ groups:
   owned_refs: []
 - name: my_group
   owned_refs:
-  - _internal:expose
+  - _internal.MyCls
+  - _internal.expose
+  - _internal.expose_with_arg

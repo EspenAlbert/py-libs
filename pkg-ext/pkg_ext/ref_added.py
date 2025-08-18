@@ -12,6 +12,7 @@ from pkg_ext.gen_changelog import (
     ChangelogActionType,
 )
 from pkg_ext.interactive_choices import (
+    select_group,
     select_groups,
     select_multiple_refs,
 )
@@ -79,6 +80,7 @@ def make_expose_decisions(
                             ChangelogActionType.EXPOSE,
                             details=f"exposed in the function {func_ref.symbol.local_id}",
                         )
+                        select_group(tool_state.groups, ref)
     return decided_refs
 
 

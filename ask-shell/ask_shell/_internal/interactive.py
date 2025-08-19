@@ -354,23 +354,37 @@ def _get_prompt_text(q: Question) -> str:
 
 @dataclass
 class PromptMatch:
+    response: str | None = None
+    responses: list[str] = field(default_factory=list)
     substring: str = ""
     exact: str = ""
     max_matches: int = 1
     matches_so_far: int = field(init=False, default=0)
 
+    def __post_init__(self):
+        assert not (self.response and self.responses), (
+            f"set either response or responses, not both! {self!r}"
+        )
+        if self.response is not None:
+            self.responses.append(self.response)
+        assert len(self.responses) == self.max_matches, (
+            f"# responses must match max_matches: {len(self.responses)} != {self.max_matches}"
+        )
+
     @property
     def match_exhausted(self) -> bool:
         return self.matches_so_far >= self.max_matches
+
+    def next_response(self) -> str:
+        self.matches_so_far += 1
+        return self.responses[self.matches_so_far - 1]
 
     def __call__(self, prompt_text: str) -> bool:
         if self.match_exhausted:
             return False
         if (substr := self.substring) and substr in prompt_text:
-            self.matches_so_far += 1
             return True
         if (exact := self.exact) and exact == prompt_text:
-            self.matches_so_far += 1
             return True
         return False
 
@@ -393,7 +407,7 @@ class question_patcher:
 
     responses: list[str] = field(default_factory=list)
     next_response: int = 0
-    dynamic_responses: dict[PromptMatch, str] = field(default_factory=dict)
+    dynamic_responses: list[PromptMatch] = field(default_factory=list)
     settings: AskShellSettings = field(default_factory=AskShellSettings.from_env)
 
     _old_force_interactive_env_str: str = field(default="", init=False, repr=False)
@@ -401,8 +415,8 @@ class question_patcher:
     def _dynamic_match(self, prompt_text: str) -> str | None:
         return next(
             (
-                response
-                for matcher, response in self.dynamic_responses.items()
+                matcher.next_response()
+                for matcher in self.dynamic_responses
                 if matcher(prompt_text)
             ),
             None,

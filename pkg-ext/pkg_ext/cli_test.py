@@ -60,19 +60,22 @@ def run_e2e(
 def test_01_initial(e2e_dirs, file_regression_e2e, monkeypatch):
     # todo: continue with the e2e regression check
     with question_patcher(
-        dynamic_responses={
+        dynamic_responses=[
             PromptMatch(
-                substring="Select references of type function to expose from _internal.py"
-            ): f" {KeyInput.DOWN} ",
+                substring="Select references of type function to expose from _internal.py",
+                response=f" {KeyInput.DOWN} ",
+            ),
             PromptMatch(
                 substring="Choose public API group name",
                 max_matches=2,
-            ): f"{KeyInput.CONTROLC}",
-            PromptMatch(substring="enter name of new public group"): "my_group",
-            # TODO: Understand how to do this substring matching better
-            PromptMatch(substring="enter name of new public"): "my_dep",
-            PromptMatch(substring="Do you want to write __init__.py"): "y",
-        }
+                responses=[f"{KeyInput.CONTROLC}" for _ in range(2)],
+            ),
+            PromptMatch(
+                substring="enter name of new public group",
+                max_matches=2,
+                responses=["my_group", "my_dep"],
+            ),
+        ]
     ):
         run_e2e(e2e_dirs, file_regression_e2e, monkeypatch)
         file_regression_e2e.check_path(e2e_dirs.python_actual_group_path("my_dep"))

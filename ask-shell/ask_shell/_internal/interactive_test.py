@@ -222,27 +222,30 @@ def test_new_handler_choice_multiple_with_extra():
 
 
 def test_prompt_match_exact():
-    match = PromptMatch(exact="exact")
+    match = PromptMatch(exact="exact", response="exact")
     assert match("exact")
     assert not match("not exact")
 
 
 def test_prompt_match_substring():
-    match = PromptMatch(substring="sub")
+    match = PromptMatch(substring="sub", response="")
     assert match("this is a substring match")
     assert not match("no match here")
 
 
 def test_prompt_match_once_only():
-    match = PromptMatch(substring="once", max_matches=1)
+    match = PromptMatch(substring="once", max_matches=1, response="")
     assert match("this will match once")
+    match.next_response()
     assert not match("this will match once")
 
 
 def test_prompt_match_twiche():
-    match = PromptMatch(substring="once", max_matches=2)
+    match = PromptMatch(substring="once", max_matches=2, responses=["1", "2"])
     assert match("this will match once")
+    match.next_response()
     assert match("this will match once")
+    match.next_response()
     assert not match("this will match once")
 
 
@@ -250,7 +253,7 @@ def test_prompt_dynamic_match():
     prompt_text = "my prompt"
     response_expected = "hello world!"
     with question_patcher(
-        dynamic_responses={PromptMatch(exact=prompt_text): response_expected}
+        dynamic_responses=[PromptMatch(exact=prompt_text, response=response_expected)]
     ):
         response = text(prompt_text)
     assert response_expected == response

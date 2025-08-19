@@ -2,6 +2,7 @@ import ast
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Callable
 
 from zero_3rdparty.iter_utils import flat_map
 
@@ -94,10 +95,13 @@ def parse_symbols(
     path: Path,
     rel_path: str,
     pkg_import_name: str,
+    is_generated: Callable[[str], bool] | None = None,
 ) -> PkgSrcFile | PkgTestFile | None:
     if is_dunder_file(path):
         return None
     py_script = path.read_text()
+    if is_generated and is_generated(py_script):
+        return None
     try:
         tree = ast.parse(py_script, type_comments=True)
     except SyntaxError as e:

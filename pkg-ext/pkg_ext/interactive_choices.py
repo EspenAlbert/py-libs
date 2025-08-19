@@ -50,11 +50,12 @@ def select_group(groups: PublicGroups, ref: RefSymbol) -> PublicGroup:
         group = groups.matching_group(ref)
         return groups.add_ref(ref, group.name)
     choices = as_choices(groups)
-    return select_list_choice(
+    group = select_list_choice(
         "Choose public API group name",
         choices,
         options=new_public_group_constructor(groups, ref),
     )
+    return groups.add_ref(ref, group.name)
 
 
 def select_groups(

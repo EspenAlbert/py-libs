@@ -184,6 +184,9 @@ class PkgFileBase(Entity):
     local_imports: set[str] = Field(
         default_factory=set
     )  # should be in the format of ref_id (see `ref_id` function)
+    dependencies: set[PkgFileBase] = Field(
+        default_factory=set, description="Added by the PkgCodeState"
+    )
 
     @property
     def module_local_path(self) -> str:
@@ -198,6 +201,9 @@ class PkgFileBase(Entity):
         """Check if this package file depends on another package file."""
         if not isinstance(other, PkgFileBase):
             raise TypeError(f"Expected PkgFileBase, got {type(other)}")
+        return other in self.dependencies
+
+    def _depend_from_import(self, other: PkgFileBase) -> bool:
         other_import_name = other.module_full_name
         other_import_ref = f"{other_import_name}."
         return any(
@@ -219,6 +225,14 @@ class PkgFileBase(Entity):
         if other.depends_on(self):
             return True
         return self.relative_path < other.relative_path
+
+    def __eq__(self, value: object) -> bool:
+        if not isinstance(value, PkgFileBase):
+            raise TypeError
+        return self.path == value.path
+
+    def __hash__(self) -> int:
+        return hash(self.path)
 
 
 def is_dunder_file(path: Path) -> bool:
@@ -323,7 +337,7 @@ PyIdentifier: TypeAlias = Annotated[str, AfterValidator(is_root_identifier)]
 class PublicGroup(Entity):
     ROOT_GROUP_NAME: ClassVar[str] = "__ROOT__"
     name: PyIdentifier
-    owned_refs: list[SymbolRefId] = Field(default_factory=list)
+    owned_refs: set[SymbolRefId] = Field(default_factory=set)
 
     @property
     def is_root(self) -> bool:
@@ -332,6 +346,10 @@ class PublicGroup(Entity):
     @property
     def owned_modules(self) -> set[str]:
         return {ref_id_module(ref) for ref in self.owned_refs}
+
+    @property
+    def sorted_refs(self) -> list[str]:
+        return sorted(self.owned_refs)
 
     def dump(self) -> dict:
         return self.model_dump()
@@ -365,9 +383,13 @@ def ensure_disk_path_updated(func: T) -> T:
                 "Disk path must have .yaml or .yml extension"
             )
             self_.groups.sort()
+            groups_dumped = []
             for group in self_.groups:
-                group.owned_refs = sorted(set(group.owned_refs))
-            self_dict = self_.model_dump(exclude={"storage_path"})
+                group_dict = group.model_dump(exclude={"owned_refs"})
+                group_dict["owned_refs"] = sorted(group.owned_refs)
+                groups_dumped.append(group_dict)
+            self_dict = self_.model_dump(exclude={"storage_path", "groups"})
+            self_dict["groups"] = groups_dumped
             yaml_text = dump(self_dict, "yaml")
             file_utils.ensure_parents_write_text(storage_path, yaml_text)
 
@@ -426,9 +448,9 @@ class PublicGroups(Entity):
                 raise InvalidGroupSelectionError(
                     reason=f"existing_group: {matching_group.name} matched for {ref.local_id}"
                 )
-            group.owned_refs.append(ref.local_id)
+            group.owned_refs.add(ref.local_id)
         except NoPublicGroupMatch:
-            group.owned_refs.append(ref.local_id)
+            group.owned_refs.add(ref.local_id)
         return group
 
 
@@ -438,6 +460,20 @@ class PkgCodeState(Entity):
     pkg_import_name: str
     import_id_refs: dict[str, RefSymbol]
     files: list[PkgSrcFile | PkgTestFile]
+
+    def _add_transitive_dependencies(self) -> None:
+        """Add dependencies based on local imports."""
+        while True:
+            new_dependencies = False
+            for file in self.files:
+                for other_file in self.files:
+                    if file == other_file or other_file in file.dependencies:
+                        continue
+                    if file._depend_from_import(other_file):
+                        file.dependencies.add(other_file)
+                        new_dependencies = True
+            if not new_dependencies:
+                break
 
     @model_validator(mode="after")
     def ensure_no_duplicate_names(self):
@@ -456,6 +492,7 @@ class PkgCodeState(Entity):
         )
         if not self.import_id_refs:
             raise ValueError("No code state found")
+        self._add_transitive_dependencies()
         self.files = sorted(self.files)
         return self
 
@@ -493,6 +530,25 @@ class PkgCodeState(Entity):
             raise ValueError(f"ref not found in any file: {ref}")
 
         return sorted(refs, key=lookup_in_file)
+
+    def sort_rel_paths_by_dependecy_order(
+        self, paths: Iterable[str], reverse: bool = True
+    ) -> list[str]:
+        """assume a.py:
+        from my_pkg.b import b
+        def a():
+            b()
+        Then the order will be b, a
+        If reverse=True, a, b # reversed dependency order
+        """
+
+        def key_in_files(rel_path: str) -> int:
+            for i, file in enumerate(self.files):
+                if file.relative_path == rel_path:
+                    return i
+            raise ValueError(f"rel_path not found in any file: {rel_path}")
+
+        return sorted(paths, key=key_in_files, reverse=reverse)
 
 
 class AddChangelogAction(Protocol):

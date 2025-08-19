@@ -113,12 +113,23 @@ def handle_added_refs(
         logger.info("No new references found in the package")
         return
 
-    def group_by_module_path(state: RefStateWithSymbol) -> str:
+    def group_by_rel_path(state: RefStateWithSymbol) -> str:
         return state.symbol.rel_path
 
     def decide_refs(refs: list[RefStateWithSymbol | RefSymbol]) -> None:
         for ref in refs:
             added_refs.pop(ref.name, None)
+
+    def sort_by_dep_order(
+        rel_path_refs: dict[str, list[RefStateWithSymbol]],
+    ) -> dict[str, list[RefStateWithSymbol]]:
+        sorted_rel_paths = code_state.sort_rel_paths_by_dependecy_order(
+            rel_path_refs.keys(), reverse=True
+        )
+        new_order = {}
+        for rel_path in sorted_rel_paths:
+            new_order[rel_path] = rel_path_refs[rel_path]
+        return new_order
 
     with new_task(
         "New References expose/hide decisions",
@@ -135,7 +146,8 @@ def handle_added_refs(
             ]
             if not relevant_refs:
                 continue
-            file_added = group_by_once(relevant_refs, key=group_by_module_path)
+            file_added = group_by_once(relevant_refs, key=group_by_rel_path)
+            file_added = sort_by_dep_order(file_added)
             extra_refs_decided = make_expose_decisions(
                 file_added, add_changelog, tool_state, code_state, symbol_type, settings
             )

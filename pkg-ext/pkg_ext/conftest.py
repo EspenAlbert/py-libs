@@ -1,4 +1,5 @@
 import re
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -85,7 +86,8 @@ def _e2e_dir(request) -> Path:
 
 @pytest.fixture()
 def _e2e_pkg_path(_e2e_dir) -> Path:
-    return _e2e_dir / "my_pkg"
+    yield _e2e_dir / "my_pkg"
+    del sys.modules["my_pkg"]  # support re-importing in the next test
 
 
 @pytest.fixture()

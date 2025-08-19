@@ -41,7 +41,7 @@ def test_public_groups_dumping_after_new_ref_symbol(
     groups = _public_group_check()
     test_group = groups.matching_group(ref)
     assert test_group.name == "test"
-    assert test_group.owned_refs == ["my_module.my_func"]
+    assert test_group.owned_refs == {"my_module.my_func"}
 
 
 def test_public_groups_add_to_existing_group(_public_groups, _public_group_check):
@@ -51,5 +51,5 @@ def test_public_groups_add_to_existing_group(_public_groups, _public_group_check
     assert added_group == group
     _public_groups.add_ref(ref, "test")
     assert _public_groups.groups_no_root == [
-        PublicGroup(name="test", owned_refs=["my_module.my_func"])
+        PublicGroup(name="test", owned_refs={"my_module.my_func"})
     ]

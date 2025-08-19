@@ -434,7 +434,8 @@ class question_patcher:
 
     def _next_response(self, q: Question) -> str:
         if prompt_text := _get_prompt_text(q):
-            if dynamic := self._dynamic_match(prompt_text):
+            dynamic = self._dynamic_match(prompt_text)
+            if dynamic is not None:
                 return dynamic
             return self._next_index_response(prompt_text)
         return self._next_index_response("")

@@ -22,9 +22,9 @@ def write_imports(code: PkgCodeState, refs: list[SymbolRefId]) -> list[str]:
 def write_group(group: PublicGroup, settings: PkgSettings, code: PkgCodeState) -> Path:
     path = settings.pkg_directory / f"{group.name}.py"
     pkg_name = code.pkg_import_name
-    imports = [as_import_line(pkg_name, ref) for ref in group.owned_refs]
+    imports = [as_import_line(pkg_name, ref) for ref in group.sorted_refs]
     exposed_vars = [
-        f"{ref_id_name(ref)} = _{ref_id_name(ref)}" for ref in group.owned_refs
+        f"{ref_id_name(ref)} = _{ref_id_name(ref)}" for ref in group.sorted_refs
     ]
     file_content = "\n".join(
         [

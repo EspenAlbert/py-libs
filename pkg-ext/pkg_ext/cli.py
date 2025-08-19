@@ -34,10 +34,18 @@ def parse_pkg_code_state(settings: PkgSettings) -> PkgCodeState:
         iter_paths_and_relative(settings.pkg_directory, "*.py", only_files=True)
     )
     pkg_import_name = settings.pkg_import_name
+
+    def is_generated(py_text: str) -> bool:
+        return py_text.startswith(settings.file_header)
+
     files = sorted(
         parsed
         for path, rel_path in pkg_py_files
-        if (parsed := parse_symbols(path, rel_path, pkg_import_name))
+        if (
+            parsed := parse_symbols(
+                path, rel_path, pkg_import_name, is_generated=is_generated
+            )
+        )
     )
 
     import_id_symbols = parse_code_symbols(files, pkg_import_name)

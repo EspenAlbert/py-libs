@@ -70,6 +70,7 @@ dev = [
     "pytest-freezer>=0.4.9",
     "pytest-regressions==2.0.1",
     "pytest-subtests==0.5.0",
+    "pytest-xdist==3.8.0",
     "pytest>=8.3.4",
     "ruff>=0.9.2",
     "ssort==0.15.0",

@@ -1,8 +1,10 @@
 groups:
 - name: __ROOT__
   owned_refs: []
+- name: my_dep
+  owned_refs:
+  - _internal2.MyCls
 - name: my_group
   owned_refs:
-  - _internal.MyCls
   - _internal.expose
   - _internal.expose_with_arg

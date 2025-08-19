@@ -95,4 +95,5 @@ def e2e_dirs(tmp_path, _e2e_dir, _e2e_pkg_path):
 
 @pytest.fixture()
 def file_regression_e2e(file_regression, e2e_dirs) -> E2eRegressionCheck:
-    return E2eRegressionCheck(e2e_dirs, file_regression)
+    checker = E2eRegressionCheck(e2e_dirs, file_regression)
+    yield checker

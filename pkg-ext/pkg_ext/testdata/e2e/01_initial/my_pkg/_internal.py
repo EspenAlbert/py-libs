@@ -1,13 +1,8 @@
-from dataclasses import dataclass
+from my_pkg._internal2 import MyCls
 
 
 def expose():
     return "EXPOSED"
-
-
-@dataclass
-class MyCls:
-    name: str
 
 
 def expose_with_arg(my_arg: MyCls):

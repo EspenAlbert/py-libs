@@ -43,6 +43,7 @@ def run_e2e(
     monkeypatch.syspath_prepend(execution_e2e_dir)
     clean_dir(settings.changelog_path, recreate=False)
     settings.public_groups_path.unlink(missing_ok=True)
+    settings.init_path.write_text("")
     command = f"--repo-root {execution_e2e_dir} {paths.pkg_path_relative} --skip-open"
     logger.info(f"running command: {command}")
     result = run(command)
@@ -64,13 +65,17 @@ def test_01_initial(e2e_dirs, file_regression_e2e, monkeypatch):
                 substring="Select references of type function to expose from _internal.py"
             ): f" {KeyInput.DOWN} ",
             PromptMatch(
-                substring="Choose public API group name"
+                substring="Choose public API group name",
+                max_matches=2,
             ): f"{KeyInput.CONTROLC}",
             PromptMatch(substring="enter name of new public group"): "my_group",
+            # TODO: Understand how to do this substring matching better
+            PromptMatch(substring="enter name of new public"): "my_dep",
             PromptMatch(substring="Do you want to write __init__.py"): "y",
         }
     ):
         run_e2e(e2e_dirs, file_regression_e2e, monkeypatch)
+        file_regression_e2e.check_path(e2e_dirs.python_actual_group_path("my_dep"))
         file_regression_e2e.check_path(e2e_dirs.python_actual_group_path("my_group"))
 
 

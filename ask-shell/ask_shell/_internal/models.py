@@ -12,7 +12,7 @@ from functools import lru_cache
 from pathlib import Path
 from shutil import which
 from threading import RLock
-from typing import Any, Callable, Literal, NamedTuple, Self, TypeAlias, TypeVar, Union
+from typing import Any, Callable, Literal, NamedTuple, Self, TypeVar
 
 from model_lib import parse_dict, parse_list, parse_model
 from model_lib.constants import FileFormat, FileFormatT
@@ -22,6 +22,17 @@ from rich.console import Console
 from zero_3rdparty.closable_queue import ClosableQueue
 
 from ask_shell._internal._run_env import interactive_shell
+from ask_shell._internal.events import (
+    OutputCallbackT,
+    ShellRunCallbackT,
+    ShellRunEventT,
+    ShellRunPOpenStarted,
+    ShellRunQueueT,
+    ShellRunRetryAttempt,
+    ShellRunStdOutput,
+    ShellRunStdReadError,
+    ShellRunStdStarted,
+)
 from ask_shell.settings import AskShellSettings
 
 logger = logging.getLogger(__name__)
@@ -78,62 +89,6 @@ class ShellInput(NamedTuple):
             if not prev_arg_is_flag:
                 return arg
         return ""
-
-
-@dataclass
-class ShellRunStdStarted:
-    is_stdout: bool
-    console: Console
-    log_path: Path
-
-
-@dataclass
-class ShellRunStdOutput:
-    is_stdout: bool
-    content: str
-
-
-@dataclass
-class ShellRunPOpenStarted:
-    p_open: subprocess.Popen
-
-
-@dataclass
-class ShellRunStdReadError:
-    is_stdout: bool
-    error: BaseException
-
-
-@dataclass
-class ShellRunRetryAttempt:
-    attempt: int
-
-
-@dataclass
-class ShellRunBefore:
-    run: ShellRun
-
-
-@dataclass
-class ShellRunAfter:
-    run: ShellRun
-    error: BaseException | None = None
-
-
-OutputCallbackT: TypeAlias = Callable[
-    [str], bool | None
-]  # returns True if the callback is done and should be removed
-ShellRunEventT: TypeAlias = Union[
-    ShellRunBefore,
-    ShellRunPOpenStarted,
-    ShellRunStdStarted,
-    ShellRunStdReadError,
-    ShellRunStdOutput,
-    ShellRunRetryAttempt,  # only on retries
-    ShellRunAfter,
-]
-ShellRunCallbackT: TypeAlias = Callable[[ShellRunEventT], bool | None]
-ShellRunQueueT: TypeAlias = ClosableQueue[ShellRunEventT]
 
 
 @lru_cache

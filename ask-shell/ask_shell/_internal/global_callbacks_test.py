@@ -11,8 +11,9 @@ from ask_shell._internal._run import (
     run,
     wait_on_ok_errors,
 )
+from ask_shell._internal.events import ShellRunBefore
 from ask_shell._internal.global_callbacks import wait_on_available_threads
-from ask_shell._internal.models import ShellRun, ShellRunBefore
+from ask_shell._internal.models import ShellRun
 from ask_shell.settings import AskShellSettings
 
 logger = logging.getLogger(__name__)

@@ -1,7 +1,0 @@
-name: ENV_NAME_FORCE_INTERACTIVE_SHELL
-action: hide
-details: Created in _run_env.py
----
-name: interactive_shell
-action: expose
-details: Created in _run_env.py

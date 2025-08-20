@@ -5,7 +5,7 @@ from ask_shell._internal._run import (
     max_run_count_for_workers,
     wait_if_many_runs,
 )
-from ask_shell._internal.models import ShellRunBefore, ShellRunEventT
+from ask_shell._internal.events import ShellRunBefore, ShellRunEventT
 
 logger = logging.getLogger(__name__)
 

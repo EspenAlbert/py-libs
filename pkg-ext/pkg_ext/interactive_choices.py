@@ -51,7 +51,7 @@ def select_group(groups: PublicGroups, ref: RefSymbol) -> PublicGroup:
         return groups.add_ref(ref, group.name)
     choices = as_choices(groups)
     group = select_list_choice(
-        "Choose public API group name",
+        f"Choose public API group name for {ref.local_id}",
         choices,
         options=new_public_group_constructor(groups, ref),
     )

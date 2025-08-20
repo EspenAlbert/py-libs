@@ -1,4 +1,4 @@
-from ask_shell._internal.models import (
+from ask_shell._internal.events import (
     ShellRunAfter,
     ShellRunBefore,
 )

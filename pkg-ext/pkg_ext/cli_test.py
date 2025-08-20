@@ -1,5 +1,4 @@
 import logging
-import pydoc
 from itertools import zip_longest
 
 from ask_shell._internal.interactive import KeyInput, PromptMatch, question_patcher
@@ -36,7 +35,7 @@ def run_e2e(
     monkeypatch: MonkeyPatch,
     groups: list[str],
     *,
-    force_regen: bool = False,  # useful instead of having to re-run multiple times
+    force_regen: bool = False,
 ):
     execution_e2e_dir = paths.execution_e2e_dir
     execution_e2e_pkg_path = paths.execution_e2e_pkg_path
@@ -122,9 +121,13 @@ def test_02_dep_order(e2e_dirs, file_regression_e2e, monkeypatch):
         )
 
 
-def test_import(_e2e_dir, monkeypatch):
-    monkeypatch.syspath_prepend(
-        _e2e_dir.parent / test_01_initial.__name__.removeprefix("test_")
-    )
-    what = pydoc.locate("my_pkg._internal.expose", forceload=True)
-    assert what() == "EXPOSED"  # type: ignore
+def test_03_nested(e2e_dirs, file_regression_e2e, monkeypatch):
+    groups = ["n1"]
+    with _question_patcher({"_internal/a.py": f" {KeyInput.DOWN} "}, groups):
+        run_e2e(
+            e2e_dirs,
+            file_regression_e2e,
+            monkeypatch,
+            groups,
+            force_regen=False,
+        )

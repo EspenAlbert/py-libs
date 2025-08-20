@@ -41,6 +41,8 @@ class SymbolParser(ast.NodeTransformer):
         node_name = node.id
         if self.name_is_imported(node_name):
             return node
+        if len(node_name) == 1:
+            return node
         if node_name.isupper():
             self.global_vars.append(node.id)
         elif node.id.endswith("T"):

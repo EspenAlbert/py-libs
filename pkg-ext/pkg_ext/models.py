@@ -63,7 +63,7 @@ SymbolRefId: TypeAlias = Annotated[str, AfterValidator(ref_id_format)]
 
 
 def ref_id_module(ref_id: SymbolRefId) -> str:
-    return ref_id.rsplit(".")[0]
+    return ref_id.rsplit(".", maxsplit=1)[0]
 
 
 def ref_id_name(ref_id: SymbolRefId) -> str:
@@ -511,10 +511,13 @@ class PkgCodeState(Entity):
         return py_any
 
     def as_local_ref(self, any: Any) -> RefSymbol | None:
-        name = as_name(any)
+        import_id = as_name(any)
         pkg_prefix = f"{self.pkg_import_name}."
-        if name.startswith(pkg_prefix):
-            return self.import_id_refs[name]
+        if import_id.startswith(pkg_prefix):
+            name = ref_id_name(import_id)
+            if len(name) == 1:  # most likely a TypeAlias, like T, which are not stored
+                return None
+            return self.import_id_refs[import_id]
 
     def sort_refs(self, refs: Iterable[SymbolRefId]) -> list[SymbolRefId]:
         def lookup_in_file(ref: SymbolRefId) -> tuple[int, str]:

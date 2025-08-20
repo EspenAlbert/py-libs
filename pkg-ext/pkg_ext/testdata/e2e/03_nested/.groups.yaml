@@ -1,0 +1,7 @@
+groups:
+- name: __ROOT__
+  owned_refs: []
+- name: n1
+  owned_refs:
+  - _internal.a.a
+  - _internal.a.b

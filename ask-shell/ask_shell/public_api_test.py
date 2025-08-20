@@ -10,22 +10,24 @@ import pytest
 from model_lib.pydantic_utils import field_names
 from pydantic import ValidationError
 
-from ask_shell import (
-    ShellConfig,
-    ShellError,
-    ShellRun,
-    kill,
-    run,
-    run_and_wait,
-    wait_on_ok_errors,
-)
-from ask_shell._internal.models import (
+from ask_shell._internal.events import (
     ShellRunAfter,
     ShellRunBefore,
     ShellRunPOpenStarted,
     ShellRunStdOutput,
     ShellRunStdStarted,
+)
+from ask_shell._internal.models import (
+    ShellConfig,
+    ShellError,
+    ShellRun,
     _mise_binary,
+)
+from ask_shell.shell import (
+    kill,
+    run,
+    run_and_wait,
+    wait_on_ok_errors,
 )
 
 PYTHON_EXEC = sys.executable

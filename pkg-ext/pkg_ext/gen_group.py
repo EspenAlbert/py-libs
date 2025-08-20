@@ -11,7 +11,12 @@ from pkg_ext.models import (
 from pkg_ext.settings import PkgSettings
 
 
-def as_import_line(pkg_name: str, ref: SymbolRefId) -> str:
+def as_import_line(
+    pkg_name: str, ref: SymbolRefId, *, skip_as_alias_underscore: bool = False
+) -> str:
+    if skip_as_alias_underscore:
+        return f"from {pkg_name}.{ref_id_module(ref)} import {ref_id_name(ref)}"
+
     return f"from {pkg_name}.{ref_id_module(ref)} import {ref_id_name(ref)} as _{ref_id_name(ref)}"
 
 

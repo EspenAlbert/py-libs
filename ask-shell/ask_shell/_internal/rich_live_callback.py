@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from ask_shell._internal.events import ShellRunAfter, ShellRunBefore
 from ask_shell._internal.models import (
-    ShellRunAfter,
-    ShellRunBefore,
     ShellRunEventT,
 )
 from ask_shell._internal.rich_live import live_frozen

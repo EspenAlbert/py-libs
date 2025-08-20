@@ -29,7 +29,9 @@ def write_init(tool_state: PkgExtState, code: PkgCodeState, settings: PkgSetting
     for symbol in sorted_symbols:
         group = symbol_groups[symbol]
         if group.is_root:
-            import_lines.append(as_import_line(pkg_name, symbol))
+            import_lines.append(
+                as_import_line(pkg_name, symbol, skip_as_alias_underscore=True)
+            )
             continue
         group_name = group.name
         if group_name in groups_imported:

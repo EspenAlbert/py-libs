@@ -9,14 +9,16 @@ from rich.progress import (
     TimeElapsedColumn,
 )
 
-from ask_shell._internal.models import (
-    ShellRun,
-    ShellRunEventT,
+from ask_shell._internal.events import (
     ShellRunPOpenStarted,
     ShellRunRetryAttempt,
     ShellRunStdOutput,
     ShellRunStdReadError,
     ShellRunStdStarted,
+)
+from ask_shell._internal.models import (
+    ShellRun,
+    ShellRunEventT,
 )
 from ask_shell._internal.rich_progress import ProgressManager, log_task_done, new_task
 

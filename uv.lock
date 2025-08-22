@@ -8,6 +8,7 @@ members = [
     "model-lib",
     "pkg-ext",
     "py-libs",
+    "pytest-model-lib",
     "zero-3rdparty",
 ]
 
@@ -843,6 +844,7 @@ dependencies = [
     { name = "ask-shell" },
     { name = "model-lib", extra = ["toml"] },
     { name = "pkg-ext" },
+    { name = "pytest-model-lib" },
     { name = "zero-3rdparty" },
 ]
 
@@ -859,6 +861,7 @@ dev = [
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "pytest-freezer" },
+    { name = "pytest-model-lib" },
     { name = "pytest-regressions" },
     { name = "pytest-subtests" },
     { name = "pytest-xdist" },
@@ -872,6 +875,7 @@ requires-dist = [
     { name = "ask-shell", editable = "ask-shell" },
     { name = "model-lib", extras = ["toml"], editable = "model-lib" },
     { name = "pkg-ext", editable = "pkg-ext" },
+    { name = "pytest-model-lib", editable = "pytest-model-lib" },
     { name = "zero-3rdparty", editable = "zero-3rdparty" },
 ]
 
@@ -883,11 +887,12 @@ dev = [
     { name = "mkdocs-material", specifier = ">=9.5.50" },
     { name = "pillow", specifier = ">=11.1.0" },
     { name = "pycobertura", specifier = "==4.0.0" },
-    { name = "pyright", specifier = ">=1.1.392.post0" },
+    { name = "pyright", specifier = ">=1.1.404" },
     { name = "pytest", specifier = ">=8.3.4" },
     { name = "pytest-asyncio", specifier = "==0.15.1" },
     { name = "pytest-cov", specifier = "==3.0.0" },
     { name = "pytest-freezer", specifier = ">=0.4.9" },
+    { name = "pytest-model-lib", editable = "pytest-model-lib" },
     { name = "pytest-regressions", specifier = "==2.0.1" },
     { name = "pytest-subtests", specifier = "==0.5.0" },
     { name = "pytest-xdist", specifier = "==3.8.0" },
@@ -1047,15 +1052,15 @@ wheels = [
 
 [[package]]
 name = "pyright"
-version = "1.1.392.post0"
+version = "1.1.404"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "nodeenv" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/66/df/3c6f6b08fba7ccf49b114dfc4bb33e25c299883fd763f93fad47ef8bc58d/pyright-1.1.392.post0.tar.gz", hash = "sha256:3b7f88de74a28dcfa90c7d90c782b6569a48c2be5f9d4add38472bdaac247ebd", size = 3789911, upload-time = "2025-01-15T15:01:20.913Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e2/6e/026be64c43af681d5632722acd100b06d3d39f383ec382ff50a71a6d5bce/pyright-1.1.404.tar.gz", hash = "sha256:455e881a558ca6be9ecca0b30ce08aa78343ecc031d37a198ffa9a7a1abeb63e", size = 4065679, upload-time = "2025-08-20T18:46:14.029Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e7/b1/a18de17f40e4f61ca58856b9ef9b0febf74ff88978c3f7776f910071f567/pyright-1.1.392.post0-py3-none-any.whl", hash = "sha256:252f84458a46fa2f0fd4e2f91fc74f50b9ca52c757062e93f6c250c0d8329eb2", size = 5595487, upload-time = "2025-01-15T15:01:17.775Z" },
+    { url = "https://files.pythonhosted.org/packages/84/30/89aa7f7d7a875bbb9a577d4b1dc5a3e404e3d2ae2657354808e905e358e0/pyright-1.1.404-py3-none-any.whl", hash = "sha256:c7b7ff1fdb7219c643079e4c3e7d4125f0dafcc19d253b47e898d130ea426419", size = 5902951, upload-time = "2025-08-20T18:46:12.096Z" },
 ]
 
 [[package]]
@@ -1124,6 +1129,11 @@ sdist = { url = "https://files.pythonhosted.org/packages/81/f0/98dcbc5324064360b
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c1/e9/30252bc05bcf67200a17f4f0b4cc7598f0a68df4fa9fa356193aa899f145/pytest_freezer-0.4.9-py3-none-any.whl", hash = "sha256:8b6c50523b7d4aec4590b52bfa5ff766d772ce506e2bf4846c88041ea9ccae59", size = 3192, upload-time = "2024-12-12T08:53:07.641Z" },
 ]
+
+[[package]]
+name = "pytest-model-lib"
+version = "0.0.1"
+source = { editable = "pytest-model-lib" }
 
 [[package]]
 name = "pytest-regressions"

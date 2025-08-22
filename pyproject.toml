@@ -6,6 +6,7 @@ dependencies = [
     "ask-shell",
     "model-lib[toml]",
     "pkg-ext",
+    "pytest-model-lib",
     "zero-3rdparty",
 ]
 
@@ -16,17 +17,20 @@ package = false
 ask-shell = { workspace = true }
 model-lib = { workspace = true }
 pkg-ext = {workspace = true }
+pytest-model-lib = {workspace = true }
 zero-3rdparty = { workspace = true }
 
 [tool.uv.workspace]
-members = ["ask-shell", "model-lib", "pkg-ext", "zero-3rdparty"]
+members = ["ask-shell", "model-lib", "pkg-ext", "pytest-model-lib", "zero-3rdparty"]
 exclude=['model_lib', 'docker_example', 'compose_chart_export', 'docker_compose_parser']
 
 [tool.pytest.ini_options]
-addopts = "-s -vv --log-cli-level=INFO --ignore=.venv/* --ignore=.venv-ci/* --ignore=archive/* --capture=no --durations=0 -n auto"
+addopts = "-s -vv --log-cli-level=INFO --ignore=.venv/* --ignore=.venv-ci/* --ignore=archive/* --capture=no --durations=0 -n auto -p pytest_model_lib"
 # addopts = "-s -vv --log-cli-level=INFO --ignore=.venv/* --ignore=.venv-ci/* --ignore=archive/* --capture=no"
 testpaths = ["ask-shell/ask_shell", "model-lib/model_lib", "pkg-ext/pkg_ext", "zero-3rdparty/zero_3rdparty"]
-
+filterwarnings =[
+    "ignore::pytest.PytestRemovedIn9Warning"
+]
 [tool.coverage.report]
 omit = ["*_test.py"]
 
@@ -36,6 +40,7 @@ venvPath = ".venv"
 exclude = [
     "zero-3rdparty/zero_3rdparty/humps.py",
     "zero-3rdparty/zero_3rdparty/timeparse.py",
+    "pkg-ext/pkg_ext/testdata/",
 ]
 
 [tool.ruff]
@@ -64,10 +69,11 @@ dev = [
     "mkdocs-material>=9.5.50",
     "pillow>=11.1.0",
     "pycobertura==4.0.0",
-    "pyright>=1.1.392.post0",
+    "pyright>=1.1.404",
     "pytest-asyncio==0.15.1",
     "pytest-cov==3.0.0",
     "pytest-freezer>=0.4.9",
+    "pytest-model-lib",
     "pytest-regressions==2.0.1",
     "pytest-subtests==0.5.0",
     "pytest-xdist==3.8.0",

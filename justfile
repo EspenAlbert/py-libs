@@ -23,7 +23,7 @@ type:
   uv run pyright
 test-fast:
   export PYTHONPATH=scripts && export SKIP_MARKED_TESTS=true && uv run pytest -p pytest_skip_marked
-test version='3.11' test-path='':
+test version='3.13' test-path='':
   uv run --python {{version}} pytest {{test-path}}
 test-all:
   just test 3.10

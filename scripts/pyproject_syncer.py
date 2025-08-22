@@ -24,7 +24,13 @@ exclude = [
 """
 
 if __name__ == "__main__":
-    for project in ["ask-shell", "model-lib", "pkg-ext", "zero-3rdparty"]:
+    for project in [
+        "ask-shell",
+        "model-lib",
+        "pkg-ext",
+        "pytest-model-lib",
+        "zero-3rdparty",
+    ]:
         path = ROOT_PATH / project / "pyproject.toml"
         content = template.format(
             NAME=project, NAME_UNDERSCORE=project.replace("-", "_")

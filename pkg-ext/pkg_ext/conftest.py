@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Protocol
 
 import pytest
+from model_lib.static_settings import StaticSettings
 from pytest_regressions.file_regression import FileRegressionFixture
 from zero_3rdparty.str_utils import ensure_prefix
 
@@ -17,6 +18,11 @@ TEST_DATA_PATH = Path(__file__).parent / "testdata"
 @pytest.fixture()
 def repo_path() -> Path:
     return REPO_PATH
+
+
+@pytest.fixture(autouse=True)
+def settings(static_env_vars: StaticSettings):
+    assert static_env_vars
 
 
 @pytest.fixture()
@@ -86,7 +92,7 @@ def _e2e_dir(request) -> Path:
 
 
 @pytest.fixture()
-def _e2e_pkg_path(_e2e_dir) -> Path:
+def _e2e_pkg_path(_e2e_dir) -> Path:  # type: ignore
     yield _e2e_dir / "my_pkg"  # type: ignore
     del sys.modules["my_pkg"]  # support re-importing in the next test
     with suppress(KeyError):
@@ -99,6 +105,5 @@ def e2e_dirs(tmp_path, _e2e_dir, _e2e_pkg_path):
 
 
 @pytest.fixture()
-def file_regression_e2e(file_regression, e2e_dirs) -> E2eRegressionCheck:
-    checker = E2eRegressionCheck(e2e_dirs, file_regression)
-    yield checker
+def file_regression_e2e(file_regression, e2e_dirs) -> E2eRegressionCheck:  # type: ignore
+    yield E2eRegressionCheck(e2e_dirs, file_regression)  # type: ignore

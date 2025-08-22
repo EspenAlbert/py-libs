@@ -1,5 +1,6 @@
 import inspect
 import logging
+import os
 import sys
 import time
 from json import loads
@@ -9,22 +10,24 @@ import pytest
 from model_lib.pydantic_utils import field_names
 from pydantic import ValidationError
 
-from ask_shell import (
-    ShellConfig,
-    ShellError,
-    ShellRun,
-    kill,
-    run,
-    run_and_wait,
-    wait_on_ok_errors,
-)
-from ask_shell.models import (
+from ask_shell._internal.events import (
     ShellRunAfter,
     ShellRunBefore,
     ShellRunPOpenStarted,
     ShellRunStdOutput,
     ShellRunStdStarted,
+)
+from ask_shell._internal.models import (
+    ShellConfig,
+    ShellError,
+    ShellRun,
     _mise_binary,
+)
+from ask_shell.shell import (
+    kill,
+    run,
+    run_and_wait,
+    wait_on_ok_errors,
 )
 
 PYTHON_EXEC = sys.executable
@@ -65,6 +68,7 @@ def test_stderr_run():
     assert result.stderr == "hello"
 
 
+@pytest.mark.skipif(os.environ.get("SLOW", "") == "", reason="needs os.environ[SLOW]")
 def test_async_run():
     result = run(ShellConfig(shell_input="sleep 1 && echo hello"))
     assert result.is_running
@@ -73,6 +77,7 @@ def test_async_run():
     assert result.stderr == ""
 
 
+@pytest.mark.skipif(os.environ.get("SLOW", "") == "", reason="needs os.environ[SLOW]")
 def test_error_run():
     with pytest.raises(
         ValidationError, match=r"Binary or non-executable 'unknown' not found"
@@ -82,9 +87,7 @@ def test_error_run():
 
 def test_invalid_popen_args():
     with pytest.raises(ShellError) as exc:
-        run_and_wait(
-            ShellConfig(shell_input="echo ok", extra_popen_kwargs=dict(unknown=True))
-        )
+        run_and_wait("echo ok", extra_popen_kwargs=dict(unknown=True))
     assert "unexpected keyword" in str(exc.value.base_error)
 
 
@@ -118,6 +121,7 @@ if current_attempt < 3:
 """
 
 
+@pytest.mark.skipif(os.environ.get("SLOW", "") == "", reason="needs os.environ[SLOW]")
 def test_multiple_attempts(tmp_path):
     """error might look weird due to flushing"""
     script_path = tmp_path / "attempt.py"
@@ -190,7 +194,7 @@ def test_parse_json(tmp_path):
     json_path = tmp_path / filename
     json_path.write_text(_parse_json_stdout)
     result = run_and_wait(ShellConfig(shell_input=f"cat {filename}", cwd=tmp_path))
-    time.sleep(0.1)
+    time.sleep(0.01)
     stdout = result.stdout
     logger.info(stdout)
     parsed = loads(stdout)
@@ -207,6 +211,7 @@ print("sleep_done")
 """
 
 
+@pytest.mark.skipif(os.environ.get("SLOW", "") == "", reason="needs os.environ[SLOW]")
 @pytest.mark.parametrize("immediate", [True, False])
 def test_kill_process(tmp_path, immediate):
     filename = "sleeper.py"
@@ -245,6 +250,7 @@ except KeyboardInterrupt:
 """
 
 
+@pytest.mark.skipif(os.environ.get("SLOW", "") == "", reason="needs os.environ[SLOW]")
 def test_adding_callback_to_shell_run():
     result = run("sleep 1")
     flag = False
@@ -258,6 +264,7 @@ def test_adding_callback_to_shell_run():
     assert flag
 
 
+@pytest.mark.skipif(os.environ.get("SLOW", "") == "", reason="needs os.environ[SLOW]")
 def test_adding_failing_callback_to_shell_run():
     result = run("sleep 1")
     flag = False
@@ -272,6 +279,7 @@ def test_adding_failing_callback_to_shell_run():
     assert flag
 
 
+@pytest.mark.skipif(os.environ.get("SLOW", "") == "", reason="needs os.environ[SLOW]")
 def test_allow_process_to_finish(tmp_path):
     filename = "continue_after_abort.py"
     file_path = tmp_path / filename
@@ -289,6 +297,7 @@ def test_allow_process_to_finish(tmp_path):
     assert "completing OK" in stdout
 
 
+@pytest.mark.skipif(os.environ.get("SLOW", "") == "", reason="needs os.environ[SLOW]")
 def test_parallel_runs():
     results = [run(ShellConfig(shell_input=f"sleep 1 && echo {i}")) for i in range(5)]
     start = time.time()
@@ -343,6 +352,7 @@ def test_message_callbacks():
     ], f"Unexpected message class names: {message_class_names}"
 
 
+@pytest.mark.skipif(os.environ.get("SLOW", "") == "", reason="needs os.environ[SLOW]")
 def test_mise_resolve(tmp_path):
     mise = _mise_binary()
     if not mise:

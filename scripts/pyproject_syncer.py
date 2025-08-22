@@ -24,10 +24,17 @@ exclude = [
 """
 
 if __name__ == "__main__":
-    for project in ["ask-shell", "model-lib", "zero-3rdparty"]:
+    for project in [
+        "ask-shell",
+        "model-lib",
+        "pkg-ext",
+        "pytest-model-lib",
+        "zero-3rdparty",
+    ]:
         path = ROOT_PATH / project / "pyproject.toml"
         content = template.format(
             NAME=project, NAME_UNDERSCORE=project.replace("-", "_")
         )
         logging.warning(f"Writing to {path}")
-        path.write_text(content)
+        if not path.exists():
+            path.write_text(content)

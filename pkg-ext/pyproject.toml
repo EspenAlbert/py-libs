@@ -1,0 +1,25 @@
+[project]
+name = "pkg-ext"
+version = "1.0.0+rc1"
+requires-python = ">=3.10"
+dependencies = [
+  "ask-shell",
+  "pycobertura==4.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+pkg-ext = "pkg_ext.cli:main"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "pkg_ext/*.py",
+]
+exclude = [
+  "*_test.py",
+  "conftest.py",
+  "test_*.json",
+]

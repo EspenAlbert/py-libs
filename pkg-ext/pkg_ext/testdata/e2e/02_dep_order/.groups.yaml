@@ -1,0 +1,8 @@
+groups:
+- name: __ROOT__
+  owned_refs: []
+- name: g1
+  owned_refs:
+  - a.a
+  - b.b
+  - c.c

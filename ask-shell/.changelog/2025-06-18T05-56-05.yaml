@@ -1,7 +1,0 @@
-name: progress_for_runs
-action: hide
-details: Created in rich_run_state.py
----
-name: manager_for_runs
-action: hide
-details: Created in rich_run_state.py

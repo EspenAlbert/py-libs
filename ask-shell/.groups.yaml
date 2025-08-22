@@ -1,0 +1,54 @@
+groups:
+- name: __ROOT__
+  owned_refs:
+  - settings.AskShellSettings
+- name: ask
+  owned_refs:
+  - _internal.interactive.ChoiceTyped
+  - _internal.interactive.KeyInput
+  - _internal.interactive.NewHandlerChoice
+  - _internal.interactive.PromptMatch
+  - _internal.interactive.SelectOptions
+  - _internal.interactive.confirm
+  - _internal.interactive.question_patcher
+  - _internal.interactive.select_dict
+  - _internal.interactive.select_list
+  - _internal.interactive.select_list_choice
+  - _internal.interactive.select_list_multiple
+  - _internal.interactive.select_list_multiple_choices
+  - _internal.interactive.text
+- name: console
+  owned_refs:
+  - _internal._run_env.interactive_shell
+  - _internal.rich_live.RemoveLivePart
+  - _internal.rich_live.add_renderable
+  - _internal.rich_live.get_live_console
+  - _internal.rich_live.log_to_live
+  - _internal.rich_live.print_to_live
+  - _internal.rich_progress.new_task
+  - _internal.typer_command.configure_logging
+- name: shell
+  owned_refs:
+  - _internal._run.handle_interrupt_wait
+  - _internal._run.kill
+  - _internal._run.kill_all_runs
+  - _internal._run.run
+  - _internal._run.run_and_wait
+  - _internal._run.run_error
+  - _internal._run.stop_runs_and_pool
+  - _internal._run.wait_on_ok_errors
+  - _internal.models.ShellConfig
+  - _internal.models.ShellError
+  - _internal.models.ShellRun
+  - _internal.run_pool.run_pool
+- name: shell_events
+  owned_refs:
+  - _internal.events.OutputCallbackT
+  - _internal.events.ShellRunAfter
+  - _internal.events.ShellRunBefore
+  - _internal.events.ShellRunCallbackT
+  - _internal.events.ShellRunPOpenStarted
+  - _internal.events.ShellRunRetryAttempt
+  - _internal.events.ShellRunStdOutput
+  - _internal.events.ShellRunStdReadError
+  - _internal.events.ShellRunStdStarted

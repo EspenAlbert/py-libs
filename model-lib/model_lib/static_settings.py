@@ -1,3 +1,4 @@
+import tempfile
 from pathlib import Path
 from typing import Self
 
@@ -16,10 +17,11 @@ class StaticSettings(BaseSettings):
         return humps.snake_case(cls.__qualname__.removesuffix("Settings"))
 
     @classmethod
-    def for_testing(cls, tmp_path: Path, **kwargs) -> Self:
+    def for_testing(cls, tmp_path: Path | None = None, **kwargs) -> Self:
         """
         Create a StaticSettings instance for testing purposes.
         """
+        tmp_path = tmp_path or Path(tempfile.gettempdir())
         static = tmp_path / "static"
         cache = tmp_path / "cache"
         static.mkdir(parents=True, exist_ok=True)

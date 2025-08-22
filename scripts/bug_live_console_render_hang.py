@@ -1,7 +1,6 @@
 from pathlib import Path
 
-from ask_shell._run import run_and_wait
-from ask_shell.typer_command import configure_logging
+from ask_shell import configure_logging, run_and_wait
 from typer import Argument, Typer
 
 app = Typer()

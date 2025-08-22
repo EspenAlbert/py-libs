@@ -1,1 +1,0 @@
-ENV_PREFIX = "ASK_SHELL_"

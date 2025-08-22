@@ -17,7 +17,7 @@ fmt-check:
   uv run ruff format --check .
 fmt:
   uv run ruff format .
-lint:
+lint: ssort-check
   uv run ruff check .
 type:
   uv run pyright

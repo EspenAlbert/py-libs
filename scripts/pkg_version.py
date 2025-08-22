@@ -84,7 +84,7 @@ def sub_version(pkg_name: str, old_version: str, new_version: str) -> None:
     for path, path_regex in file_regex.items():
         if not path.exists():
             raise FileNotFoundError(f"Could not find file: {path} for {pkg_name}")
-        new_text = re.sub(path_regex, replacer, path.read_text(), 1)
+        new_text = re.sub(path_regex, replacer, path.read_text(), count=1)
         path.write_text(new_text)
 
 

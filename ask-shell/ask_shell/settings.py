@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from functools import cached_property, lru_cache
 from pathlib import Path
 from pydoc import locate
+from threading import RLock
 from typing import Any, Callable, ClassVar, Literal, Self
 
 from model_lib.static_settings import StaticSettings
@@ -76,6 +77,9 @@ def _clean_run_logs(run_logs: Path, clean_value: str) -> None:
         if dir_date < parsed_date:
             logger.info(f"Cleaning run logs directory: {path}")
             clean_dir(path, recreate=False)
+
+
+_rlock = RLock()
 
 
 class AskShellSettings(StaticSettings):
@@ -207,8 +211,11 @@ class AskShellSettings(StaticSettings):
 
     def next_run_logs_dir(self, exec_name: str) -> Path:
         """{XX}_{self.exec_name}"""
-        next_counter = self.next_run_counter()
-        return self.run_logs / f"{next_counter:03d}_{exec_name}"
+        with _rlock:
+            next_counter = self.next_run_counter()
+            new_dir = self.run_logs / f"{next_counter:03d}_{exec_name}"
+            new_dir.mkdir(parents=True, exist_ok=True)
+            return new_dir
 
 
 def default_rich_info_style() -> str:

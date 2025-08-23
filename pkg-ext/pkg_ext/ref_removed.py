@@ -10,11 +10,11 @@ from pkg_ext.interactive_choices import (
     select_ref,
 )
 from pkg_ext.models import (
-    AddChangelogAction,
     PkgCodeState,
     PkgExtState,
     RefState,
     RefStateWithSymbol,
+    pkg_ctx,
 )
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ def process_reference_renames(
     active_refs: dict[str, RefStateWithSymbol],
     renames: list[RefState],
     task: new_task,
-    add_changelog: AddChangelogAction,
+    ctx: pkg_ctx,
 ) -> set[RefState]:
     renamed_refs = set()
     used_active: set[str] = set()
@@ -41,7 +41,7 @@ def process_reference_renames(
         if confirm_create_alias(ref, new_ref):
             raise NotImplementedError("Alias creation is not implemented yet")
             # Any DELETE is a breaking change? Or also add that entry?
-        add_changelog(
+        ctx.add_action(
             new_name,
             ChangelogActionType.RENAME_AND_DELETE,
             OldNameNewName(old_name=ref.name, new_name=new_name),
@@ -52,7 +52,7 @@ def process_reference_renames(
 
 
 def handle_removed_refs(
-    tool_state: PkgExtState, code_state: PkgCodeState, add_changelog: AddChangelogAction
+    tool_state: PkgExtState, code_state: PkgCodeState, ctx: pkg_ctx
 ) -> None:
     removed_refs = tool_state.removed_refs(code_state)
     if not removed_refs:
@@ -65,13 +65,13 @@ def handle_removed_refs(
             "Renaming references", total=len(renames), log_updates=True
         ) as task:
             renamed_refs = process_reference_renames(
-                code_state.named_refs, renames, task, add_changelog
+                code_state.named_refs, renames, task, ctx
             )
             for ref in renamed_refs:
                 removed_refs.remove(ref)
     delete_names = ", ".join(ref.name for ref in removed_refs)
     if confirm_delete(removed_refs):
         for ref in removed_refs:
-            add_changelog(ref.name, ChangelogActionType.DELETE)
+            ctx.add_action(ref.name, ChangelogActionType.DELETE)
     else:
         assert False, f"Old references {delete_names} were not confirmed for deletion"

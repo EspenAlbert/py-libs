@@ -1,6 +1,6 @@
 from functools import total_ordering
 from pathlib import Path
-from typing import ClassVar, Literal
+from typing import ClassVar, Literal, Union
 
 from model_lib import utc_datetime
 from model_lib.model_base import Entity
@@ -27,6 +27,7 @@ class ChangelogActionType(StrEnum):
     RENAME_AND_DELETE = "rename_and_delete"
     BREAKING_CHANGE = "breaking_change"  # todo: Possibly support signature changes
     ADDITIONAL_CHANGE = "additional_change"  # todo: Possibly support signature changes
+    GROUP_MODULE = "group_module"  # a module_path has been selected for a group
 
 
 def current_user() -> str:
@@ -41,12 +42,22 @@ class OldNameNewName(Entity):
     type: Literal["old_name_new_name"] = "old_name_new_name"
 
 
-ChangelogDetailsT = OldNameNewName | str | None
+class GroupModule(Entity):
+    module_path: str
+    type: Literal["group_module_path"] = "group_module_path"
+
+
+ChangelogDetailsT = Union[
+    GroupModule,
+    OldNameNewName,
+    str,
+    None,
+]
 
 
 @total_ordering
 class ChangelogAction(Entity):
-    name: str = Field(..., description="Symbol name")
+    name: str = Field(..., description="Symbol name or Group name")
     action: ChangelogActionType = Field(
         ...,
         description=f"Action to take with the public reference, one of {list(ChangelogActionType)}",

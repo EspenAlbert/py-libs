@@ -1,5 +1,3 @@
-import contextlib
-
 from ask_shell._internal.interactive import (
     ChoiceTyped,
     NewHandlerChoice,
@@ -9,7 +7,6 @@ from ask_shell._internal.interactive import (
     select_list_multiple_choices,
 )
 
-from pkg_ext.errors import NoPublicGroupMatch
 from pkg_ext.models import (
     PublicGroup,
     PublicGroups,
@@ -46,9 +43,6 @@ def new_public_group_constructor(
 
 
 def select_group(groups: PublicGroups, ref: RefSymbol) -> PublicGroup:
-    with contextlib.suppress(NoPublicGroupMatch):
-        group = groups.matching_group(ref)
-        return groups.add_ref(ref, group.name)
     choices = as_choices(groups)
     group = select_list_choice(
         f"Choose public API group name for {ref.local_id}",
@@ -56,17 +50,6 @@ def select_group(groups: PublicGroups, ref: RefSymbol) -> PublicGroup:
         options=new_public_group_constructor(groups, ref),
     )
     return groups.add_ref(ref, group.name)
-
-
-def select_groups(
-    groups: PublicGroups,
-    refs: list[RefStateWithSymbol | RefSymbol] | list[RefStateWithSymbol],
-) -> None:
-    for ref in refs:
-        if isinstance(ref, RefSymbol):
-            select_group(groups, ref)
-        else:
-            select_group(groups, ref.symbol)
 
 
 def _as_choice_ref_symbol(ref: RefSymbol, checked: bool) -> ChoiceTyped[RefSymbol]:

@@ -82,7 +82,11 @@ class E2eRegressionCheck:
     file_regression: FileRegressionFixture
 
     def check_path(self, actual_path: Path):
-        assert actual_path.exists(), f"path not found: {actual_path}"
+        parent = actual_path.parent
+        dir_files = [f.name for f in parent.glob("*") if f.is_file()]
+        assert actual_path.exists(), (
+            f"path not found: {actual_path}, parent_dir={dir_files}"
+        )
         relative_path = str(actual_path.relative_to(self.e2e_dirs.execution_e2e_dir))
         expected_path = self.e2e_dirs.e2e_dir / relative_path
         self.file_regression.check(actual_path.read_text(), fullpath=expected_path)

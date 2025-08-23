@@ -66,7 +66,7 @@ class PkgSettings(BaseSettings):
             self.state_dir / self.PUBLIC_GROUPS_STORAGE_FILENAME
         )
 
-    def parse_public_groups(self, t: type[T]) -> T:
+    def parse_computed_public_groups(self, t: type[T]) -> T:
         from pkg_ext.models import PublicGroups  # avoid dependency
 
         assert t is PublicGroups

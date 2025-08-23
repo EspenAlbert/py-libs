@@ -6,3 +6,4 @@ groups:
   - my_module
   owned_refs:
   - my_module.my_func
+  - my_module.my_func2

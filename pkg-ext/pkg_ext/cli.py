@@ -8,14 +8,19 @@ from ask_shell._internal.typer_command import configure_logging
 from typer import Typer
 from zero_3rdparty.file_utils import iter_paths_and_relative
 
+from pkg_ext.errors import NoPublicGroupMatch
 from pkg_ext.file_parser import parse_code_symbols, parse_symbols
-from pkg_ext.gen_changelog import parse_changelog_actions
+from pkg_ext.gen_changelog import ChangelogAction, ChangelogActionType, GroupModule
 from pkg_ext.gen_group import write_groups
 from pkg_ext.gen_init import write_init
+from pkg_ext.interactive_choices import select_group
 from pkg_ext.models import (
     PkgCodeState,
     PkgExtState,
     PublicGroups,
+    RefAddCallback,
+    RefSymbol,
+    pkg_ctx,
 )
 from pkg_ext.ref_added import (
     handle_added_refs,
@@ -55,20 +60,20 @@ def parse_pkg_code_state(settings: PkgSettings) -> PkgCodeState:
     )
 
 
-def parse_pkg_ext_state(settings: PkgSettings) -> PkgExtState:
-    """The internal state used by pkg-ext to generate files"""
-    public_groups = settings.parse_public_groups(PublicGroups)
-    changelog_path = settings.changelog_path
-    changelog_path.mkdir(parents=True, exist_ok=True)
-    actions = parse_changelog_actions(changelog_path)
-    ref_state = PkgExtState(
-        changelog_dir=changelog_path,
-        pkg_path=settings.pkg_directory,
-        groups=public_groups,
-    )
-    for action in actions:
-        ref_state.update_state(action)
-    return ref_state
+def on_new_ref(groups: PublicGroups) -> RefAddCallback:
+    def on_ref(ref: RefSymbol) -> ChangelogAction | None:
+        try:
+            found_group = groups.matching_group(ref)
+            groups.add_ref(ref, found_group.name)
+        except NoPublicGroupMatch:
+            new_group = select_group(groups, ref)
+            return ChangelogAction(
+                name=new_group.name,
+                action=ChangelogActionType.GROUP_MODULE,
+                details=GroupModule(module_path=ref.module_path),
+            )
+
+    return on_ref
 
 
 @app.command()
@@ -101,14 +106,19 @@ def generate_api(
         dev_mode=dev_mode,
     )
     code_state = parse_pkg_code_state(settings)
-    tool_state = parse_pkg_ext_state(settings)
+    tool_state = PkgExtState.parse(settings)
+    ctx = pkg_ctx(
+        tool_state=tool_state,
+        code_state=code_state,
+        ref_add_callback=[on_new_ref(tool_state.groups)],
+    )
     try:
-        with tool_state.changelog_updater() as add_changelog_action:
+        with ctx:
             handle_removed_refs(
-                tool_state, code_state, add_changelog_action
+                tool_state, code_state, ctx
             )  # updates the changelog state
             handle_added_refs(
-                tool_state, code_state, add_changelog_action, settings
+                tool_state, code_state, ctx, settings
             )  # updates the changelog and group state
     except KeyboardInterrupt:
         logger.warning("Interrupted while handling added references")

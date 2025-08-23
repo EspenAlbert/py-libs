@@ -5,7 +5,6 @@ from pathlib import Path
 
 import typer
 from ask_shell._internal.typer_command import configure_logging
-from model_lib.serialize.parse import parse_model
 from typer import Typer
 from zero_3rdparty.file_utils import iter_paths_and_relative
 
@@ -58,12 +57,7 @@ def parse_pkg_code_state(settings: PkgSettings) -> PkgCodeState:
 
 def parse_pkg_ext_state(settings: PkgSettings) -> PkgExtState:
     """The internal state used by pkg-ext to generate files"""
-    public_groups_path = settings.public_groups_path
-    if public_groups_path.exists():
-        public_groups = parse_model(public_groups_path, t=PublicGroups)
-        public_groups.storage_path = public_groups_path
-    else:
-        public_groups = PublicGroups(storage_path=public_groups_path)
+    public_groups = settings.parse_public_groups(PublicGroups)
     changelog_path = settings.changelog_path
     changelog_path.mkdir(parents=True, exist_ok=True)
     actions = parse_changelog_actions(changelog_path)
@@ -94,8 +88,18 @@ def generate_api(
         "--skip-open",
         help="By default files are opened in $EDITOR when asked to expose/hide",
     ),
+    dev_mode: bool = typer.Option(
+        False,
+        "--dev",
+        help="Adds a '-dev' suffix to files to avoid any merge conflicts",
+    ),
 ):
-    settings = pkg_settings(repo_root, pkg_path_str, skip_open_in_editor)
+    settings = pkg_settings(
+        repo_root,
+        pkg_path_str,
+        skip_open_in_editor=skip_open_in_editor,
+        dev_mode=dev_mode,
+    )
     code_state = parse_pkg_code_state(settings)
     tool_state = parse_pkg_ext_state(settings)
     try:

@@ -8,11 +8,15 @@ from typing import Protocol
 import pytest
 from model_lib.static_settings import StaticSettings
 from pytest_regressions.file_regression import FileRegressionFixture
+from zero_3rdparty.file_utils import ensure_parents_write_text
 from zero_3rdparty.str_utils import ensure_prefix
+
+from pkg_ext.settings import PkgSettings
 
 REPO_PATH = Path(__file__).parent.parent.parent
 assert (REPO_PATH / ".git").exists()
 TEST_DATA_PATH = Path(__file__).parent / "testdata"
+TEST_PKG_NAME = "my_pkg"
 
 
 @pytest.fixture()
@@ -21,8 +25,12 @@ def repo_path() -> Path:
 
 
 @pytest.fixture(autouse=True)
-def settings(static_env_vars: StaticSettings):
+def settings(static_env_vars: StaticSettings, tmp_path) -> PkgSettings:
     assert static_env_vars
+    pkg_directory = tmp_path / TEST_PKG_NAME
+    init_path = pkg_directory / "__init__.py"
+    ensure_parents_write_text(init_path, "")
+    return PkgSettings(repo_root=tmp_path, pkg_directory=pkg_directory)
 
 
 @pytest.fixture()
@@ -93,10 +101,10 @@ def _e2e_dir(request) -> Path:
 
 @pytest.fixture()
 def _e2e_pkg_path(_e2e_dir) -> Path:  # type: ignore
-    yield _e2e_dir / "my_pkg"  # type: ignore
-    del sys.modules["my_pkg"]  # support re-importing in the next test
+    yield _e2e_dir / TEST_PKG_NAME  # type: ignore
+    del sys.modules[TEST_PKG_NAME]  # support re-importing in the next test
     with suppress(KeyError):
-        del sys.modules["my_pkg._internal"]
+        del sys.modules[f"{TEST_PKG_NAME}._internal"]
 
 
 @pytest.fixture()

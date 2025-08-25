@@ -630,9 +630,12 @@ class PkgExtState(Entity):
         if code_state:
             for name, ref in ref_state.refs.items():
                 if ref.exist_in_code:
-                    ref_symbol = code_state.ref_symbol(name)
-                    group = groups.matching_group(ref_symbol)
-                    groups.add_ref(ref_symbol, group.name)
+                    with suppress(
+                        ValueError
+                    ):  # can happen if the name from changelog has been removed
+                        ref_symbol = code_state.ref_symbol(name)
+                        group = groups.matching_group(ref_symbol)
+                        groups.add_ref(ref_symbol, group.name)
         return ref_state
 
     def sha_processed(self, sha: str) -> bool:

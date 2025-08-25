@@ -12,17 +12,15 @@ from pkg_ext.gen_changelog import (
     ChangelogActionType,
 )
 from pkg_ext.interactive_choices import (
-    select_group,
-    select_groups,
     select_multiple_refs,
 )
 from pkg_ext.models import (
-    AddChangelogAction,
     PkgCodeState,
     PkgExtState,
     RefStateWithSymbol,
     RefSymbol,
     SymbolType,
+    pkg_ctx,
 )
 from pkg_ext.settings import PkgSettings, get_editor
 
@@ -45,7 +43,7 @@ def ensure_function_args_exposed(
 
 def make_expose_decisions(
     refs: dict[str, list[RefStateWithSymbol]],
-    add_changelog: AddChangelogAction,
+    ctx: pkg_ctx,
     tool_state: PkgExtState,
     code_state: PkgCodeState,
     symbol_type: str,
@@ -60,34 +58,31 @@ def make_expose_decisions(
             file_states,
         )
         for ref in exposed:
-            add_changelog(
+            ctx.add_action(
                 ref.name, ChangelogActionType.EXPOSE, details=f"created in {rel_path}"
             )
         hidden = [state for state in file_states if state not in exposed]
         for ref in hidden:
-            add_changelog(
+            ctx.add_action(
                 ref.name, ChangelogActionType.HIDE, details=f"created in {rel_path}"
             )
-        if exposed:
-            select_groups(tool_state.groups, exposed)
-            if symbol_type == SymbolType.FUNCTION:
-                args_exposed = ensure_function_args_exposed(code_state, exposed)
-                for func_ref, arg_refs in args_exposed.items():
-                    decided_refs.extend(arg_refs)  # avoid asking again
-                    for ref in arg_refs:
-                        add_changelog(
-                            ref.name,
-                            ChangelogActionType.EXPOSE,
-                            details=f"exposed in the function {func_ref.symbol.local_id}",
-                        )
-                        select_group(tool_state.groups, ref)
+        if exposed and symbol_type == SymbolType.FUNCTION:
+            args_exposed = ensure_function_args_exposed(code_state, exposed)
+            for func_ref, arg_refs in args_exposed.items():
+                decided_refs.extend(arg_refs)  # avoid asking again
+                for ref in arg_refs:
+                    ctx.add_action(
+                        ref.name,
+                        ChangelogActionType.EXPOSE,
+                        details=f"exposed in the function {func_ref.symbol.local_id}",
+                    )
     return decided_refs
 
 
 def handle_added_refs(
     tool_state: PkgExtState,
     code_state: PkgCodeState,
-    add_changelog: AddChangelogAction,
+    add_changelog: pkg_ctx,
     settings: PkgSettings,
 ) -> None:
     """

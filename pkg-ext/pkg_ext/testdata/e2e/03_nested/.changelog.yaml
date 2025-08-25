@@ -2,6 +2,11 @@ name: a
 action: expose
 details: created in _internal/a.py
 ---
+name: n1
+action: group_module
+details:
+  module_path: _internal.a
+---
 name: b
 action: expose
 details: created in _internal/a.py

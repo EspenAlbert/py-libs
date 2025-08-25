@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import ClassVar, Self, TypeVar
 
 from model_lib.serialize.parse import parse_model
-from pydantic import DirectoryPath, model_validator
+from pydantic import DirectoryPath, Field, model_validator
 from pydantic_settings import BaseSettings
 from zero_3rdparty import file_utils
 
@@ -12,6 +12,10 @@ T = TypeVar("T")
 
 def get_editor() -> str:
     return getenv("EDITOR", "code")
+
+
+def default_commit_fix_prefixes() -> tuple[str, ...]:
+    return ("fix:",)
 
 
 class PkgSettings(BaseSettings):
@@ -23,6 +27,9 @@ class PkgSettings(BaseSettings):
     pkg_directory: DirectoryPath
     skip_open_in_editor: bool = False
     dev_mode: bool = False
+    commit_fix_prefixes: tuple[str, ...] = Field(
+        default_factory=default_commit_fix_prefixes
+    )
 
     def _with_dev_suffix(self, path: Path) -> Path:
         if self.dev_mode:

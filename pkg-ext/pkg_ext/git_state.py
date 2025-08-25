@@ -11,6 +11,7 @@ from pydantic import BaseModel, model_validator
 
 
 class GitSince(StrEnum):
+    NO_GIT_CHANGES = "no_git_changes"
     LAST_GIT_TAG = "last_git_tag"
     LAST_REMOTE_SHA = "last_remote_sha"
     LAST_REMOTE_BRANCH = "last_remote_branch"
@@ -43,6 +44,7 @@ class GitChangesInput(BaseModel):
 @total_ordering
 class GitCommit(BaseModel):
     SHA_MAX_LEN: ClassVar[int] = 6
+    file_changes: set[str]
     author: str
     message: str
     ts: utc_datetime
@@ -60,7 +62,7 @@ class GitCommit(BaseModel):
 
 
 @dataclass
-class GitChangesOutput:
+class GitChanges:
     commits: list[GitCommit]
     files_changed: set[str]
     git: Git
@@ -85,28 +87,30 @@ def solve_since_sha(repo: Repo, repo_path: Path, since: GitSince) -> Commit:
         raise NotImplementedError
 
 
-def find_git_changes(in_: GitChangesInput) -> GitChangesOutput:
-    repo = Repo(in_.repo_path)
+def find_git_changes(event: GitChangesInput) -> GitChanges:
+    repo = Repo(event.repo_path)
     head_sha = repo.head.commit.hexsha
-    since = in_.since
-    start_commit = solve_since_sha(repo, in_.repo_path, since)
+    since = event.since
+    start_commit = solve_since_sha(repo, event.repo_path, since)
     start_sha = start_commit.hexsha
     commits: list[GitCommit] = []
     files_changed: set[str] = set()
     for commit in repo.iter_commits(rev=head_sha):
         if commit.hexsha.startswith(start_sha):
             break
-        files_changed |= {str(file) for file in commit.stats.files}
+        commit_files = {str(file) for file in commit.stats.files}
+        files_changed |= commit_files
         commits.append(
             GitCommit(
                 author=commit.author.name or "",
                 message=str(commit.message.strip()),
                 ts=commit.committed_datetime,  # type: ignore
                 sha=commit.hexsha,
+                file_changes=commit_files,
             )
         )
     assert commits, f"No commit messages found between {start_sha} and {head_sha}"
-    return GitChangesOutput(
+    return GitChanges(
         commits=sorted(commits),
         files_changed=files_changed,
         git=repo.git,

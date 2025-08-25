@@ -1,6 +1,6 @@
 from functools import total_ordering
 from pathlib import Path
-from typing import ClassVar, Literal, Union
+from typing import ClassVar, Generic, Literal, TypeVar, Union
 
 from model_lib import utc_datetime
 from model_lib.model_base import Entity
@@ -50,8 +50,9 @@ class GroupModulePath(Entity):
 class CommitFix(Entity):
     short_sha: str
     message: str
-    group: str
+    changelog_message: str = ""
     rephrased: bool = False
+    ignored: bool = False
     type: Literal["commit_fix"] = "commit_fix"
 
 
@@ -63,9 +64,11 @@ ChangelogDetailsT = Union[
     None,
 ]
 
+T = TypeVar("T", bound=ChangelogDetailsT)
+
 
 @total_ordering
-class ChangelogAction(Entity):
+class ChangelogAction(Entity, Generic[T]):
     name: str = Field(..., description="Symbol name or Group name")
     action: ChangelogActionType = Field(
         ...,

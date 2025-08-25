@@ -40,11 +40,13 @@ from pkg_ext.gen_changelog import (
     ChangelogAction,
     ChangelogActionType,
     ChangelogDetailsT,
+    CommitFix,
     GroupModulePath,
     OldNameNewName,
     dump_changelog_actions,
     parse_changelog_actions,
 )
+from pkg_ext.git_state import GitChanges
 from pkg_ext.settings import PkgSettings
 
 
@@ -585,6 +587,7 @@ class PkgCodeState(Entity):
 
 
 class PkgExtState(Entity):
+    repo_root: DirectoryPath
     changelog_dir: DirectoryPath
     pkg_path: DirectoryPath
     refs: dict[str, RefState] = Field(
@@ -595,6 +598,14 @@ class PkgExtState(Entity):
         default_factory=PublicGroups,
         description="Use with caution, inferred by changelog_dir entries.",
     )
+    ignored_shas: set[str] = Field(
+        default_factory=set,
+        description="Fix commits not included in the changelog",
+    )
+    included_shas: set[str] = Field(
+        default_factory=set,
+        description="Fix commits included in the changelog",
+    )
 
     @classmethod
     def parse(cls, settings: PkgSettings) -> Self:
@@ -603,11 +614,17 @@ class PkgExtState(Entity):
         actions = parse_changelog_actions(changelog_path)
         groups = PublicGroups(storage_path=settings.public_groups_path)
         ref_state = cls(
-            changelog_dir=changelog_path, pkg_path=settings.pkg_directory, groups=groups
+            repo_root=settings.repo_root,
+            changelog_dir=changelog_path,
+            pkg_path=settings.pkg_directory,
+            groups=groups,
         )
         for action in actions:
             ref_state.update_state(action)
         return ref_state
+
+    def sha_processed(self, sha: str) -> bool:
+        return sha in self.ignored_shas or sha in self.included_shas
 
     def current_state(self, ref_name: str) -> RefState:
         if state := self.refs.get(ref_name):
@@ -640,6 +657,12 @@ class PkgExtState(Entity):
                 details=GroupModulePath(group_name=group_name, module_path=module_path),
             ):
                 self.groups.add_module(group_name, module_path)
+            case ChangelogAction(
+                type=ChangelogActionType.FIX,
+                details=CommitFix(short_sha=sha, ignored=ignored),
+            ):
+                shas = self.ignored_shas if ignored else self.included_shas
+                shas.add(sha)
 
     def removed_refs(self, code: PkgCodeState) -> list[RefState]:
         named_refs = code.named_refs
@@ -681,17 +704,38 @@ class PkgExtState(Entity):
             if self.is_exposed(name)
         }
 
+    def is_pkg_relative(self, rel_path: str) -> bool:
+        pkg_rel_path = self.pkg_path.relative_to(self.repo_root)
+        return rel_path.startswith(str(pkg_rel_path))
+
+    def full_path(self, rel_path_repo: str) -> Path:
+        return self.repo_root / rel_path_repo
+
 
 RefAddCallback: TypeAlias = Callable[[RefSymbol], ChangelogAction | None]
 
 
 @dataclass
 class pkg_ctx:
+    settings: PkgSettings
     tool_state: PkgExtState
     code_state: PkgCodeState
+    git_changes: GitChanges | None = None
     ref_add_callback: list[RefAddCallback] = field(default_factory=list)
 
     _actions: list[ChangelogAction] = field(default_factory=list, init=False)
+
+    def add_changelog_action(self, action: ChangelogAction) -> list[ChangelogAction]:
+        actions = [action]
+        name = action.name
+        if action.action == ChangelogActionType.EXPOSE:
+            ref = self.code_state.ref_symbol(name)
+            for call in self.ref_add_callback:
+                if extra_action := call(ref):
+                    actions.insert(0, extra_action)
+        self._actions.extend(actions)
+        self.tool_state.add_changelog_actions(actions)
+        return actions
 
     def add_action(
         self,
@@ -700,15 +744,7 @@ class pkg_ctx:
         details: ChangelogDetailsT | None = None,
     ) -> list[ChangelogAction]:
         action = ChangelogAction(name=name, action=type, details=details)
-        actions = [action]
-        if type == ChangelogActionType.EXPOSE:
-            ref = self.code_state.ref_symbol(name)
-            for call in self.ref_add_callback:
-                if extra_action := call(ref):
-                    actions.insert(0, extra_action)
-        self._actions.extend(actions)
-        self.tool_state.add_changelog_actions(actions)
-        return actions
+        return self.add_changelog_action(action)
 
     def __enter__(self) -> pkg_ctx:
         return self

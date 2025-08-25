@@ -9,6 +9,7 @@ from zero_3rdparty.file_utils import clean_dir, copy
 
 from pkg_ext.cli import app
 from pkg_ext.conftest import E2eDirs, E2eRegressionCheck
+from pkg_ext.git_state import GitSince
 from pkg_ext.settings import PkgSettings
 
 logger = logging.getLogger(__name__)
@@ -51,7 +52,7 @@ def run_e2e(
     settings.public_groups_path.unlink(missing_ok=True)
     settings.init_path.write_text("")
 
-    command = f"--repo-root {execution_e2e_dir} {paths.pkg_path_relative} --skip-open"
+    command = f"--repo-root {execution_e2e_dir} {paths.pkg_path_relative} --skip-open --git-since {GitSince.NO_GIT_CHANGES}"
     logger.info(f"running command: {command}")
     result = run(command)
     assert result.exit_code == 0

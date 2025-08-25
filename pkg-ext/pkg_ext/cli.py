@@ -8,11 +8,13 @@ from ask_shell._internal.typer_command import configure_logging
 from typer import Typer
 from zero_3rdparty.file_utils import iter_paths_and_relative
 
+from pkg_ext.commit_changelog import add_git_changes
 from pkg_ext.errors import NoPublicGroupMatch
 from pkg_ext.file_parser import parse_code_symbols, parse_symbols
 from pkg_ext.gen_changelog import ChangelogAction, ChangelogActionType, GroupModulePath
 from pkg_ext.gen_group import write_groups
 from pkg_ext.gen_init import write_init
+from pkg_ext.git_state import GitChangesInput, GitSince, find_git_changes
 from pkg_ext.interactive_choices import select_group
 from pkg_ext.models import (
     PkgCodeState,
@@ -98,6 +100,11 @@ def generate_api(
         "--dev",
         help="Adds a '-dev' suffix to files to avoid any merge conflicts",
     ),
+    git_changes_since: GitSince = typer.Option(
+        GitSince.LAST_GIT_TAG,
+        "--git-since",
+        help="will use git log to look for 'fix' commits to include in the changelog",
+    ),
 ):
     settings = pkg_settings(
         repo_root,
@@ -107,13 +114,23 @@ def generate_api(
     )
     code_state = parse_pkg_code_state(settings)
     tool_state = PkgExtState.parse(settings)
+    git_changes = (
+        None
+        if git_changes_since == GitSince.NO_GIT_CHANGES
+        else find_git_changes(
+            GitChangesInput(repo_path=settings.repo_root, since=git_changes_since)
+        )
+    )
     ctx = pkg_ctx(
+        settings=settings,
         tool_state=tool_state,
         code_state=code_state,
         ref_add_callback=[on_new_ref(tool_state.groups)],
+        git_changes=git_changes,
     )
     try:
         with ctx:
+            add_git_changes(ctx)
             handle_removed_refs(
                 tool_state, code_state, ctx
             )  # updates the changelog state

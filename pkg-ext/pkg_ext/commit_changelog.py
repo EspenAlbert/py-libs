@@ -1,10 +1,19 @@
 import difflib
+from collections import Counter
+from contextlib import suppress
 
+from ask_shell._internal.rich_live import print_to_live
 from rich.markdown import Markdown
 
+from pkg_ext.errors import NoPublicGroupMatch
 from pkg_ext.gen_changelog import ChangelogAction, ChangelogActionType, CommitFix
 from pkg_ext.git_state import GitCommit
-from pkg_ext.models import pkg_ctx
+from pkg_ext.interactive_choices import (
+    select_commit_fix,
+    select_commit_rephrased,
+    select_group_name,
+)
+from pkg_ext.models import PublicGroups, as_module_path, pkg_ctx
 
 
 def py_diff(old: str, new: str) -> str:
@@ -30,19 +39,30 @@ def rich_diff(old: str, new: str) -> Markdown:
     )
 
 
-def infer_group(changes: list[str]) -> str:
-    raise NotImplementedError
+def infer_group(groups: PublicGroups, changes: dict[str, str]) -> str:
+    group_counts = Counter()
+    for rel_path, diff in changes.items():
+        with suppress(NoPublicGroupMatch):
+            group = groups.matching_group_by_module_path(as_module_path(rel_path))
+            group_counts[group.name] += len(diff.splitlines())
+    if not group_counts:
+        return ""
+    return group_counts.most_common(1)[0][0]
 
 
-def prompt_for_fix(
-    sha: str, commit_message: str, prompt_context: list[str]
-) -> CommitFix:
-    # todo: prompt for decision to include/exclude/include_rephrase
-    return CommitFix(
+def prompt_for_fix(sha: str, commit_message: str, prompt_text: str) -> CommitFix:
+    fix = CommitFix(
         short_sha=sha,
         message=commit_message,
         changelog_message=commit_message,
     )
+    match select_commit_fix(prompt_text):
+        case CommitFix.rephrased:
+            fix.changelog_message = select_commit_rephrased(commit_message)
+            fix.rephrased = True
+        case CommitFix.ignored:
+            fix.ignored = True
+    return fix
 
 
 def fix_changelog_action(commit: GitCommit, ctx: pkg_ctx) -> ChangelogAction[CommitFix]:
@@ -54,24 +74,37 @@ def fix_changelog_action(commit: GitCommit, ctx: pkg_ctx) -> ChangelogAction[Com
         for changed_path in commit.file_changes
         if tool_state.is_pkg_relative(changed_path)
     )
-    group = infer_group(pkg_changes)
     prompt_context = []
+    diff_suffixes = ctx.settings.commit_fix_diff_suffixes
+    diffs: dict[str, str] = {}
     for rel_path in pkg_changes:
-        if not git_changes.has_change(rel_path):
+        if not git_changes.has_change(rel_path) or not rel_path.endswith(diff_suffixes):
             continue
         path = tool_state.full_path(rel_path)
         if not path.exists():
             continue
         new_content = path.read_text()
         old_content = git_changes.old_version(rel_path)
+        diffs[rel_path] = diff = py_diff(old_content, new_content)
         prompt_context.extend(
             [
                 f"### {rel_path} ###",
-                py_diff(old_content, new_content),
+                diff,
             ]
         )
+    group = infer_group(tool_state.groups, diffs)
+    prompt_md = Markdown("\n".join(prompt_context))
+    print_to_live(prompt_md)
     commit_message = commit.message
-    details = prompt_for_fix(commit.sha, commit_message, prompt_context)
+    commit_sha = commit.sha
+    prompt_text = f"commit({commit_sha}): {commit_message}"
+    if not group:
+        public_group = select_group_name(
+            f"select group for {prompt_text}",
+            tool_state.groups,
+        )
+        group = public_group.name
+    details = prompt_for_fix(commit_sha, commit_message, prompt_text)
     return ChangelogAction(
         name=group,
         action=ChangelogActionType.FIX,

@@ -3,9 +3,12 @@ from ask_shell._internal.interactive import (
     NewHandlerChoice,
     SelectOptions,
     confirm,
+    select_dict,
     select_list_choice,
     select_list_multiple_choices,
+    text,
 )
+from zero_3rdparty.enum_utils import StrEnum
 
 from pkg_ext.models import (
     PublicGroup,
@@ -40,6 +43,29 @@ def new_public_group_constructor(
             new_public_group, "enter name of new public group"
         )
     )
+
+
+class CommitFixActions(StrEnum):
+    INCLUDE = "include"
+    EXCLUDE = "exclude"
+    REPHRASE = "rephrase"
+
+
+def select_commit_fix(prompt_text: str) -> CommitFixActions:
+    return select_dict(
+        prompt_text,
+        {option: option for option in list(CommitFixActions)},
+        default=CommitFixActions.INCLUDE,
+    )
+
+
+def select_commit_rephrased(commit_message: str) -> str:
+    return text("rephrase commit message", default=commit_message)
+
+
+def select_group_name(prompt_text: str, groups: PublicGroups) -> PublicGroup:
+    choices = as_choices(groups)
+    return select_list_choice(prompt_text, choices)
 
 
 def select_group(groups: PublicGroups, ref: RefSymbol) -> PublicGroup:

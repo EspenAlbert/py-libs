@@ -18,6 +18,10 @@ def default_commit_fix_prefixes() -> tuple[str, ...]:
     return ("fix:",)
 
 
+def default_commit_diff_suffixes() -> tuple[str, ...]:
+    return (".py",)
+
+
 class PkgSettings(BaseSettings):
     PUBLIC_GROUPS_STORAGE_FILENAME: ClassVar[str] = ".groups.yaml"
     CHANGELOG_FILENAME: ClassVar[str] = "CHANGELOG.md"
@@ -29,6 +33,9 @@ class PkgSettings(BaseSettings):
     dev_mode: bool = False
     commit_fix_prefixes: tuple[str, ...] = Field(
         default_factory=default_commit_fix_prefixes
+    )
+    commit_fix_diff_suffixes: tuple[str, ...] = Field(
+        default_factory=default_commit_diff_suffixes
     )
 
     def _with_dev_suffix(self, path: Path) -> Path:

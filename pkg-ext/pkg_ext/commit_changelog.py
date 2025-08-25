@@ -9,6 +9,7 @@ from pkg_ext.errors import NoPublicGroupMatch
 from pkg_ext.gen_changelog import ChangelogAction, ChangelogActionType, CommitFix
 from pkg_ext.git_state import GitCommit
 from pkg_ext.interactive_choices import (
+    CommitFixAction,
     select_commit_fix,
     select_commit_rephrased,
     select_group_name,
@@ -57,10 +58,10 @@ def prompt_for_fix(sha: str, commit_message: str, prompt_text: str) -> CommitFix
         changelog_message=commit_message,
     )
     match select_commit_fix(prompt_text):
-        case CommitFix.rephrased:
+        case CommitFixAction.REPHRASE:
             fix.changelog_message = select_commit_rephrased(commit_message)
             fix.rephrased = True
-        case CommitFix.ignored:
+        case CommitFixAction.EXCLUDE:
             fix.ignored = True
     return fix
 
@@ -92,18 +93,17 @@ def fix_changelog_action(commit: GitCommit, ctx: pkg_ctx) -> ChangelogAction[Com
                 diff,
             ]
         )
-    group = infer_group(tool_state.groups, diffs)
     prompt_md = Markdown("\n".join(prompt_context))
     print_to_live(prompt_md)
     commit_message = commit.message
     commit_sha = commit.sha
     prompt_text = f"commit({commit_sha}): {commit_message}"
-    if not group:
-        public_group = select_group_name(
-            f"select group for {prompt_text}",
-            tool_state.groups,
-        )
-        group = public_group.name
+    groups = tool_state.groups
+    group = infer_group(groups, diffs)
+    public_group = select_group_name(
+        f"select group for {prompt_text}", groups, default=group
+    )
+    group = public_group.name
     details = prompt_for_fix(commit_sha, commit_message, prompt_text)
     return ChangelogAction(
         name=group,

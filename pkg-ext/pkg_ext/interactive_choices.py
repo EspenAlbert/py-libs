@@ -19,11 +19,14 @@ from pkg_ext.models import (
 )
 
 
-def as_choices(groups: PublicGroups) -> list[ChoiceTyped[PublicGroup]]:
+def as_choices(
+    groups: PublicGroups, default: str = ""
+) -> list[ChoiceTyped[PublicGroup]]:
     return [
         ChoiceTyped(
             name=group.name,
             value=group,
+            checked=group.name == default,
             description="Don't belong to a group, rather at top level"
             if group.is_root
             else "",
@@ -45,17 +48,17 @@ def new_public_group_constructor(
     )
 
 
-class CommitFixActions(StrEnum):
+class CommitFixAction(StrEnum):
     INCLUDE = "include"
     EXCLUDE = "exclude"
     REPHRASE = "rephrase"
 
 
-def select_commit_fix(prompt_text: str) -> CommitFixActions:
+def select_commit_fix(prompt_text: str) -> CommitFixAction:
     return select_dict(
         prompt_text,
-        {option: option for option in list(CommitFixActions)},
-        default=CommitFixActions.INCLUDE,
+        {option: option for option in list(CommitFixAction)},
+        default=CommitFixAction.INCLUDE,
     )
 
 
@@ -63,8 +66,10 @@ def select_commit_rephrased(commit_message: str) -> str:
     return text("rephrase commit message", default=commit_message)
 
 
-def select_group_name(prompt_text: str, groups: PublicGroups) -> PublicGroup:
-    choices = as_choices(groups)
+def select_group_name(
+    prompt_text: str, groups: PublicGroups, default: str = ""
+) -> PublicGroup:
+    choices = as_choices(groups, default)
     return select_list_choice(prompt_text, choices)
 
 

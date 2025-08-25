@@ -7,7 +7,7 @@ import logging
 import os
 from dataclasses import dataclass, field
 from functools import wraps
-from typing import Callable, Generic, TypeVar
+from typing import Callable, Generic, Self, TypeVar
 
 from prompt_toolkit.input.defaults import create_pipe_input
 from prompt_toolkit.output import DummyOutput
@@ -453,7 +453,7 @@ class question_patcher:
         with create_pipe_input() as inp:
             return run(inp)
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         global _question_asker
         self._old_patcher = _question_asker
         _question_asker = self.ask_question

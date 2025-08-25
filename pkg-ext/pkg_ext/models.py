@@ -303,6 +303,10 @@ class RefState(Entity):
             name=self.name, value=self.name, description=f"State: {self.type.value}"
         )
 
+    @property
+    def exist_in_code(self) -> bool:
+        return self.type in {RefStateType.EXPOSED, RefStateType.DEPRECATED}
+
 
 class RefStateWithSymbol(RefState):
     symbol: RefSymbol = Field(
@@ -455,7 +459,7 @@ class PublicGroups(Entity):
         group = self._get_or_create_group(group_name)
         try:
             existing = self.matching_group_by_module_path(module_path)
-            if existing.name != group:
+            if existing.name != group.name:
                 raise InvalidGroupSelectionError(
                     reason=f"existing_group: {existing.name} matched for module {module_path} selected for {group_name}"
                 )
@@ -608,7 +612,9 @@ class PkgExtState(Entity):
     )
 
     @classmethod
-    def parse(cls, settings: PkgSettings) -> Self:
+    def parse(
+        cls, settings: PkgSettings, code_state: PkgCodeState | None = None
+    ) -> Self:
         changelog_path = settings.changelog_path
         changelog_path.mkdir(parents=True, exist_ok=True)
         actions = parse_changelog_actions(changelog_path)
@@ -621,6 +627,12 @@ class PkgExtState(Entity):
         )
         for action in actions:
             ref_state.update_state(action)
+        if code_state:
+            for name, ref in ref_state.refs.items():
+                if ref.exist_in_code:
+                    ref_symbol = code_state.ref_symbol(name)
+                    group = groups.matching_group(ref_symbol)
+                    groups.add_ref(ref_symbol, group.name)
         return ref_state
 
     def sha_processed(self, sha: str) -> bool:
@@ -634,31 +646,35 @@ class PkgExtState(Entity):
 
     def update_state(self, action: ChangelogAction) -> None:
         """Update the state of a reference based on a changelog action."""
-        state = self.current_state(action.name)
         match action:
-            case ChangelogAction(type=ChangelogActionType.EXPOSE):
+            case ChangelogAction(action=ChangelogActionType.EXPOSE):
+                state = self.current_state(action.name)
                 state.type = RefStateType.EXPOSED
-
-            case ChangelogAction(type=ChangelogActionType.HIDE):
+            case ChangelogAction(action=ChangelogActionType.HIDE):
+                state = self.current_state(action.name)
                 state.type = RefStateType.HIDDEN
-            case ChangelogAction(type=ChangelogActionType.DEPRECATE):
+            case ChangelogAction(action=ChangelogActionType.DEPRECATE):
+                state = self.current_state(action.name)
                 state.type = RefStateType.DEPRECATED
-            case ChangelogAction(type=ChangelogActionType.DELETE):
+            case ChangelogAction(action=ChangelogActionType.DELETE):
+                state = self.current_state(action.name)
                 state.type = RefStateType.DELETED
             case ChangelogAction(
-                type=ChangelogActionType.RENAME_AND_DELETE,
+                action=ChangelogActionType.RENAME_AND_DELETE,
                 details=OldNameNewName(old_name=old_name),
             ):
+                state = self.current_state(action.name)
                 old_state = self.current_state(old_name)
                 old_state.type = RefStateType.DELETED
                 state.type = RefStateType.EXPOSED
             case ChangelogAction(
-                type=ChangelogActionType.GROUP_MODULE,
-                details=GroupModulePath(group_name=group_name, module_path=module_path),
+                name=group_name,
+                action=ChangelogActionType.GROUP_MODULE,
+                details=GroupModulePath(module_path=module_path),
             ):
                 self.groups.add_module(group_name, module_path)
             case ChangelogAction(
-                type=ChangelogActionType.FIX,
+                action=ChangelogActionType.FIX,
                 details=CommitFix(short_sha=sha, ignored=ignored),
             ):
                 shas = self.ignored_shas if ignored else self.included_shas
@@ -751,6 +767,4 @@ class pkg_ctx:
 
     def __exit__(self, *_):
         if actions := self._actions:
-            action = min(actions)
-            path = self.tool_state.changelog_dir / action.filename
-            dump_changelog_actions(path, actions)
+            dump_changelog_actions(self.tool_state.changelog_dir, actions)

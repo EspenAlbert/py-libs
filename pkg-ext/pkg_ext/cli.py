@@ -113,7 +113,7 @@ def generate_api(
         dev_mode=dev_mode,
     )
     code_state = parse_pkg_code_state(settings)
-    tool_state = PkgExtState.parse(settings)
+    tool_state = PkgExtState.parse(settings, code_state)
     git_changes = (
         None
         if git_changes_since == GitSince.NO_GIT_CHANGES

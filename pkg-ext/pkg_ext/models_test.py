@@ -1,9 +1,16 @@
+from datetime import datetime, timezone
 from typing import Callable
 
 import pytest
 from model_lib.serialize.parse import parse_model
 
-from pkg_ext.models import PublicGroups, RefSymbol, SymbolType
+from pkg_ext.gen_changelog import (
+    ChangelogAction,
+    ChangelogActionType,
+    GroupModulePath,
+    dump_changelog_actions,
+)
+from pkg_ext.models import PkgExtState, PublicGroups, RefSymbol, SymbolType
 from pkg_ext.settings import PkgSettings
 
 
@@ -42,3 +49,27 @@ def test_public_groups_add_to_existing_group(_public_groups, _public_group_check
     _public_groups.add_ref(ref2, "test")
     assert len(_public_groups.groups_no_root) == 1
     _public_group_check()
+
+
+def test_tool_state_update_state(settings):
+    actions = [
+        ChangelogAction(
+            name="git_inferred",
+            action=ChangelogActionType.GROUP_MODULE,
+            ts=datetime(2025, 8, 25, 17, 37, 2, tzinfo=timezone.utc),
+            author="UNSET",
+            details=GroupModulePath(module_path="inferred", type="group_module_path"),
+            pr="",
+        ),
+        ChangelogAction(
+            name="inferred",
+            action=ChangelogActionType.EXPOSE,
+            ts=datetime(2025, 8, 25, 17, 37, 2, tzinfo=timezone.utc),
+            author="UNSET",
+            details="created in inferred.py",
+            pr="",
+        ),
+    ]
+    dump_changelog_actions(settings.changelog_path, actions)
+    state = PkgExtState.parse(settings)
+    assert [group.name for group in state.groups.groups_no_root] == ["git_inferred"]

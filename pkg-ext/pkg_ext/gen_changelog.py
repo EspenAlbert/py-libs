@@ -131,8 +131,10 @@ def parse_changelog_actions(changelog_dir_path: Path) -> list[ChangelogAction]:
     return sorted(actions)
 
 
-def dump_changelog_actions(path: Path, actions: list[ChangelogAction]) -> None:
-    assert actions, f"no actions to dump to {path}"
+def dump_changelog_actions(changelog_dir: Path, actions: list[ChangelogAction]) -> Path:
+    assert actions, "no actions to dump"
+    action = min(actions)
+    path = changelog_dir / action.filename
     if path.exists():
         existing_actions = parse_changelog_file_path(path)
         actions.extend(existing_actions)
@@ -140,3 +142,4 @@ def dump_changelog_actions(path: Path, actions: list[ChangelogAction]) -> None:
         action.file_content for action in sorted(actions)
     )
     ensure_parents_write_text(path, yaml_content)
+    return path

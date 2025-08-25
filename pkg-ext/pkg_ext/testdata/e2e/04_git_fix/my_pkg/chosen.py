@@ -1,0 +1,2 @@
+def chosen():
+    return "chosen"

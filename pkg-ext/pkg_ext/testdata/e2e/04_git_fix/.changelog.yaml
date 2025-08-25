@@ -1,0 +1,20 @@
+name: git_inferred
+action: group_module
+details:
+  module_path: inferred
+---
+name: inferred
+action: expose
+details: created in inferred.py
+---
+name: __ROOT__
+action: fix
+author: EspenAlbert
+details:
+  short_sha: GIT_SHA
+  message: 'fix: adds chosen file'
+  changelog_message: 'fix: adds chosen file'
+---
+name: chosen
+action: hide
+details: created in chosen.py

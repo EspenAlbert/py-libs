@@ -1,0 +1,2 @@
+def inferred():
+    return "inferred"

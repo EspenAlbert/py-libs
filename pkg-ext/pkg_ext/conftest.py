@@ -17,6 +17,7 @@ REPO_PATH = Path(__file__).parent.parent.parent
 assert (REPO_PATH / ".git").exists()
 TEST_DATA_PATH = Path(__file__).parent / "testdata"
 TEST_PKG_NAME = "my_pkg"
+CHANGELOG_YAML_FILENAME = ".changelog.yaml"
 
 
 @pytest.fixture()
@@ -81,6 +82,11 @@ class E2eRegressionCheck:
     e2e_dirs: E2eDirs
     file_regression: FileRegressionFixture
 
+    def _actual_text_modifier(self, text: str, path: Path) -> str:
+        if path.name == CHANGELOG_YAML_FILENAME:
+            text = re.sub(r"(short_sha: )([0-9a-f]*)", "short_sha: GIT_SHA", text)
+        return text
+
     def check_path(self, actual_path: Path):
         parent = actual_path.parent
         dir_files = [f.name for f in parent.glob("*") if f.is_file()]
@@ -89,11 +95,13 @@ class E2eRegressionCheck:
         )
         relative_path = str(actual_path.relative_to(self.e2e_dirs.execution_e2e_dir))
         expected_path = self.e2e_dirs.e2e_dir / relative_path
-        self.file_regression.check(actual_path.read_text(), fullpath=expected_path)
+        text = self._actual_text_modifier(actual_path.read_text(), actual_path)
+        self.file_regression.check(text, fullpath=expected_path)
 
     def __call__(self, rel_path: str, text: str, extension: str):
         dotted_extension = ensure_prefix(extension, ".")
         path = self.e2e_dirs.e2e_dir / rel_path
+        text = self._actual_text_modifier(text, path)
         self.file_regression.check(text, fullpath=path, extension=dotted_extension)
 
 

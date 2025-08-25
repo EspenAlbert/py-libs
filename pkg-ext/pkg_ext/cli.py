@@ -10,7 +10,7 @@ from zero_3rdparty.file_utils import iter_paths_and_relative
 
 from pkg_ext.errors import NoPublicGroupMatch
 from pkg_ext.file_parser import parse_code_symbols, parse_symbols
-from pkg_ext.gen_changelog import ChangelogAction, ChangelogActionType, GroupModule
+from pkg_ext.gen_changelog import ChangelogAction, ChangelogActionType, GroupModulePath
 from pkg_ext.gen_group import write_groups
 from pkg_ext.gen_init import write_init
 from pkg_ext.interactive_choices import select_group
@@ -70,7 +70,7 @@ def on_new_ref(groups: PublicGroups) -> RefAddCallback:
             return ChangelogAction(
                 name=new_group.name,
                 action=ChangelogActionType.GROUP_MODULE,
-                details=GroupModule(module_path=ref.module_path),
+                details=GroupModulePath(module_path=ref.module_path),
             )
 
     return on_ref

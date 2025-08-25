@@ -42,13 +42,22 @@ class OldNameNewName(Entity):
     type: Literal["old_name_new_name"] = "old_name_new_name"
 
 
-class GroupModule(Entity):
+class GroupModulePath(Entity):
     module_path: str
     type: Literal["group_module_path"] = "group_module_path"
 
 
+class CommitFix(Entity):
+    short_sha: str
+    message: str
+    group: str
+    rephrased: bool = False
+    type: Literal["commit_fix"] = "commit_fix"
+
+
 ChangelogDetailsT = Union[
-    GroupModule,
+    CommitFix,
+    GroupModulePath,
     OldNameNewName,
     str,
     None,

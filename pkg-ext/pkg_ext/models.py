@@ -40,7 +40,7 @@ from pkg_ext.gen_changelog import (
     ChangelogAction,
     ChangelogActionType,
     ChangelogDetailsT,
-    GroupModule,
+    GroupModulePath,
     OldNameNewName,
     dump_changelog_actions,
     parse_changelog_actions,
@@ -637,7 +637,7 @@ class PkgExtState(Entity):
                 state.type = RefStateType.EXPOSED
             case ChangelogAction(
                 type=ChangelogActionType.GROUP_MODULE,
-                details=GroupModule(group_name=group_name, module_path=module_path),
+                details=GroupModulePath(group_name=group_name, module_path=module_path),
             ):
                 self.groups.add_module(group_name, module_path)
 

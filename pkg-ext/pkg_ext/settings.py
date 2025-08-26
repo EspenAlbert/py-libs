@@ -80,6 +80,10 @@ class PkgSettings(BaseSettings):
             self.state_dir / self.PUBLIC_GROUPS_STORAGE_FILENAME
         )
 
+    @property
+    def pyproject_toml(self) -> Path:
+        return self.state_dir / "pyproject.toml"
+
     def parse_computed_public_groups(self, t: type[T]) -> T:
         from pkg_ext.models import PublicGroups  # avoid dependency
 

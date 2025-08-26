@@ -765,6 +765,9 @@ class pkg_ctx:
         action = ChangelogAction(name=name, type=type, details=details)
         return self.add_changelog_action(action)
 
+    def all_changelog_actions(self) -> list[ChangelogAction]:
+        return parse_changelog_actions(self.settings.changelog_path) + self._actions
+
     def __enter__(self) -> pkg_ctx:
         return self
 

@@ -2,6 +2,7 @@
 # flake8: noqa
 from my_pkg import g1
 
+VERSION = "0.1.0"
 __all__ = [
     "g1",
 ]

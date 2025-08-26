@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from functools import total_ordering
 from pathlib import Path
-from typing import ClassVar, Generic, Literal, TypeVar, Union
+from typing import ClassVar, Generic, Iterable, Literal, NamedTuple, TypeVar, Union
 
 from model_lib import utc_datetime
 from model_lib.model_base import Entity
@@ -28,6 +30,22 @@ class ChangelogActionType(StrEnum):
     BREAKING_CHANGE = "breaking_change"  # todo: Possibly support signature changes
     ADDITIONAL_CHANGE = "additional_change"  # todo: Possibly support signature changes
     GROUP_MODULE = "group_module"  # a module_path has been selected for a group
+    RELEASE = "release"
+
+
+class BumpType(StrEnum):
+    MAJOR = "major"
+    MINOR = "minor"
+    PATCH = "patch"
+    RC = "release_candidate"
+    BETA = "beta"
+    ALPHA = "alpha"
+    UNDEFINED = "undefined"
+
+    @classmethod
+    def max_bump_type(cls, bumps: Iterable[BumpType]) -> BumpType:
+        bumps_set = set(bumps)
+        return next((t for t in list(cls) if t in bumps_set), BumpType.UNDEFINED)
 
 
 def current_user() -> str:
@@ -56,10 +74,16 @@ class CommitFixChangelog(Entity):
     type: Literal["commit_fix"] = "commit_fix"
 
 
+class ReleaseChangelog(Entity):
+    old_version: str
+    type: Literal["release"] = "release"
+
+
 ChangelogDetailsT = Union[
     CommitFixChangelog,
     GroupModulePathChangelog,
     OldNameNewNameChangelog,
+    ReleaseChangelog,
     str,
     None,
 ]
@@ -69,7 +93,7 @@ T = TypeVar("T", bound=ChangelogDetailsT)
 
 @total_ordering
 class ChangelogAction(Entity, Generic[T]):
-    name: str = Field("", description="Symbol name or Group name")
+    name: str = Field("", description="Symbol name or Group name or Release Version")
     type: ChangelogActionType = Field(
         ...,
         description=f"Action to take with the public reference, one of {list(ChangelogActionType)}",
@@ -104,10 +128,28 @@ class ChangelogAction(Entity, Generic[T]):
         )
         return dump(ignored_falsy, format="yaml")
 
+    @property
+    def bump_type(self) -> BumpType:
+        return as_bump_type(self)
+
     def __lt__(self, other) -> bool:
         if not isinstance(other, ChangelogAction):
             raise TypeError
         return (self.ts, self.name) < (other.ts, other.name)
+
+
+def as_bump_type(action: ChangelogAction) -> BumpType:
+    """Might want ot use fields on the action in the future to determine BumpType therefore we pass action instead of type"""
+    match action.type:
+        case ChangelogActionType.FIX | ChangelogActionType.ADDITIONAL_CHANGE:
+            return BumpType.PATCH
+        case ChangelogActionType.EXPOSE:
+            return BumpType.MINOR
+        case (
+            ChangelogActionType.BREAKING_CHANGE | ChangelogActionType.RENAME_AND_DELETE
+        ):
+            return BumpType.MAJOR
+    return BumpType.UNDEFINED
 
 
 def parse_changelog_file_path(path: Path) -> list[ChangelogAction]:
@@ -143,3 +185,20 @@ def dump_changelog_actions(changelog_dir: Path, actions: list[ChangelogAction]) 
     )
     ensure_parents_write_text(path, yaml_content)
     return path
+
+
+class UnreleasedActions(NamedTuple):
+    actions: list[ChangelogAction]
+    last_release: ChangelogAction[ReleaseChangelog] | None
+
+
+def unreleased_actions(all_actions: list[ChangelogAction]) -> UnreleasedActions:
+    """Ensure you use pkg_ctx.all_changelog_actions if you have made any actions"""
+    unreleased_actions = []
+    last_release = None
+    for action in reversed(all_actions):
+        if action.type == ChangelogActionType.RELEASE:
+            last_release = action
+            break
+        unreleased_actions.append(action)
+    return UnreleasedActions(unreleased_actions, last_release)

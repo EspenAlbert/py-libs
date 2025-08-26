@@ -6,6 +6,7 @@ dependencies = [
   "ask-shell",
   "pycobertura==4.0.0",
   "GitPython>=3.1.44",
+  "model-lib[toml]",
 ]
 
 [build-system]

@@ -33,6 +33,7 @@ from pkg_ext.ref_added import (
 )
 from pkg_ext.ref_removed import handle_removed_refs
 from pkg_ext.settings import PkgSettings, pkg_settings
+from pkg_ext.version_bump import bump_or_get_version
 
 app = Typer(name="pkg-ext", help="Generate public API for a package and more!")
 logger = logging.getLogger(__name__)
@@ -137,10 +138,12 @@ def generate_api(
             handle_removed_refs(ctx)
             handle_added_refs(ctx)
             add_git_changes(ctx)
+            version = bump_or_get_version(ctx)
     except KeyboardInterrupt:
         logger.warning("Interrupted while handling added references")
-    write_groups(tool_state, code_state, settings)
-    write_init(tool_state, code_state, settings)
+    else:
+        write_groups(tool_state, code_state, settings)
+        write_init(ctx, str(version))
 
 
 def main():

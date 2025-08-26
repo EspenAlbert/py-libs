@@ -4,17 +4,17 @@ from zero_3rdparty.iter_utils import flat_map
 
 from pkg_ext.gen_group import as_import_line
 from pkg_ext.models import (
-    PkgCodeState,
-    PkgExtState,
     PublicGroup,
     SymbolRefId,
+    pkg_ctx,
 )
-from pkg_ext.settings import PkgSettings
 
 logger = logging.getLogger(__name__)
 
 
-def write_init(tool_state: PkgExtState, code: PkgCodeState, settings: PkgSettings):
+def write_init(ctx: pkg_ctx, version: str):
+    code = ctx.code_state
+    tool_state = ctx.tool_state
     pkg_name = code.pkg_import_name
     sorted_symbols = code.sort_refs(
         flat_map(group.owned_refs for group in tool_state.groups.groups)
@@ -40,12 +40,13 @@ def write_init(tool_state: PkgExtState, code: PkgCodeState, settings: PkgSetting
         groups_imported.add(group_name)
     all_symbols = [line.split(" ")[-1] for line in import_lines]
     init_lines = [
-        settings.file_header,
+        ctx.settings.file_header,
         "# flake8: noqa",
         *import_lines,
         "",
+        f'VERSION = "{version}"',
         "__all__ = [",
         *[f'    "{name}",' for name in all_symbols],
         "]",
     ]
-    settings.init_path.write_text("\n".join(init_lines) + "\n")
+    ctx.settings.init_path.write_text("\n".join(init_lines) + "\n")

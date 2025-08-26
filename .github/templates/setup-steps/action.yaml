@@ -22,3 +22,8 @@ runs:
       name: configure terraform
       with:
         terraform_version: "1.12.2"
+    - name: git-configure
+      shell: bash
+      run: |
+        git config user.name github-actions[bot]
+        git config user.email github-actions[bot]@users.noreply.github.com"

@@ -182,11 +182,6 @@ def test_03_nested(e2e_dirs, file_regression_e2e, monkeypatch):
 
 def git_init(repo_dir: Path):
     run_and_wait("git init", cwd=repo_dir)
-    run_and_wait("git config user.name github-actions[bot]", cwd=repo_dir)
-    run_and_wait(
-        "git config user.email github-actions[bot]@users.noreply.github.com",
-        cwd=repo_dir,
-    )
 
 
 _GIT_AUTHOR = (

@@ -41,9 +41,9 @@ from pkg_ext.gen_changelog import (
     ChangelogAction,
     ChangelogActionType,
     ChangelogDetailsT,
-    CommitFix,
-    GroupModulePath,
-    OldNameNewName,
+    CommitFixChangelog,
+    GroupModulePathChangelog,
+    OldNameNewNameChangelog,
     dump_changelog_actions,
     parse_changelog_actions,
 )
@@ -650,21 +650,21 @@ class PkgExtState(Entity):
     def update_state(self, action: ChangelogAction) -> None:
         """Update the state of a reference based on a changelog action."""
         match action:
-            case ChangelogAction(action=ChangelogActionType.EXPOSE):
+            case ChangelogAction(type=ChangelogActionType.EXPOSE):
                 state = self.current_state(action.name)
                 state.type = RefStateType.EXPOSED
-            case ChangelogAction(action=ChangelogActionType.HIDE):
+            case ChangelogAction(type=ChangelogActionType.HIDE):
                 state = self.current_state(action.name)
                 state.type = RefStateType.HIDDEN
-            case ChangelogAction(action=ChangelogActionType.DEPRECATE):
+            case ChangelogAction(type=ChangelogActionType.DEPRECATE):
                 state = self.current_state(action.name)
                 state.type = RefStateType.DEPRECATED
-            case ChangelogAction(action=ChangelogActionType.DELETE):
+            case ChangelogAction(type=ChangelogActionType.DELETE):
                 state = self.current_state(action.name)
                 state.type = RefStateType.DELETED
             case ChangelogAction(
-                action=ChangelogActionType.RENAME_AND_DELETE,
-                details=OldNameNewName(old_name=old_name),
+                type=ChangelogActionType.RENAME_AND_DELETE,
+                details=OldNameNewNameChangelog(old_name=old_name),
             ):
                 state = self.current_state(action.name)
                 old_state = self.current_state(old_name)
@@ -672,13 +672,13 @@ class PkgExtState(Entity):
                 state.type = RefStateType.EXPOSED
             case ChangelogAction(
                 name=group_name,
-                action=ChangelogActionType.GROUP_MODULE,
-                details=GroupModulePath(module_path=module_path),
+                type=ChangelogActionType.GROUP_MODULE,
+                details=GroupModulePathChangelog(module_path=module_path),
             ):
                 self.groups.add_module(group_name, module_path)
             case ChangelogAction(
-                action=ChangelogActionType.FIX,
-                details=CommitFix(short_sha=sha, ignored=ignored),
+                type=ChangelogActionType.FIX,
+                details=CommitFixChangelog(short_sha=sha, ignored=ignored),
             ):
                 shas = self.ignored_shas if ignored else self.included_shas
                 shas.add(sha)
@@ -747,7 +747,7 @@ class pkg_ctx:
     def add_changelog_action(self, action: ChangelogAction) -> list[ChangelogAction]:
         actions = [action]
         name = action.name
-        if action.action == ChangelogActionType.EXPOSE:
+        if action.type == ChangelogActionType.EXPOSE:
             ref = self.code_state.ref_symbol(name)
             for call in self.ref_add_callback:
                 if extra_action := call(ref):
@@ -762,7 +762,7 @@ class pkg_ctx:
         type: ChangelogActionType,
         details: ChangelogDetailsT | None = None,
     ) -> list[ChangelogAction]:
-        action = ChangelogAction(name=name, action=type, details=details)
+        action = ChangelogAction(name=name, type=type, details=details)
         return self.add_changelog_action(action)
 
     def __enter__(self) -> pkg_ctx:

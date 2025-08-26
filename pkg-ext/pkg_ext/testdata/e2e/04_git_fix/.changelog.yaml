@@ -1,14 +1,14 @@
 name: git_inferred
-action: group_module
+type: group_module
 details:
   module_path: inferred
 ---
 name: inferred
-action: expose
+type: expose
 details: created in inferred.py
 ---
 name: __ROOT__
-action: fix
+type: fix
 author: github-actions[bot]
 details:
   short_sha: GIT_SHA
@@ -16,5 +16,5 @@ details:
   changelog_message: 'fix: adds chosen file'
 ---
 name: chosen
-action: hide
+type: hide
 details: created in chosen.py

@@ -11,7 +11,11 @@ from zero_3rdparty.file_utils import iter_paths_and_relative
 from pkg_ext.commit_changelog import add_git_changes
 from pkg_ext.errors import NoPublicGroupMatch
 from pkg_ext.file_parser import parse_code_symbols, parse_symbols
-from pkg_ext.gen_changelog import ChangelogAction, ChangelogActionType, GroupModulePath
+from pkg_ext.gen_changelog import (
+    ChangelogAction,
+    ChangelogActionType,
+    GroupModulePathChangelog,
+)
 from pkg_ext.gen_group import write_groups
 from pkg_ext.gen_init import write_init
 from pkg_ext.git_state import GitChangesInput, GitSince, find_git_changes
@@ -71,8 +75,8 @@ def on_new_ref(groups: PublicGroups) -> RefAddCallback:
             new_group = select_group(groups, ref)
             return ChangelogAction(
                 name=new_group.name,
-                action=ChangelogActionType.GROUP_MODULE,
-                details=GroupModulePath(module_path=ref.module_path),
+                type=ChangelogActionType.GROUP_MODULE,
+                details=GroupModulePathChangelog(module_path=ref.module_path),
             )
 
     return on_ref

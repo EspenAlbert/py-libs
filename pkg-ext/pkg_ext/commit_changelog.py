@@ -6,7 +6,11 @@ from ask_shell._internal.rich_live import print_to_live
 from rich.markdown import Markdown
 
 from pkg_ext.errors import NoPublicGroupMatch
-from pkg_ext.gen_changelog import ChangelogAction, ChangelogActionType, CommitFix
+from pkg_ext.gen_changelog import (
+    ChangelogAction,
+    ChangelogActionType,
+    CommitFixChangelog,
+)
 from pkg_ext.git_state import GitCommit
 from pkg_ext.interactive_choices import (
     CommitFixAction,
@@ -51,8 +55,10 @@ def infer_group(groups: PublicGroups, changes: dict[str, str]) -> str:
     return group_counts.most_common(1)[0][0]
 
 
-def prompt_for_fix(sha: str, commit_message: str, prompt_text: str) -> CommitFix:
-    fix = CommitFix(
+def prompt_for_fix(
+    sha: str, commit_message: str, prompt_text: str
+) -> CommitFixChangelog:
+    fix = CommitFixChangelog(
         short_sha=sha,
         message=commit_message,
         changelog_message=commit_message,
@@ -66,7 +72,9 @@ def prompt_for_fix(sha: str, commit_message: str, prompt_text: str) -> CommitFix
     return fix
 
 
-def fix_changelog_action(commit: GitCommit, ctx: pkg_ctx) -> ChangelogAction[CommitFix]:
+def fix_changelog_action(
+    commit: GitCommit, ctx: pkg_ctx
+) -> ChangelogAction[CommitFixChangelog]:
     tool_state = ctx.tool_state
     git_changes = ctx.git_changes
     assert git_changes
@@ -107,7 +115,7 @@ def fix_changelog_action(commit: GitCommit, ctx: pkg_ctx) -> ChangelogAction[Com
     details = prompt_for_fix(commit_sha, commit_message, prompt_text)
     return ChangelogAction(
         name=group,
-        action=ChangelogActionType.FIX,
+        type=ChangelogActionType.FIX,
         author=commit.author,
         details=details,
     )

@@ -7,7 +7,7 @@ from model_lib.serialize.parse import parse_model
 from pkg_ext.gen_changelog import (
     ChangelogAction,
     ChangelogActionType,
-    GroupModulePath,
+    GroupModulePathChangelog,
     dump_changelog_actions,
 )
 from pkg_ext.models import PkgExtState, PublicGroups, RefSymbol, SymbolType
@@ -55,15 +55,17 @@ def test_tool_state_update_state(settings):
     actions = [
         ChangelogAction(
             name="git_inferred",
-            action=ChangelogActionType.GROUP_MODULE,
+            type=ChangelogActionType.GROUP_MODULE,
             ts=datetime(2025, 8, 25, 17, 37, 2, tzinfo=timezone.utc),
             author="UNSET",
-            details=GroupModulePath(module_path="inferred", type="group_module_path"),
+            details=GroupModulePathChangelog(
+                module_path="inferred", type="group_module_path"
+            ),
             pr="",
         ),
         ChangelogAction(
             name="inferred",
-            action=ChangelogActionType.EXPOSE,
+            type=ChangelogActionType.EXPOSE,
             ts=datetime(2025, 8, 25, 17, 37, 2, tzinfo=timezone.utc),
             author="UNSET",
             details="created in inferred.py",

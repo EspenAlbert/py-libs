@@ -2,7 +2,7 @@ import logging
 
 from ask_shell._internal.rich_progress import new_task
 
-from pkg_ext.gen_changelog import ChangelogActionType, OldNameNewName
+from pkg_ext.gen_changelog import ChangelogActionType, OldNameNewNameChangelog
 from pkg_ext.interactive_choices import (
     confirm_create_alias,
     confirm_delete,
@@ -44,7 +44,7 @@ def process_reference_renames(
         ctx.add_action(
             new_name,
             ChangelogActionType.RENAME_AND_DELETE,
-            OldNameNewName(old_name=ref.name, new_name=new_name),
+            OldNameNewNameChangelog(old_name=ref.name, new_name=new_name),
         )
         renamed_refs.add(ref)
         task.update(advance=1)

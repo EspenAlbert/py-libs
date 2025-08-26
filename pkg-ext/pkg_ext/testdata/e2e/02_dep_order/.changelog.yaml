@@ -1,26 +1,26 @@
 name: a
-action: expose
+type: expose
 details: created in a.py
 ---
 name: b
-action: expose
+type: expose
 details: created in b.py
 ---
 name: c
-action: expose
+type: expose
 details: created in c.py
 ---
 name: g1
-action: group_module
+type: group_module
 details:
   module_path: a
 ---
 name: g1
-action: group_module
+type: group_module
 details:
   module_path: b
 ---
 name: g1
-action: group_module
+type: group_module
 details:
   module_path: c

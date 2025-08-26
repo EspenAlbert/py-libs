@@ -36,18 +36,18 @@ def current_user() -> str:
     )  # todo: read from git config or environment variable
 
 
-class OldNameNewName(Entity):
+class OldNameNewNameChangelog(Entity):
     old_name: str
     new_name: str
     type: Literal["old_name_new_name"] = "old_name_new_name"
 
 
-class GroupModulePath(Entity):
+class GroupModulePathChangelog(Entity):
     module_path: str
     type: Literal["group_module_path"] = "group_module_path"
 
 
-class CommitFix(Entity):
+class CommitFixChangelog(Entity):
     short_sha: str
     message: str
     changelog_message: str = ""
@@ -57,9 +57,9 @@ class CommitFix(Entity):
 
 
 ChangelogDetailsT = Union[
-    CommitFix,
-    GroupModulePath,
-    OldNameNewName,
+    CommitFixChangelog,
+    GroupModulePathChangelog,
+    OldNameNewNameChangelog,
     str,
     None,
 ]
@@ -69,8 +69,8 @@ T = TypeVar("T", bound=ChangelogDetailsT)
 
 @total_ordering
 class ChangelogAction(Entity, Generic[T]):
-    name: str = Field(..., description="Symbol name or Group name")
-    action: ChangelogActionType = Field(
+    name: str = Field("", description="Symbol name or Group name")
+    type: ChangelogActionType = Field(
         ...,
         description=f"Action to take with the public reference, one of {list(ChangelogActionType)}",
     )

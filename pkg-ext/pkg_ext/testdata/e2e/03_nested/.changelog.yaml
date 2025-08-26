@@ -1,12 +1,12 @@
 name: a
-action: expose
+type: expose
 details: created in _internal/a.py
 ---
 name: b
-action: expose
+type: expose
 details: created in _internal/a.py
 ---
 name: n1
-action: group_module
+type: group_module
 details:
   module_path: _internal.a

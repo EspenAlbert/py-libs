@@ -1,25 +1,25 @@
 name: MyCls
-action: expose
+type: expose
 details: exposed in the function _internal.expose_with_arg
 ---
 name: expose
-action: expose
+type: expose
 details: created in _internal.py
 ---
 name: expose_with_arg
-action: expose
+type: expose
 details: created in _internal.py
 ---
 name: hidden
-action: hide
+type: hide
 details: created in _internal.py
 ---
 name: my_dep
-action: group_module
+type: group_module
 details:
   module_path: _internal2
 ---
 name: my_group
-action: group_module
+type: group_module
 details:
   module_path: _internal

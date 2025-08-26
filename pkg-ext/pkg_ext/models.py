@@ -35,6 +35,7 @@ from pkg_ext.errors import (
     InvalidGroupSelectionError,
     LocateError,
     NoPublicGroupMatch,
+    RefSymbolNotInCodeError,
 )
 from pkg_ext.gen_changelog import (
     ChangelogAction,
@@ -530,7 +531,7 @@ class PkgCodeState(Entity):
     def ref_symbol(self, name: str) -> RefSymbol:
         if ref_state := self.named_refs.get(name):
             return ref_state.symbol
-        raise ValueError(f"symbol not found: {name}")
+        raise RefSymbolNotInCodeError(name)
 
     @property
     def named_refs(self) -> dict[str, RefStateWithSymbol]:
@@ -630,9 +631,8 @@ class PkgExtState(Entity):
         if code_state:
             for name, ref in ref_state.refs.items():
                 if ref.exist_in_code:
-                    with suppress(
-                        ValueError
-                    ):  # can happen if the name from changelog has been removed
+                    # can happen if the name from changelog has been removed
+                    with suppress(RefSymbolNotInCodeError):
                         ref_symbol = code_state.ref_symbol(name)
                         group = groups.matching_group(ref_symbol)
                         groups.add_ref(ref_symbol, group.name)

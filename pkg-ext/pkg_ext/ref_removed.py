@@ -10,8 +10,6 @@ from pkg_ext.interactive_choices import (
     select_ref,
 )
 from pkg_ext.models import (
-    PkgCodeState,
-    PkgExtState,
     RefState,
     RefStateWithSymbol,
     pkg_ctx,
@@ -51,9 +49,9 @@ def process_reference_renames(
     return renamed_refs
 
 
-def handle_removed_refs(
-    tool_state: PkgExtState, code_state: PkgCodeState, ctx: pkg_ctx
-) -> None:
+def handle_removed_refs(ctx: pkg_ctx) -> None:
+    tool_state = ctx.tool_state
+    code_state = ctx.code_state
     removed_refs = tool_state.removed_refs(code_state)
     if not removed_refs:
         logger.info("No removed references found in the package")

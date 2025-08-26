@@ -134,12 +134,8 @@ def generate_api(
     )
     try:
         with ctx:
-            handle_removed_refs(
-                tool_state, code_state, ctx
-            )  # updates the changelog state
-            handle_added_refs(
-                tool_state, code_state, ctx, settings
-            )  # updates the changelog and group state
+            handle_removed_refs(ctx)
+            handle_added_refs(ctx)
             add_git_changes(ctx)
     except KeyboardInterrupt:
         logger.warning("Interrupted while handling added references")

@@ -79,12 +79,7 @@ def make_expose_decisions(
     return decided_refs
 
 
-def handle_added_refs(
-    tool_state: PkgExtState,
-    code_state: PkgCodeState,
-    add_changelog: pkg_ctx,
-    settings: PkgSettings,
-) -> None:
+def handle_added_refs(ctx: pkg_ctx) -> None:
     """
     # Processing Order
     1. functions
@@ -103,6 +98,8 @@ def handle_added_refs(
     2. Any errors raised by the function must also be exposed
 
     """
+    tool_state = ctx.tool_state
+    code_state = ctx.code_state
     added_refs = tool_state.added_refs(code_state.named_refs)
     if not added_refs:
         logger.info("No new references found in the package")
@@ -144,7 +141,7 @@ def handle_added_refs(
             file_added = group_by_once(relevant_refs, key=group_by_rel_path)
             file_added = sort_by_dep_order(file_added)
             extra_refs_decided = make_expose_decisions(
-                file_added, add_changelog, tool_state, code_state, symbol_type, settings
+                file_added, ctx, tool_state, code_state, symbol_type, ctx.settings
             )
             all_refs_decided = relevant_refs + extra_refs_decided
             decide_refs(all_refs_decided)

@@ -9,7 +9,7 @@ details: created in inferred.py
 ---
 name: __ROOT__
 action: fix
-author: EspenAlbert
+author: github-actions[bot]
 details:
   short_sha: GIT_SHA
   message: 'fix: adds chosen file'

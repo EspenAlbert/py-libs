@@ -182,11 +182,21 @@ def test_03_nested(e2e_dirs, file_regression_e2e, monkeypatch):
 
 def git_init(repo_dir: Path):
     run_and_wait("git init", cwd=repo_dir)
+    run_and_wait("git config user.name github-actions[bot]", cwd=repo_dir)
+    run_and_wait(
+        "git config user.email github-actions[bot]@users.noreply.github.com",
+        cwd=repo_dir,
+    )
+
+
+_GIT_AUTHOR = (
+    '--author="github-actions[bot] <github-actions[bot]@users.noreply.github.com>"'
+)
 
 
 def git_commit(repo_dir: Path, message: str, tag: str = ""):
     run_and_wait("git add .", cwd=repo_dir)
-    run_and_wait(f'git commit -m "{message}"', cwd=repo_dir)
+    run_and_wait(f'git commit {_GIT_AUTHOR} -m "{message}"', cwd=repo_dir)
     if tag:
         run_and_wait(f'git tag -a "{tag}" -m "{tag}"', cwd=repo_dir)
 

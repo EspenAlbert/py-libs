@@ -84,7 +84,7 @@ class E2eRegressionCheck:
 
     def _actual_text_modifier(self, text: str, path: Path) -> str:
         if path.name == CHANGELOG_YAML_FILENAME:
-            text = re.sub(r"(short_sha: )([0-9a-f]*)", "short_sha: GIT_SHA", text)
+            text = re.sub(r"(short_sha: )('?[0-9a-f]+'?)", "short_sha: GIT_SHA", text)
         return text
 
     def check_path(self, actual_path: Path):

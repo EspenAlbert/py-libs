@@ -33,7 +33,7 @@ filterwarnings =[
     "ignore::pytest.PytestRemovedIn9Warning"
 ]
 [tool.coverage.report]
-omit = ["*_test.py", "conftest.py", "testdata/*", "/private/var/*"]
+omit = ["*_test.py", "conftest.py", "*/testdata/*", "/private/var/*"]
 
 [tool.pyright]
 include = ["ask-shell", "model-lib", "pkg-ext", "zero-3rdparty"]

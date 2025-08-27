@@ -8,6 +8,7 @@ from typing import Protocol
 import pytest
 from model_lib.static_settings import StaticSettings
 from pytest_regressions.file_regression import FileRegressionFixture
+from zero_3rdparty import file_utils
 from zero_3rdparty.file_utils import ensure_parents_write_text
 from zero_3rdparty.str_utils import ensure_prefix
 
@@ -87,6 +88,17 @@ class E2eRegressionCheck:
             text = re.sub(r"(short_sha: )('?[0-9a-f]+'?)", "short_sha: GIT_SHA", text)
         return text
 
+    def modify_files(self, dir_path: Path):
+        for file in file_utils.iter_paths(
+            dir_path, "*", exclude_folder_names=[".git", "__pycache__"]
+        ):
+            if not file.is_file():
+                continue
+            old = file.read_text()
+            new = self._actual_text_modifier(old, file)
+            if old != new:
+                file.write_text(new)
+
     def check_path(self, actual_path: Path):
         parent = actual_path.parent
         dir_files = [f.name for f in parent.glob("*") if f.is_file()]
@@ -95,14 +107,14 @@ class E2eRegressionCheck:
         )
         relative_path = str(actual_path.relative_to(self.e2e_dirs.execution_e2e_dir))
         expected_path = self.e2e_dirs.e2e_dir / relative_path
-        text = self._actual_text_modifier(actual_path.read_text(), actual_path)
-        self.file_regression.check(text, fullpath=expected_path)
+        self.file_regression.check(actual_path.read_text(), fullpath=expected_path)
 
     def __call__(self, rel_path: str, text: str, extension: str):
         dotted_extension = ensure_prefix(extension, ".")
         path = self.e2e_dirs.e2e_dir / rel_path
-        text = self._actual_text_modifier(text, path)
-        self.file_regression.check(text, fullpath=path, extension=dotted_extension)
+        self.file_regression.check(
+            path.read_text(), fullpath=path, extension=dotted_extension
+        )
 
 
 @pytest.fixture()

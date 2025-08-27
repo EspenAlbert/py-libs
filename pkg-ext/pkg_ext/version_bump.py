@@ -99,7 +99,7 @@ def _extract_version(text: str) -> str:
     return ""
 
 
-def bump_or_get_version(ctx: pkg_ctx) -> PkgVersion:
+def bump_or_get_version(ctx: pkg_ctx, *, skip_bump: bool = False) -> PkgVersion:
     """Use the .changelog dir to find the bump type
     To find the version:
     1. Look in changelog for release entry
@@ -126,4 +126,6 @@ def bump_or_get_version(ctx: pkg_ctx) -> PkgVersion:
         if raw_init_version := _extract_version(init_path.read_text()):
             with suppress(Exception):
                 version = PkgVersion.parse(raw_init_version)
+    if skip_bump:
+        return version
     return version.bump(bump)

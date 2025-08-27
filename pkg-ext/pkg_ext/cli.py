@@ -16,6 +16,7 @@ from pkg_ext.gen_changelog import (
     ChangelogActionType,
     GroupModulePathChangelog,
 )
+from pkg_ext.gen_changelog_md import write_changelog_md
 from pkg_ext.gen_group import write_groups
 from pkg_ext.gen_init import write_init
 from pkg_ext.git_state import GitChangesInput, GitSince, find_git_changes
@@ -108,7 +109,12 @@ def generate_api(
     git_changes_since: GitSince = typer.Option(
         GitSince.LAST_GIT_TAG,
         "--git-since",
-        help="will use git log to look for 'fix' commits to include in the changelog",
+        help="Will use git log to look for 'fix' commits to include in the changelog",
+    ),
+    bump_version: bool = typer.Option(
+        False,
+        "--bump",
+        help="Use the changelog actions to bump the version",
     ),
 ):
     settings = pkg_settings(
@@ -138,12 +144,13 @@ def generate_api(
             handle_removed_refs(ctx)
             handle_added_refs(ctx)
             add_git_changes(ctx)
-            version = bump_or_get_version(ctx)
+            version = bump_or_get_version(ctx, skip_bump=not bump_version)
     except KeyboardInterrupt:
         logger.warning("Interrupted while handling added references")
     else:
         write_groups(tool_state, code_state, settings)
         write_init(ctx, str(version))
+        write_changelog_md(ctx)
 
 
 def main():

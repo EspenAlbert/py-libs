@@ -1,8 +1,10 @@
+import re
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from enum import StrEnum
 from functools import total_ordering
 from pathlib import Path
-from typing import ClassVar, Self
+from typing import ClassVar, Iterable, Self
 
 from ask_shell._internal._run import run_and_wait
 from git import Commit, Git, GitCommandError, Repo
@@ -61,6 +63,10 @@ class GitCommit(BaseModel):
         return self.ts < other.ts
 
 
+# Merge pull request #26 from EspenAlbert/pkg-ext-standalone
+_merge_message_regex = re.compile(r"Merge pull request #(\d+)")
+
+
 @dataclass
 class GitChanges:
     commits: list[GitCommit]
@@ -75,6 +81,18 @@ class GitChanges:
     def old_version(self, rel_path_repo: str) -> str:
         assert self.has_change(rel_path_repo), f"file hasn't changed: {rel_path_repo}"
         return _file_content(self.git, self.start_sha, rel_path_repo)
+
+
+def last_merge_pr(
+    commits: Iterable[GitCommit], after_ts: utc_datetime | None = None
+) -> int | None:
+    after_ts = after_ts or datetime.fromtimestamp(0, tz=timezone.utc)
+    for commit in sorted(commits, reverse=True):
+        if commit.ts < after_ts:
+            return None
+        if merge_match := _merge_message_regex.match(commit.message):
+            return int(merge_match[1])
+    return None
 
 
 def solve_since_sha(repo: Repo, repo_path: Path, since: GitSince) -> Commit:

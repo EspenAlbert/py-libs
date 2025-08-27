@@ -1,3 +1,6 @@
+from pathlib import Path
+
+
 class NoPublicGroupMatch(Exception):
     """Internal error"""
 
@@ -26,3 +29,10 @@ class RefSymbolNotInCodeError(Exception):
     def __init__(self, name: str):
         self.name = name
         super().__init__(f"RefSymbol {name} not found in code")
+
+
+class RemoteURLNotFound(Exception):
+    def __init__(self, reason: str, path: Path):
+        self.reason = reason
+        self.path = path
+        super().__init__(f"Could not find remote URL for git repo @ {path}: {reason}")

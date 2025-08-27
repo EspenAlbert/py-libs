@@ -448,7 +448,7 @@ class PublicGroups(Entity):
             return match_by_module[0]
         raise NoPublicGroupMatch(f"No public group found for module {module_path}")
 
-    def _get_or_create_group(self, name: str) -> PublicGroup:
+    def get_or_create_group(self, name: str) -> PublicGroup:
         group = self.name_to_group.get(name)
         if not group:
             group = PublicGroup(name=name)
@@ -457,7 +457,7 @@ class PublicGroups(Entity):
 
     @ensure_disk_path_updated
     def add_module(self, group_name: str, module_path: str) -> PublicGroup:
-        group = self._get_or_create_group(group_name)
+        group = self.get_or_create_group(group_name)
         try:
             existing = self.matching_group_by_module_path(module_path)
             if existing.name != group.name:
@@ -471,7 +471,7 @@ class PublicGroups(Entity):
 
     @ensure_disk_path_updated
     def add_ref(self, ref: RefSymbol, group_name: str) -> PublicGroup:
-        group = self._get_or_create_group(group_name)
+        group = self.get_or_create_group(group_name)
         try:
             matching_group = self.matching_group(ref)
             if matching_group.name != group_name:
@@ -620,23 +620,28 @@ class PkgExtState(Entity):
         changelog_path.mkdir(parents=True, exist_ok=True)
         actions = parse_changelog_actions(changelog_path)
         groups = PublicGroups(storage_path=settings.public_groups_path)
-        ref_state = cls(
+        tool_state = cls(
             repo_root=settings.repo_root,
             changelog_dir=changelog_path,
             pkg_path=settings.pkg_directory,
             groups=groups,
         )
         for action in actions:
-            ref_state.update_state(action)
+            tool_state.update_state(action)
         if code_state:
-            for name, ref in ref_state.refs.items():
-                if ref.exist_in_code:
-                    # can happen if the name from changelog has been removed
-                    with suppress(RefSymbolNotInCodeError):
-                        ref_symbol = code_state.ref_symbol(name)
-                        group = groups.matching_group(ref_symbol)
-                        groups.add_ref(ref_symbol, group.name)
-        return ref_state
+            for name in tool_state.refs:
+                if ref_symbol := tool_state.code_ref(code_state, name):
+                    group = groups.matching_group(ref_symbol)
+                    groups.add_ref(ref_symbol, group.name)
+        return tool_state
+
+    def code_ref(self, code_state: PkgCodeState, name: str) -> RefSymbol | None:
+        if state := self.refs.get(name):
+            if state.exist_in_code:
+                # can happen if the name from changelog has been removed
+                with suppress(RefSymbolNotInCodeError):
+                    return code_state.ref_symbol(name)
+        return None
 
     def sha_processed(self, sha: str) -> bool:
         return sha in self.ignored_shas or sha in self.included_shas
@@ -767,6 +772,15 @@ class pkg_ctx:
 
     def all_changelog_actions(self) -> list[ChangelogAction]:
         return parse_changelog_actions(self.settings.changelog_path) + self._actions
+
+    def action_group(self, action: ChangelogAction) -> PublicGroup:
+        match action:
+            case ChangelogAction(name=name, type=ChangelogActionType.EXPOSE):
+                if code_ref := self.tool_state.code_ref(self.code_state, name):
+                    return self.tool_state.groups.matching_group(code_ref)
+            case ChangelogAction(name=group_name, type=ChangelogActionType.FIX):
+                return self.tool_state.groups.get_or_create_group(group_name)
+        raise NoPublicGroupMatch()
 
     def __enter__(self) -> pkg_ctx:
         return self

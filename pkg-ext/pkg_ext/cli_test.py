@@ -37,7 +37,7 @@ def test_normal_help_command_is_ok():
     run("--help", exit_code=0)
 
 
-def read_generated_changelog(changelog_dir: Path) -> Path:
+def read_and_rename_generated_changelog(changelog_dir: Path) -> Path:
     actions = parse_changelog_actions(changelog_dir)
     assert actions, "no changelog actions found"
     clean_dir(changelog_dir, recreate=True)
@@ -99,15 +99,20 @@ def run_e2e(
     )
     execution_e2e_dir = settings.repo_root
     execution_e2e_pkg_path = settings.pkg_directory
-    command = f"--repo-root {execution_e2e_dir} {paths.pkg_path_relative} --skip-open --git-since {git_since}"
+    command = f"--repo-root {execution_e2e_dir} {paths.pkg_path_relative} --skip-open --git-since {git_since} --bump"
     logger.info(f"running command: {command}")
     result = run(command)
     assert result.exit_code == 0
-    actual_changelog_path = read_generated_changelog(settings.changelog_path)
+    actual_changelog_path = read_and_rename_generated_changelog(settings.changelog_path)
+    changelog_md = settings.changelog_md
     if force_regen:
         copy(execution_e2e_pkg_path, paths.e2e_pkg_dir, clean_dest=True)
         copy(actual_changelog_path, paths.e2e_dir / CHANGELOG_YAML_FILENAME)
         copy(settings.public_groups_path, paths.e2e_dir / ".groups.yaml")
+        if changelog_md.exists():
+            copy(changelog_md, paths.e2e_dir / settings.changelog_md.name)
+        regression_check.modify_files(paths.e2e_dir)
+    regression_check.modify_files(paths.execution_e2e_dir)
     if skip_regressions:
         return
     regression_check(
@@ -115,6 +120,8 @@ def run_e2e(
     )
     regression_check.check_path(settings.public_groups_path)
     regression_check.check_path(settings.init_path)
+    if changelog_md.exists():
+        regression_check.check_path(changelog_md)
     for group in groups:
         regression_check.check_path(paths.python_actual_group_path(group))
 
@@ -155,7 +162,7 @@ def _question_patcher(
 def test_01_initial(e2e_dirs, file_regression_e2e, monkeypatch):
     groups = ["my_group", "my_dep"]
     with _question_patcher({"_internal.py": f" {KeyInput.DOWN} "}, groups):
-        run_e2e(e2e_dirs, file_regression_e2e, monkeypatch, groups)
+        run_e2e(e2e_dirs, file_regression_e2e, monkeypatch, groups, force_regen=True)
 
 
 def test_02_dep_order(e2e_dirs, file_regression_e2e, monkeypatch):

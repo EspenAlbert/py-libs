@@ -47,6 +47,15 @@ class BumpType(StrEnum):
         bumps_set = set(bumps)
         return next((t for t in list(cls) if t in bumps_set), BumpType.UNDEFINED)
 
+    @classmethod
+    def sort_by_bump(cls, actions: Iterable[ChangelogAction]) -> list[ChangelogAction]:
+        indexes = {bump: i for i, bump in enumerate(cls)}
+
+        def as_index(action: ChangelogAction) -> int:
+            return indexes[action.bump_type]
+
+        return sorted(actions, key=as_index)
+
 
 def current_user() -> str:
     return (
@@ -93,6 +102,8 @@ T = TypeVar("T", bound=ChangelogDetailsT)
 
 @total_ordering
 class ChangelogAction(Entity, Generic[T]):
+    DEFAULT_AUTHOR: ClassVar[str] = "UNSET"
+
     name: str = Field("", description="Symbol name or Group name or Release Version")
     type: ChangelogActionType = Field(
         ...,
@@ -102,7 +113,6 @@ class ChangelogAction(Entity, Generic[T]):
         default_factory=utc_now, description="Timestamp of the action"
     )
 
-    DEFAULT_AUTHOR: ClassVar[str] = "UNSET"
     author: str = Field(
         default_factory=current_user,
         description="Author of the public reference action",

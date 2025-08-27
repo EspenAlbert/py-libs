@@ -23,9 +23,7 @@ def normalize_repo_url(repo_url: str) -> str:
     >>> normalize_repo_url('https://oauth2:BySECRET_TOKEN@gitlab.com/org/backend')
     'https://gitlab.com/org/backend'
     """
-    if repo_url.endswith(".git"):
-        repo_url = repo_url[: -len(".git")]
-    # git@gitlab.com:org/_shared/docker
+    repo_url = repo_url.removesuffix(".git")
     extra_prefix = "git@gitlab.com:"
     if repo_url.startswith(extra_prefix):
         repo_url = f"https://gitlab.com/{repo_url[len(extra_prefix) :]}"

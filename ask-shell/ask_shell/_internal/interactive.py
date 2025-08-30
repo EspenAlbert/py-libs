@@ -402,15 +402,30 @@ class PromptMatch:
 
 
 @dataclass
-class question_patcher:
+class force_interactive:
+    settings: AskShellSettings = field(default_factory=AskShellSettings.from_env)
+    _old_force_interactive_env_str: str = field(default="", init=False, repr=False)
+
+    def __enter__(self) -> Self:
+        self._old_force_interactive_env_str = str(self.settings.force_interactive_shell)
+        interactive_shell.cache_clear()
+        os.environ[self.settings.ENV_NAME_FORCE_INTERACTIVE_SHELL] = "true"
+        return self
+
+    def __exit__(self, exc_val, exc_type, exc_tb):
+        os.environ[self.settings.ENV_NAME_FORCE_INTERACTIVE_SHELL] = (
+            self._old_force_interactive_env_str
+        )
+        interactive_shell.cache_clear()
+
+
+@dataclass(kw_only=True)
+class question_patcher(force_interactive):
     """Context manager to patch the questionary.ask_question, useful for testing."""
 
     responses: list[str] = field(default_factory=list)
     next_response: int = 0
     dynamic_responses: list[PromptMatch] = field(default_factory=list)
-    settings: AskShellSettings = field(default_factory=AskShellSettings.from_env)
-
-    _old_force_interactive_env_str: str = field(default="", init=False, repr=False)
 
     def _dynamic_match(self, prompt_text: str) -> str | None:
         return next(
@@ -457,18 +472,41 @@ class question_patcher:
         global _question_asker
         self._old_patcher = _question_asker
         _question_asker = self.ask_question
-        self._old_force_interactive_env_str = str(self.settings.force_interactive_shell)
-        interactive_shell.cache_clear()
-        os.environ[self.settings.ENV_NAME_FORCE_INTERACTIVE_SHELL] = "true"
-        return self
+        return super().__enter__()
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_val, exc_type, exc_tb):
         global _question_asker
         _question_asker = self._old_patcher
-        os.environ[self.settings.ENV_NAME_FORCE_INTERACTIVE_SHELL] = (
-            self._old_force_interactive_env_str
+        super().__exit__(exc_val, exc_type, exc_tb)
+
+
+class RaiseOnQuestionError(Exception):
+    def __init__(self, prompt_text: str):
+        self.prompt_text = prompt_text
+        super().__init__(
+            f"Question asked: '{prompt_text}' when {raise_on_question.__name__} was active"
         )
-        interactive_shell.cache_clear()
+
+
+@dataclass
+class raise_on_question(force_interactive):
+    raise_error: Callable[[str], BaseException] = RaiseOnQuestionError
+    _old_asker: Callable = field(init=False)
+
+    def raise_on_question(self, q: Question, _: type[T]) -> T:
+        prompt_text = _get_prompt_text(q) or "unknown prompt"
+        raise self.raise_error(prompt_text)
+
+    def __enter__(self) -> Self:
+        global _question_asker
+        self._old_asker = _question_asker
+        _question_asker = self.raise_on_question
+        return super().__enter__()
+
+    def __exit__(self, exc_val, exc_type, exc_tb):
+        global _question_asker
+        _question_asker = self._old_asker
+        super().__exit__(exc_val, exc_type, exc_tb)
 
 
 if __name__ == "__main__":

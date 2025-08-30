@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 NOW_TS
+## 0.1.0 NOW_TS
 
 ### N1
 - New function b

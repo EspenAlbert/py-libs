@@ -144,12 +144,13 @@ def generate_api(
             handle_removed_refs(ctx)
             handle_added_refs(ctx)
             add_git_changes(ctx)
-            version = bump_or_get_version(ctx, skip_bump=not bump_version)
+            bump_or_get_version(ctx, skip_bump=not bump_version)
     except KeyboardInterrupt:
         logger.warning("Interrupted while handling added references")
     else:
         write_groups(tool_state, code_state, settings)
-        write_init(ctx, str(version))
+        init_version = ctx.run_state.init_version(bump_version)
+        write_init(ctx, init_version)
         write_changelog_md(ctx)
 
 

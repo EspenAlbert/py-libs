@@ -126,6 +126,7 @@ def bump_or_get_version(ctx: pkg_ctx, *, skip_bump: bool = False) -> PkgVersion:
         if raw_init_version := _extract_version(init_path.read_text()):
             with suppress(Exception):
                 version = PkgVersion.parse(raw_init_version)
+    ctx.add_versions(str(version), str(version.bump(bump)))
     if skip_bump:
         return version
     return version.bump(bump)

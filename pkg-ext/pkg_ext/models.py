@@ -740,15 +740,29 @@ RefAddCallback: TypeAlias = Callable[[RefSymbol], ChangelogAction | None]
 
 
 @dataclass
+class RunState:
+    old_version: str = ""
+    new_version: str = ""
+
+    def init_version(self, is_bump: bool) -> str:
+        return self.new_version if is_bump else self.old_version
+
+
+@dataclass
 class pkg_ctx:
     settings: PkgSettings
     tool_state: PkgExtState
     code_state: PkgCodeState
     git_changes: GitChanges | None = None
     ref_add_callback: list[RefAddCallback] = field(default_factory=list)
+    run_state: RunState = field(default_factory=RunState)
 
     _actions: list[ChangelogAction] = field(default_factory=list, init=False)
     _actions_dumped: bool = False
+
+    def add_versions(self, old_version: str, new_version: str):
+        self.run_state.old_version = old_version
+        self.run_state.new_version = new_version
 
     def add_changelog_action(self, action: ChangelogAction) -> list[ChangelogAction]:
         actions = [action]

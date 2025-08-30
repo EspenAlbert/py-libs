@@ -18,7 +18,6 @@ from pkg_ext.gen_changelog import (
 from pkg_ext.git_state import GitChanges, last_merge_pr
 from pkg_ext.git_url import read_remote_url
 from pkg_ext.models import PublicGroup, pkg_ctx
-from pkg_ext.version_bump import bump_or_get_version
 
 logger = logging.getLogger(__name__)
 _header_regex = re.compile(r"^(?P<hashes>#{2,5})\s", re.M)
@@ -169,8 +168,8 @@ def write_changelog_md(ctx: pkg_ctx) -> Path:
     unreleased = _get_changelog_actions(ctx)
     if not unreleased.actions:
         return path
-    old_version = bump_or_get_version(ctx, skip_bump=True)
-    new_version = bump_or_get_version(ctx)
+    old_version = ctx.run_state.old_version
+    new_version = ctx.run_state.new_version
     if old_version == new_version:
         return path
     changelog_md = _create_changelog_content(

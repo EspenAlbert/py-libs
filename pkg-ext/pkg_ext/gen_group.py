@@ -2,9 +2,9 @@ from pathlib import Path
 
 from pkg_ext.models import (
     PkgCodeState,
-    PkgExtState,
     PublicGroup,
     SymbolRefId,
+    pkg_ctx,
     ref_id_module,
     ref_id_name,
 )
@@ -44,10 +44,8 @@ def write_group(group: PublicGroup, settings: PkgSettings, code: PkgCodeState) -
     return path
 
 
-def write_groups(
-    tool: PkgExtState, code: PkgCodeState, settings: PkgSettings
-) -> list[Path]:
-    paths = []
-    for group in tool.groups.groups_no_root:
-        paths.append(write_group(group, settings, code))
-    return paths
+def write_groups(ctx: pkg_ctx) -> list[Path]:
+    return [
+        write_group(group, ctx.settings, ctx.code_state)
+        for group in ctx.tool_state.groups.groups_no_root
+    ]

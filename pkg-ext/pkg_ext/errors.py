@@ -36,3 +36,9 @@ class RemoteURLNotFound(Exception):
         self.reason = reason
         self.path = path
         super().__init__(f"Could not find remote URL for git repo @ {path}: {reason}")
+
+
+class NoHumanRequiredError(Exception):
+    def __init__(self, question_text: str):
+        self.question_text = question_text
+        super().__init__(f"Question asked but no human available: {question_text}")

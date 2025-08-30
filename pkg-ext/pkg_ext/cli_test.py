@@ -3,6 +3,7 @@ from datetime import timedelta
 from itertools import zip_longest
 from pathlib import Path
 
+import pytest
 from ask_shell._internal._run import run_and_wait
 from ask_shell._internal.interactive import KeyInput, PromptMatch, question_patcher
 from click.testing import Result
@@ -12,6 +13,7 @@ from zero_3rdparty.file_utils import clean_dir, copy
 
 from pkg_ext.cli import app
 from pkg_ext.conftest import CHANGELOG_YAML_FILENAME, E2eDirs, E2eRegressionCheck
+from pkg_ext.errors import NoHumanRequiredError
 from pkg_ext.gen_changelog import (
     dump_changelog_actions,
     parse_changelog_actions,
@@ -83,6 +85,22 @@ def prepare_test(
     return settings
 
 
+def _run_command(
+    settings: PkgSettings,
+    *,
+    git_since: GitSince = GitSince.NO_GIT_CHANGES,
+    extra_cli_args: str = "",
+):
+    execution_e2e_dir = settings.repo_root
+    pkg_path_relative = str(settings.pkg_directory.relative_to(execution_e2e_dir))
+    command = f"--repo-root {execution_e2e_dir} {pkg_path_relative} --skip-open --git-since {git_since} --bump"
+    if extra_cli_args:
+        command = f"{command} {extra_cli_args}"
+    logger.info(f"running command: {command}")
+    result = run(command)
+    assert result.exit_code == 0
+
+
 def run_e2e(
     paths: E2eDirs,
     regression_check: E2eRegressionCheck,
@@ -94,20 +112,15 @@ def run_e2e(
     is_follow_up_step: bool = False,
     skip_regressions: bool = False,
     copy_ignore_globs: list[str] | None = None,
-):
+) -> PkgSettings:
     settings = prepare_test(
         paths, monkeypatch, groups, is_follow_up_step, copy_ignore_globs
     )
-    execution_e2e_dir = settings.repo_root
-    execution_e2e_pkg_path = settings.pkg_directory
-    command = f"--repo-root {execution_e2e_dir} {paths.pkg_path_relative} --skip-open --git-since {git_since} --bump"
-    logger.info(f"running command: {command}")
-    result = run(command)
-    assert result.exit_code == 0
+    _run_command(settings, git_since=git_since)
     actual_changelog_path = read_and_rename_generated_changelog(settings.changelog_path)
     changelog_md = settings.changelog_md
     if force_regen:
-        copy(execution_e2e_pkg_path, paths.e2e_pkg_dir, clean_dest=True)
+        copy(settings.pkg_directory, paths.e2e_pkg_dir, clean_dest=True)
         copy(actual_changelog_path, paths.e2e_dir / CHANGELOG_YAML_FILENAME)
         copy(settings.public_groups_path, paths.e2e_dir / ".groups.yaml")
         if changelog_md.exists():
@@ -115,7 +128,7 @@ def run_e2e(
         regression_check.modify_files(paths.e2e_dir)
     regression_check.modify_files(paths.execution_e2e_dir)
     if skip_regressions:
-        return
+        return settings
     regression_check(
         CHANGELOG_YAML_FILENAME, actual_changelog_path.read_text(), extension=".yaml"
     )
@@ -125,6 +138,7 @@ def run_e2e(
         regression_check.check_path(changelog_md)
     for group in groups:
         regression_check.check_path(paths.python_actual_group_path(group))
+    return settings
 
 
 def _question_patcher(
@@ -163,7 +177,9 @@ def _question_patcher(
 def test_01_initial(e2e_dirs, file_regression_e2e, monkeypatch):
     groups = ["my_group", "my_dep"]
     with _question_patcher({"_internal.py": f" {KeyInput.DOWN} "}, groups):
-        run_e2e(e2e_dirs, file_regression_e2e, monkeypatch, groups, force_regen=True)
+        settings = run_e2e(e2e_dirs, file_regression_e2e, monkeypatch, groups)
+        # No human after a run should have no effect
+        _run_command(settings, extra_cli_args="--no-human")
 
 
 def test_02_dep_order(e2e_dirs, file_regression_e2e, monkeypatch):
@@ -215,7 +231,7 @@ def test_04_git_fix(e2e_dirs, file_regression_e2e, monkeypatch):
     chosen_filepath = pkg_path / "chosen.py"
     groups = ["git_inferred"]
     with _question_patcher({"inferred.py": " "}, groups):
-        run_e2e(
+        settings = run_e2e(
             e2e_dirs,
             file_regression_e2e,
             monkeypatch,
@@ -229,6 +245,8 @@ def test_04_git_fix(e2e_dirs, file_regression_e2e, monkeypatch):
     chosen_filepath.write_text(_chosen_content)
     chosen_file_commit_message = "fix: adds chosen file"
     git_commit(repo_path, chosen_file_commit_message)
+    with pytest.raises(NoHumanRequiredError):
+        _run_command(settings, extra_cli_args="--no-human")
     with _question_patcher({chosen_filepath.name: ""}, groups=groups) as patcher:
         patcher.dynamic_responses.extend(
             [

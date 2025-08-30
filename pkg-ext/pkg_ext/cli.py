@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import logging
+from contextlib import ExitStack
 from pathlib import Path
 
 import typer
+from ask_shell._internal.interactive import raise_on_question
 from ask_shell._internal.typer_command import configure_logging
 from typer import Typer
 from zero_3rdparty.file_utils import iter_paths_and_relative
 
 from pkg_ext.commit_changelog import add_git_changes
-from pkg_ext.errors import NoPublicGroupMatch
+from pkg_ext.errors import NoHumanRequiredError, NoPublicGroupMatch
 from pkg_ext.file_parser import parse_code_symbols, parse_symbols
 from pkg_ext.gen_changelog import (
     ChangelogAction,
@@ -84,6 +86,37 @@ def on_new_ref(groups: PublicGroups) -> RefAddCallback:
     return on_ref
 
 
+def create_ctx(
+    pkg_path_str: str,
+    repo_root: Path,
+    skip_open_in_editor: bool,
+    dev_mode: bool,
+    git_changes_since: GitSince,
+) -> pkg_ctx:
+    settings = pkg_settings(
+        repo_root,
+        pkg_path_str,
+        skip_open_in_editor=skip_open_in_editor,
+        dev_mode=dev_mode,
+    )
+    code_state = parse_pkg_code_state(settings)
+    tool_state = PkgExtState.parse(settings, code_state)
+    git_changes = (
+        None
+        if git_changes_since == GitSince.NO_GIT_CHANGES
+        else find_git_changes(
+            GitChangesInput(repo_path=settings.repo_root, since=git_changes_since)
+        )
+    )
+    return pkg_ctx(
+        settings=settings,
+        tool_state=tool_state,
+        code_state=code_state,
+        ref_add_callback=[on_new_ref(tool_state.groups)],
+        git_changes=git_changes,
+    )
+
+
 @app.command()
 def generate_api(
     pkg_path_str: str = typer.Argument(
@@ -116,42 +149,34 @@ def generate_api(
         "--bump",
         help="Use the changelog actions to bump the version",
     ),
+    no_human: bool = typer.Option(
+        False,
+        "--no-human",
+        help="For CI to avoid any prompt hanging or accidental defaults made",
+    ),
 ):
-    settings = pkg_settings(
-        repo_root,
-        pkg_path_str,
-        skip_open_in_editor=skip_open_in_editor,
-        dev_mode=dev_mode,
-    )
-    code_state = parse_pkg_code_state(settings)
-    tool_state = PkgExtState.parse(settings, code_state)
-    git_changes = (
-        None
-        if git_changes_since == GitSince.NO_GIT_CHANGES
-        else find_git_changes(
-            GitChangesInput(repo_path=settings.repo_root, since=git_changes_since)
+    exit_stack = ExitStack()
+    if no_human:
+        exit_stack.enter_context(raise_on_question(raise_error=NoHumanRequiredError))
+    with exit_stack:
+        ctx = create_ctx(
+            pkg_path_str, repo_root, skip_open_in_editor, dev_mode, git_changes_since
         )
-    )
-    ctx = pkg_ctx(
-        settings=settings,
-        tool_state=tool_state,
-        code_state=code_state,
-        ref_add_callback=[on_new_ref(tool_state.groups)],
-        git_changes=git_changes,
-    )
-    try:
-        with ctx:
-            handle_removed_refs(ctx)
-            handle_added_refs(ctx)
-            add_git_changes(ctx)
-            bump_or_get_version(ctx, skip_bump=not bump_version)
-    except KeyboardInterrupt:
-        logger.warning("Interrupted while handling added references")
-    else:
-        write_groups(tool_state, code_state, settings)
-        init_version = ctx.run_state.init_version(bump_version)
-        write_init(ctx, init_version)
-        write_changelog_md(ctx)
+        try:
+            with ctx:
+                handle_removed_refs(ctx)
+                handle_added_refs(ctx)
+                add_git_changes(ctx)
+                bump_or_get_version(ctx, skip_bump=not bump_version)
+        except KeyboardInterrupt:
+            logger.warning(
+                f"Interrupted while handling added references, only {ctx.settings.changelog_path} updated"
+            )
+        else:
+            write_groups(ctx)
+            init_version = ctx.run_state.init_version(bump_version)
+            write_init(ctx, init_version)
+            write_changelog_md(ctx)
 
 
 def main():

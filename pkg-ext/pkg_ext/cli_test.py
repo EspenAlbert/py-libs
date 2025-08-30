@@ -79,6 +79,7 @@ def prepare_test(
         clean_dir(settings.changelog_path, recreate=False)
         settings.public_groups_path.unlink(missing_ok=True)
         settings.init_path.write_text("")
+        settings.changelog_md.unlink(missing_ok=True)
     return settings
 
 
@@ -242,5 +243,4 @@ def test_04_git_fix(e2e_dirs, file_regression_e2e, monkeypatch):
             groups,
             git_since=GitSince.LAST_GIT_TAG,
             is_follow_up_step=True,
-            force_regen=False,
         )

@@ -62,7 +62,7 @@ def _commit_url(remote_url: str, sha: str) -> str:
     return f"({sha})"
 
 
-def as_changelog_line(action: ChangelogAction, remote_url: str) -> str:
+def as_changelog_line(action: ChangelogAction, remote_url: str, ctx: pkg_ctx) -> str:
     match action:
         case ChangelogAction(
             type=ChangelogActionType.FIX,
@@ -74,6 +74,9 @@ def as_changelog_line(action: ChangelogAction, remote_url: str) -> str:
             ),
         ):
             return f"{changelog_message or message} {_commit_url(remote_url, sha)}"
+        case ChangelogAction(type=ChangelogActionType.EXPOSE, name=name):
+            ref_symbol = ctx.code_state.ref_symbol(name)
+            return f"New {ref_symbol.type} {name}"
     return ""
 
 
@@ -81,7 +84,7 @@ def _get_changelog_actions(ctx: pkg_ctx) -> UnreleasedActions:
     all_actions = ctx.all_changelog_actions()
     actions, last_release = unreleased_actions(all_actions)
     actions_with_changelog = [
-        action for action in actions if as_changelog_line(action, "")
+        action for action in actions if as_changelog_line(action, "", ctx)
     ]
     return UnreleasedActions(actions_with_changelog, last_release)
 
@@ -115,7 +118,7 @@ def _group_changelog_entries(
     group_sections: dict[str, list[str]] = defaultdict(list)
     other_sections: list[str] = []
     for action in BumpType.sort_by_bump(actions):
-        line = as_changelog_line(action, remote_url)
+        line = as_changelog_line(action, remote_url, ctx)
         try:
             group: PublicGroup = ctx.action_group(action)
             group_sections[group.name].append(line)
@@ -144,6 +147,7 @@ def _create_changelog_content(
         changelog_md.append(f"{header_prefix} {header}")
         lines = lines or [""]  # Include at least one new line after a header
         changelog_md.extend(lines)
+        lines.append("\n")  # Include two newlines after a group
 
     pr_part = _pr_url(ctx.git_changes, remote_url, unreleased.last_release)
     if pr_part:
@@ -155,6 +159,7 @@ def _create_changelog_content(
         add_section(group.title(), [f"- {line}" for line in lines])
     if other_sections:
         add_section("Other Changes", [f"- {line}" for line in other_sections])
+    changelog_md.append("\n")  # Include two newlines at the bottom of the changelog
     return changelog_md
 
 

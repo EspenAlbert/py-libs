@@ -242,4 +242,5 @@ def test_04_git_fix(e2e_dirs, file_regression_e2e, monkeypatch):
             groups,
             git_since=GitSince.LAST_GIT_TAG,
             is_follow_up_step=True,
+            force_regen=False,
         )

@@ -78,6 +78,22 @@ def file_regression_testdata(file_regression, request) -> LocalRegressionCheck:
     return local_regression_check
 
 
+# 2025-08-30T15-07Z
+_ts_regex = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}-\d{2}Z")
+
+
+def _replace_timestamps(text: str) -> str:
+    return _ts_regex.sub("NOW_TS", text)
+
+
+# 469fb8
+_sha_regex = re.compile(r"[0-9a-f]{6}")
+
+
+def _replace_shas(text: str) -> str:
+    return _sha_regex.sub("GIT_SHA", text)
+
+
 @dataclass
 class E2eRegressionCheck:
     e2e_dirs: E2eDirs
@@ -86,7 +102,8 @@ class E2eRegressionCheck:
     def _actual_text_modifier(self, text: str, path: Path) -> str:
         if path.name == CHANGELOG_YAML_FILENAME:
             text = re.sub(r"(short_sha: )('?[0-9a-f]+'?)", "short_sha: GIT_SHA", text)
-        return text
+        text = _replace_timestamps(text)
+        return _replace_shas(text)
 
     def modify_files(self, dir_path: Path):
         for file in file_utils.iter_paths(

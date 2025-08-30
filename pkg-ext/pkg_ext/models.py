@@ -748,6 +748,7 @@ class pkg_ctx:
     ref_add_callback: list[RefAddCallback] = field(default_factory=list)
 
     _actions: list[ChangelogAction] = field(default_factory=list, init=False)
+    _actions_dumped: bool = False
 
     def add_changelog_action(self, action: ChangelogAction) -> list[ChangelogAction]:
         actions = [action]
@@ -771,6 +772,8 @@ class pkg_ctx:
         return self.add_changelog_action(action)
 
     def all_changelog_actions(self) -> list[ChangelogAction]:
+        if self._actions_dumped:
+            return parse_changelog_actions(self.settings.changelog_path)
         return parse_changelog_actions(self.settings.changelog_path) + self._actions
 
     def action_group(self, action: ChangelogAction) -> PublicGroup:
@@ -786,5 +789,6 @@ class pkg_ctx:
         return self
 
     def __exit__(self, *_):
+        self._actions_dumped = True
         if actions := self._actions:
             dump_changelog_actions(self.tool_state.changelog_dir, actions)

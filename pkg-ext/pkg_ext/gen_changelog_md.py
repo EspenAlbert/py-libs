@@ -17,7 +17,7 @@ from pkg_ext.gen_changelog import (
 )
 from pkg_ext.git_state import GitChanges, last_merge_pr
 from pkg_ext.git_url import read_remote_url
-from pkg_ext.models import pkg_ctx
+from pkg_ext.models import PublicGroup, pkg_ctx
 from pkg_ext.version_bump import bump_or_get_version
 
 logger = logging.getLogger(__name__)
@@ -117,7 +117,7 @@ def _group_changelog_entries(
     for action in BumpType.sort_by_bump(actions):
         line = as_changelog_line(action, remote_url)
         try:
-            group = ctx.action_group(action)
+            group: PublicGroup = ctx.action_group(action)
             group_sections[group.name].append(line)
         except NoPublicGroupMatch:
             other_sections.append(line)

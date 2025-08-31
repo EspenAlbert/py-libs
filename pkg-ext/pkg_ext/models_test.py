@@ -4,13 +4,18 @@ from typing import Callable
 import pytest
 from model_lib.serialize.parse import parse_model
 
+from pkg_ext.changelog_parser import parse_changelog
 from pkg_ext.gen_changelog import (
     ChangelogAction,
     ChangelogActionType,
     GroupModulePathChangelog,
     dump_changelog_actions,
 )
-from pkg_ext.models import PkgExtState, PublicGroups, RefSymbol, SymbolType
+from pkg_ext.models import (
+    PublicGroups,
+    RefSymbol,
+    SymbolType,
+)
 from pkg_ext.settings import PkgSettings
 
 
@@ -73,5 +78,5 @@ def test_tool_state_update_state(settings):
         ),
     ]
     dump_changelog_actions(settings.changelog_path, actions)
-    state = PkgExtState.parse(settings)
+    state, _ = parse_changelog(settings)
     assert [group.name for group in state.groups.groups_no_root] == ["git_inferred"]

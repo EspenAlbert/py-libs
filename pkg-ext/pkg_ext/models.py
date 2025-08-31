@@ -11,7 +11,6 @@ from typing import (
     Callable,
     ClassVar,
     Iterable,
-    Self,
     TypeAlias,
     TypeVar,
 )
@@ -612,29 +611,6 @@ class PkgExtState(Entity):
         description="Fix commits included in the changelog",
     )
 
-    @classmethod
-    def parse(
-        cls, settings: PkgSettings, code_state: PkgCodeState | None = None
-    ) -> Self:
-        changelog_path = settings.changelog_path
-        changelog_path.mkdir(parents=True, exist_ok=True)
-        actions = parse_changelog_actions(changelog_path)
-        groups = PublicGroups(storage_path=settings.public_groups_path)
-        tool_state = cls(
-            repo_root=settings.repo_root,
-            changelog_dir=changelog_path,
-            pkg_path=settings.pkg_directory,
-            groups=groups,
-        )
-        for action in actions:
-            tool_state.update_state(action)
-        if code_state:
-            for name in tool_state.refs:
-                if ref_symbol := tool_state.code_ref(code_state, name):
-                    group = groups.matching_group(ref_symbol)
-                    groups.add_ref(ref_symbol, group.name)
-        return tool_state
-
     def code_ref(self, code_state: PkgCodeState, name: str) -> RefSymbol | None:
         if state := self.refs.get(name):
             if state.exist_in_code:
@@ -757,7 +733,7 @@ class pkg_ctx:
     ref_add_callback: list[RefAddCallback] = field(default_factory=list)
     run_state: RunState = field(default_factory=RunState)
 
-    _actions: list[ChangelogAction] = field(default_factory=list, init=False)
+    _actions: list[ChangelogAction] = field(default_factory=list)
     _actions_dumped: bool = False
 
     def add_versions(self, old_version: str, new_version: str):

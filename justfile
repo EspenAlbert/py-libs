@@ -5,6 +5,7 @@ zversion := "1.0.0b6"
 quick: ssort fmt fix lint test-fast
   @echo "Quick checks passed"
 pre-push: lint fmt-check test
+  just changes-ask-shell-no-human
   @echo "All checks passed"
 build-only pkg_name:
   uv build --package {{pkg_name}}
@@ -51,12 +52,17 @@ pkg-version pkg_name command='read': # use m for model-lib and z for zero-3rdpar
   @uv run scripts/pkg_version.py {{pkg_name}} {{command}}
 pkg-find tag_name:
   @uv run scripts/pkg_version.py {{tag_name}} decode-tag
-changes-ask-shell:
-  just pkg-ext ./ask-shell/ask_shell
 ssort:
   @uv run ssort ask-shell/ask_shell pkg-ext/pkg_ext
 ssort-check:
   @uv run ssort --diff --check ask-shell/ask_shell pkg-ext/pkg_ext
+changes-ask-shell-no-human:
+  just changes-ask-shell --no-human --dev
+
+[positional-arguments]
+changes-ask-shell *args:
+  just pkg-ext ./ask-shell/ask_shell {{args}}
+  just fix
 
 [positional-arguments]
 gh-ext *args:

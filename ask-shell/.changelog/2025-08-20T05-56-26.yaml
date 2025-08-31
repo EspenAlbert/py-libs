@@ -1,35 +1,35 @@
 name: SecretsHider
-action: hide
+type: hide
 details: created in _internal/typer_command.py
 ---
 name: run_pool
-action: expose
+type: expose
 details: created in _internal/run_pool.py
 ---
 name: SubmitFunc
-action: hide
+type: hide
 details: created in _internal/run_pool.py
 ---
 name: AskShellSettings
-action: expose
+type: expose
 details: created in settings.py
 ---
 name: new_task
-action: expose
+type: expose
 details: created in _internal/rich_progress.py
 ---
 name: ProgressManager
-action: hide
+type: hide
 details: created in _internal/rich_progress.py
 ---
 name: RunConsoleLogger
-action: hide
+type: hide
 details: created in _internal/rich_live_callback.py
 ---
 name: LivePart
-action: hide
+type: hide
 details: created in _internal/rich_live.py
 ---
 name: live_frozen
-action: hide
+type: hide
 details: created in _internal/rich_live.py

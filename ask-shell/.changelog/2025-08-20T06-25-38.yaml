@@ -1,87 +1,87 @@
 name: ShellConfig
-action: expose
+type: expose
 details: created in _internal/models.py
 ---
 name: ShellInput
-action: hide
+type: hide
 details: created in _internal/models.py
 ---
 name: NewHandlerChoice
-action: expose
+type: expose
 details: created in _internal/interactive.py
 ---
 name: ChoiceTyped
-action: expose
+type: expose
 details: created in _internal/interactive.py
 ---
 name: SelectOptions
-action: expose
+type: expose
 details: created in _internal/interactive.py
 ---
 name: KeyInput
-action: expose
+type: expose
 details: created in _internal/interactive.py
 ---
 name: PromptMatch
-action: expose
+type: expose
 details: created in _internal/interactive.py
 ---
 name: question_patcher
-action: expose
+type: expose
 details: created in _internal/interactive.py
 ---
 name: SelectChosenOptions
-action: hide
+type: hide
 details: created in _internal/interactive.py
 ---
 name: ShellRunStdStarted
-action: expose
+type: expose
 details: created in _internal/events.py
 ---
 name: ShellRunStdOutput
-action: expose
+type: expose
 details: created in _internal/events.py
 ---
 name: ShellRunPOpenStarted
-action: expose
+type: expose
 details: created in _internal/events.py
 ---
 name: ShellRunStdReadError
-action: expose
+type: expose
 details: created in _internal/events.py
 ---
 name: ShellRunRetryAttempt
-action: expose
+type: expose
 details: created in _internal/events.py
 ---
 name: ShellRunBefore
-action: expose
+type: expose
 details: created in _internal/events.py
 ---
 name: ShellRunAfter
-action: expose
+type: expose
 details: created in _internal/events.py
 ---
 name: OutputCallbackT
-action: expose
+type: expose
 details: created in _internal/events.py
 ---
 name: ShellRunCallbackT
-action: expose
+type: expose
 details: created in _internal/events.py
 ---
 name: handle_interrupt_wait
-action: expose
+type: expose
 details: created in _internal/_run.py
 ---
 name: ShellError
-action: expose
+type: expose
 details: created in _internal/models.py
 ---
 name: RunIncompleteError
-action: hide
+type: hide
 details: created in _internal/models.py
 ---
 name: EmptyOutputError
-action: hide
+type: hide
 details: created in _internal/models.py

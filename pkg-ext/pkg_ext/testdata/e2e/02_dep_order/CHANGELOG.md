@@ -6,4 +6,3 @@
 - New function c
 - New function b
 - New function a
-

@@ -74,7 +74,7 @@ def prompt_for_fix(
 
 def fix_changelog_action(
     commit: GitCommit, ctx: pkg_ctx
-) -> ChangelogAction[CommitFixChangelog]:
+) -> ChangelogAction[CommitFixChangelog] | None:
     tool_state = ctx.tool_state
     git_changes = ctx.git_changes
     assert git_changes
@@ -83,6 +83,8 @@ def fix_changelog_action(
         for changed_path in commit.file_changes
         if tool_state.is_pkg_relative(changed_path)
     )
+    if not pkg_changes:
+        return None
     prompt_context = []
     diff_suffixes = ctx.settings.commit_fix_diff_suffixes
     diffs: dict[str, str] = {}
@@ -133,8 +135,8 @@ def add_git_changes(ctx: pkg_ctx) -> None:
         message = commit.message
         if not message.startswith(commit_fix_prefixes):
             continue
-        commit_fix = fix_changelog_action(commit, ctx)
-        ctx.add_changelog_action(commit_fix)
+        if commit_fix := fix_changelog_action(commit, ctx):
+            ctx.add_changelog_action(commit_fix)
 
 
 if __name__ == "__main__":

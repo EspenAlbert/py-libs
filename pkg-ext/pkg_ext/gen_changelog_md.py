@@ -144,9 +144,8 @@ def _create_changelog_content(
     def add_section(header: str, lines: list[str], *, header_level=1) -> None:
         header_prefix = root_prefix + header_level * "#"
         changelog_md.append(f"{header_prefix} {header}")
-        lines = lines or [""]  # Include at least one new line after a header
+        lines.append("")  # Include an extra line after a group
         changelog_md.extend(lines)
-        lines.append("\n")  # Include two newlines after a group
 
     pr_part = _pr_url(ctx.git_changes, remote_url, unreleased.last_release)
     if pr_part:
@@ -154,11 +153,10 @@ def _create_changelog_content(
     add_section(
         header=f"{new_version} {date_filename()}{pr_part}", lines=[], header_level=0
     )
-    for group, lines in group_sections.items():
+    for group, lines in sorted(group_sections.items()):
         add_section(group.title(), [f"- {line}" for line in lines])
     if other_sections:
         add_section("Other Changes", [f"- {line}" for line in other_sections])
-    changelog_md.append("\n")  # Include two newlines at the bottom of the changelog
     return changelog_md
 
 

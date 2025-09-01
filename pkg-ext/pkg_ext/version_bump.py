@@ -10,6 +10,8 @@ from model_lib.serialize.parse import parse_dict
 
 from pkg_ext.gen_changelog import (
     BumpType,
+    ChangelogAction,
+    ChangelogActionType,
     unreleased_actions,
 )
 from pkg_ext.models import pkg_ctx
@@ -99,7 +101,9 @@ def _extract_version(text: str) -> str:
     return ""
 
 
-def bump_or_get_version(ctx: pkg_ctx, *, skip_bump: bool = False) -> PkgVersion:
+def bump_or_get_version(
+    ctx: pkg_ctx, *, skip_bump: bool = False, add_release_action: bool = False
+) -> PkgVersion:
     """Use the .changelog dir to find the bump type
     To find the version:
     1. Look in changelog for release entry
@@ -126,7 +130,12 @@ def bump_or_get_version(ctx: pkg_ctx, *, skip_bump: bool = False) -> PkgVersion:
         if raw_init_version := _extract_version(init_path.read_text()):
             with suppress(Exception):
                 version = PkgVersion.parse(raw_init_version)
-    ctx.add_versions(str(version), str(version.bump(bump)))
+    new_version = str(version.bump(bump))
+    ctx.add_versions(str(version), new_version)
     if skip_bump:
         return version
+    if add_release_action:
+        ctx.add_changelog_action(
+            ChangelogAction(name=new_version, type=ChangelogActionType.RELEASE)
+        )
     return version.bump(bump)

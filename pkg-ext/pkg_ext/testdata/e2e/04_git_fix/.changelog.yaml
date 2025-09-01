@@ -7,6 +7,9 @@ name: inferred
 type: expose
 details: created in inferred.py
 ---
+name: 0.2.0
+type: release
+---
 name: __ROOT__
 type: fix
 author: github-actions[bot]

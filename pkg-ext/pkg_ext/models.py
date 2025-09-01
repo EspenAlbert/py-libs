@@ -720,7 +720,7 @@ class RunState:
     old_version: str = ""
     new_version: str = ""
 
-    def init_version(self, is_bump: bool) -> str:
+    def current_or_next_version(self, is_bump: bool) -> str:
         return self.new_version if is_bump else self.old_version
 
 

@@ -18,6 +18,7 @@ from pkg_ext.gen_changelog_md import write_changelog_md
 from pkg_ext.gen_group import write_groups
 from pkg_ext.gen_init import write_init
 from pkg_ext.gen_pyproject_toml import update_pyproject_toml
+from pkg_ext.git_actions import git_commit
 from pkg_ext.git_state import GitChangesInput, GitSince, find_git_changes
 from pkg_ext.interactive_choices import on_new_ref
 from pkg_ext.models import (
@@ -132,7 +133,23 @@ def generate_api(
         "--no-human",
         help="For CI to avoid any prompt hanging or accidental defaults made",
     ),
+    create_tag: bool = typer.Option(
+        False,
+        "--tag",
+        "--commit",
+        help="Add a git commit and tag for the bumped version",
+    ),
+    tag_prefix: str = typer.Option(
+        "",
+        "--tag-prefix",
+        help="{tag_prefix}{version} used in the git tag not in the version",
+    ),
+    push: bool = typer.Option(False, "--push", help="Push commit and tag"),
 ):
+    if create_tag:
+        assert bump_version, "cannot tag without bumping version"
+    if push:
+        assert create_tag, "cannot push without tagging/committing"
     exit_stack = ExitStack()
     if no_human:
         exit_stack.enter_context(raise_on_question(raise_error=NoHumanRequiredError))
@@ -145,17 +162,31 @@ def generate_api(
                 handle_removed_refs(ctx)
                 handle_added_refs(ctx)
                 add_git_changes(ctx)
-                bump_or_get_version(ctx, skip_bump=not bump_version)
+                bump_or_get_version(
+                    ctx,
+                    skip_bump=not bump_version,
+                    add_release_action=create_tag,
+                )
         except KeyboardInterrupt:
             logger.warning(
                 f"Interrupted while handling added references, only {ctx.settings.changelog_path} updated"
             )
-        else:
-            write_groups(ctx)
-            init_version = ctx.run_state.init_version(bump_version)
-            write_init(ctx, init_version)
-            update_pyproject_toml(ctx, init_version)
-            write_changelog_md(ctx)
+            return
+        write_groups(ctx)
+        version = ctx.run_state.current_or_next_version(bump_version)
+        write_init(ctx, version)
+        update_pyproject_toml(ctx, version)
+        write_changelog_md(ctx)
+        if not create_tag:
+            return
+        repo_path = ctx.settings.repo_root
+        git_tag = f"{tag_prefix}{version}"
+        git_commit(
+            repo_path,
+            f"chore: pre-release commit for {git_tag}",
+            tag=git_tag,
+            push=push,
+        )
 
 
 def main():

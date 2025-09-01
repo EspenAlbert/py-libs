@@ -59,7 +59,7 @@ ssort-check:
 changes-ask-shell-no-human:
   just changes-ask-shell --no-human --dev
 pre-release-ask-shell:
-  just changes-ask-shell --no-human --bump --tag --push
+  just changes-ask-shell --no-human --bump --tag --tag-prefix a --push
 
 [positional-arguments]
 changes-ask-shell *args:

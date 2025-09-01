@@ -18,6 +18,7 @@ from pkg_ext.gen_changelog import (
     dump_changelog_actions,
     parse_changelog_actions,
 )
+from pkg_ext.git_actions import git_commit
 from pkg_ext.git_state import GitSince
 from pkg_ext.settings import PkgSettings
 
@@ -112,11 +113,12 @@ def run_e2e(
     is_follow_up_step: bool = False,
     skip_regressions: bool = False,
     copy_ignore_globs: list[str] | None = None,
+    extra_cli_args: str = "",
 ) -> PkgSettings:
     settings = prepare_test(
         paths, monkeypatch, groups, is_follow_up_step, copy_ignore_globs
     )
-    _run_command(settings, git_since=git_since)
+    _run_command(settings, git_since=git_since, extra_cli_args=extra_cli_args)
     actual_changelog_path = read_and_rename_generated_changelog(settings.changelog_path)
     changelog_md = settings.changelog_md
     if force_regen:
@@ -208,18 +210,6 @@ def git_init(repo_dir: Path):
     run_and_wait("git init", cwd=repo_dir)
 
 
-_GIT_AUTHOR = (
-    '--author="github-actions[bot] <github-actions[bot]@users.noreply.github.com>"'
-)
-
-
-def git_commit(repo_dir: Path, message: str, tag: str = ""):
-    run_and_wait("git add .", cwd=repo_dir)
-    run_and_wait(f'git commit {_GIT_AUTHOR} -m "{message}"', cwd=repo_dir)
-    if tag:
-        run_and_wait(f'git tag -a "{tag}" -m "{tag}"', cwd=repo_dir)
-
-
 _chosen_content = """\
 def chosen():
     return "chosen"
@@ -261,4 +251,5 @@ def test_04_git_fix(e2e_dirs, file_regression_e2e, monkeypatch):
             groups,
             git_since=GitSince.LAST_GIT_TAG,
             is_follow_up_step=True,
+            extra_cli_args="--tag --tag-prefix v",
         )

@@ -71,6 +71,9 @@ def make_expose_decisions(
             for func_ref, arg_refs in args_exposed.items():
                 decided_refs.extend(arg_refs)  # avoid asking again
                 for ref in arg_refs:
+                    if tool_state.current_state(ref.name).exist_in_code:
+                        # already exposed
+                        continue
                     ctx.add_action(
                         ref.name,
                         ChangelogActionType.EXPOSE,

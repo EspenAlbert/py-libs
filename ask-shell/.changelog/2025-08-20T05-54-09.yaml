@@ -44,20 +44,4 @@ details: created in _internal/_run.py
 ---
 name: ShellRun
 type: expose
-details: exposed in the function _internal._run.kill
----
-name: ShellRun
-type: expose
 details: exposed in the function _internal._run.run
----
-name: ShellRun
-type: expose
-details: exposed in the function _internal._run.run_and_wait
----
-name: ShellRun
-type: expose
-details: exposed in the function _internal._run.run_error
----
-name: ShellRun
-type: expose
-details: exposed in the function _internal._run.wait_on_ok_errors

@@ -17,6 +17,7 @@ from pkg_ext.file_parser import parse_code_symbols, parse_symbols
 from pkg_ext.gen_changelog_md import write_changelog_md
 from pkg_ext.gen_group import write_groups
 from pkg_ext.gen_init import write_init
+from pkg_ext.gen_pyproject_toml import update_pyproject_toml
 from pkg_ext.git_state import GitChangesInput, GitSince, find_git_changes
 from pkg_ext.interactive_choices import on_new_ref
 from pkg_ext.models import (
@@ -153,6 +154,7 @@ def generate_api(
             write_groups(ctx)
             init_version = ctx.run_state.init_version(bump_version)
             write_init(ctx, init_version)
+            update_pyproject_toml(ctx, init_version)
             write_changelog_md(ctx)
 
 

@@ -58,6 +58,8 @@ ssort-check:
   @uv run ssort --diff --check ask-shell/ask_shell pkg-ext/pkg_ext
 changes-ask-shell-no-human:
   just changes-ask-shell --no-human --dev
+pre-release-ask-shell:
+  just changes-ask-shell --no-human --bump --tag --push
 
 [positional-arguments]
 changes-ask-shell *args:

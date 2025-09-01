@@ -49,7 +49,12 @@ def _add_changelog_section(old_content: str, new_section: str, version: str) -> 
         (header_match.start() for header_match in _header_regex.finditer(old_content)),
         None,
     ):
-        return old_content[:insert_point] + new_section + old_content[insert_point:]
+        return (
+            old_content[:insert_point]
+            + new_section
+            + "\n\n"
+            + old_content[insert_point:]
+        )
     else:
         return old_content + new_section  # no existing headers, appending to the end
 

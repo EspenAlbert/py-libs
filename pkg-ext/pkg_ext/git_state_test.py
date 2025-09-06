@@ -11,6 +11,7 @@ from pkg_ext.git_state import (
     GitSince,
     find_git_changes,
     last_merge_pr,
+    pr_number_from_url,
     solve_since_sha,
 )
 from pkg_ext.git_url import read_remote_url
@@ -22,6 +23,10 @@ from pkg_ext.git_url import read_remote_url
 def test_solve_since_sha(repo_path):
     tag_commit = solve_since_sha(Repo(repo_path), repo_path, GitSince.LAST_GIT_TAG)
     assert tag_commit.hexsha[:6] == "25e96d"
+
+
+def test_pr_number_from_url():
+    assert pr_number_from_url("https://github.com/EspenAlbert/py-libs/pull/28") == 28
 
 
 @pytest.mark.skipif(

@@ -125,8 +125,6 @@ def fix_changelog_action(
 
 def add_git_changes(ctx: pkg_ctx) -> None:
     git_changes = ctx.git_changes
-    if git_changes is None:
-        return
     commit_fix_prefixes = ctx.settings.commit_fix_prefixes
     tool_state = ctx.tool_state
     for commit in git_changes.commits:

@@ -729,7 +729,7 @@ class pkg_ctx:
     settings: PkgSettings
     tool_state: PkgExtState
     code_state: PkgCodeState
-    git_changes: GitChanges | None = None
+    git_changes: GitChanges
     ref_add_callback: list[RefAddCallback] = field(default_factory=list)
     run_state: RunState = field(default_factory=RunState)
 

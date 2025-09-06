@@ -79,12 +79,8 @@ def create_ctx(
     )
     code_state = parse_pkg_code_state(settings)
     tool_state, extra_actions = parse_changelog(settings, code_state)
-    git_changes = (
-        None
-        if git_changes_since == GitSince.NO_GIT_CHANGES
-        else find_git_changes(
-            GitChangesInput(repo_path=settings.repo_root, since=git_changes_since)
-        )
+    git_changes = find_git_changes(
+        GitChangesInput(repo_path=settings.repo_root, since=git_changes_since)
     )
     return pkg_ctx(
         settings=settings,

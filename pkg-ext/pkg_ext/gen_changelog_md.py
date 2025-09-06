@@ -6,7 +6,7 @@ from pathlib import Path
 from zero_3rdparty.datetime_utils import date_filename
 from zero_3rdparty.file_utils import ensure_parents_write_text
 
-from pkg_ext.errors import NoPublicGroupMatch, RemoteURLNotFound
+from pkg_ext.errors import NoPublicGroupMatch
 from pkg_ext.gen_changelog import (
     BumpType,
     ChangelogAction,
@@ -15,8 +15,6 @@ from pkg_ext.gen_changelog import (
     UnreleasedActions,
     unreleased_actions,
 )
-from pkg_ext.git_state import GitChanges, last_merge_pr
-from pkg_ext.git_url import read_remote_url
 from pkg_ext.models import PublicGroup, pkg_ctx
 
 logger = logging.getLogger(__name__)
@@ -101,21 +99,6 @@ def _get_section_header_level(path: Path, version: str):
     return section_header_level
 
 
-def _pr_url(
-    git_changes: GitChanges | None,
-    remote_url: str,
-    last_release: ChangelogAction | None,
-) -> str:
-    if not git_changes:
-        return ""
-    after_ts = last_release.ts if last_release else None
-    if last_pr := last_merge_pr(git_changes.commits, after_ts):
-        if remote_url:
-            return f" [#{last_pr}]({remote_url}/pull/{last_pr})"
-        return f"#{last_pr}"
-    return ""
-
-
 def _group_changelog_entries(
     ctx: pkg_ctx, actions: list[ChangelogAction], remote_url: str
 ) -> tuple[dict[str, list[str]], list[str]]:
@@ -135,11 +118,8 @@ def _create_changelog_content(
     ctx: pkg_ctx, unreleased: UnreleasedActions, old_version: str, new_version: str
 ) -> list[str]:
     actions = unreleased.actions
-    try:
-        remote_url = read_remote_url(ctx.settings.repo_root)
-    except RemoteURLNotFound as e:
-        logger.warning(repr(e))
-        remote_url = ""
+    git_changes = ctx.git_changes
+    remote_url = git_changes.remote_url
     group_sections, other_sections = _group_changelog_entries(ctx, actions, remote_url)
     changelog_md: list[str] = []
     root_prefix = "#" * _get_section_header_level(
@@ -152,9 +132,10 @@ def _create_changelog_content(
         lines.append("")  # Include an extra line after a group
         changelog_md.extend(lines)
 
-    pr_part = _pr_url(ctx.git_changes, remote_url, unreleased.last_release)
-    if pr_part:
-        pr_part = f" {pr_part}"
+    if pr_url := git_changes.pr_url:
+        pr_part = f" [#{git_changes.current_pr}]({pr_url})"
+    else:
+        pr_part = ""
     add_section(
         header=f"{new_version} {date_filename()}{pr_part}", lines=[], header_level=0
     )

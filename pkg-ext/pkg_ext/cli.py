@@ -19,7 +19,7 @@ from pkg_ext.gen_group import write_groups
 from pkg_ext.gen_init import write_init
 from pkg_ext.gen_pyproject_toml import update_pyproject_toml
 from pkg_ext.git_actions import git_commit
-from pkg_ext.git_state import GitChangesInput, GitSince, find_git_changes
+from pkg_ext.git_state import GitChangesInput, GitSince, find_git_changes, find_pr_url
 from pkg_ext.interactive_choices import on_new_ref
 from pkg_ext.models import (
     PkgCodeState,
@@ -69,7 +69,7 @@ def create_ctx(
     repo_root: Path,
     skip_open_in_editor: bool,
     dev_mode: bool,
-    git_changes_since: GitSince,
+    git_changes_input: GitChangesInput,
 ) -> pkg_ctx:
     settings = pkg_settings(
         repo_root,
@@ -79,9 +79,7 @@ def create_ctx(
     )
     code_state = parse_pkg_code_state(settings)
     tool_state, extra_actions = parse_changelog(settings, code_state)
-    git_changes = find_git_changes(
-        GitChangesInput(repo_path=settings.repo_root, since=git_changes_since)
-    )
+    git_changes = find_git_changes(git_changes_input)
     return pkg_ctx(
         settings=settings,
         tool_state=tool_state,
@@ -146,12 +144,18 @@ def generate_api(
         assert bump_version, "cannot tag without bumping version"
     if push:
         assert create_tag, "cannot push without tagging/committing"
+        assert not find_pr_url(repo_root), (
+            "Never push changes from a branch with an active PR, release jobs only runs from the default branch and wouldn't be triggered leading to tags without releases"
+        )
     exit_stack = ExitStack()
     if no_human:
         exit_stack.enter_context(raise_on_question(raise_error=NoHumanRequiredError))
+    git_changes_input = GitChangesInput(
+        repo_path=repo_root, since=git_changes_since, use_pr_from_last_merge=push
+    )
     with exit_stack:
         ctx = create_ctx(
-            pkg_path_str, repo_root, skip_open_in_editor, dev_mode, git_changes_since
+            pkg_path_str, repo_root, skip_open_in_editor, dev_mode, git_changes_input
         )
         try:
             with ctx:

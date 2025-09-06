@@ -10,7 +10,7 @@ from typing import ClassVar, Iterable, Self
 from ask_shell._internal._run import run_and_wait
 from git import Commit, Git, GitCommandError, InvalidGitRepositoryError, Repo
 from model_lib import utc_datetime
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from pkg_ext.errors import RemoteURLNotFound
 from pkg_ext.git_url import read_remote_url
@@ -47,6 +47,10 @@ class GitState:
 class GitChangesInput(BaseModel):
     repo_path: Path
     since: GitSince
+    use_pr_from_last_merge: bool = Field(
+        default=False,
+        description="The pre-release job is running on main which doesn't have an active PR. So instead of guessing next PR, use the last merge commit.",
+    )
 
 
 @total_ordering
@@ -214,7 +218,10 @@ def find_git_changes(event: GitChangesInput) -> GitChanges:
         pr_number = pr_number_from_url(pr_url)
     else:
         prev_pr_number = _last_merge_pr_repo(repo, head_sha) or 0
-        pr_number = prev_pr_number + 1
+        if event.use_pr_from_last_merge:
+            pr_number = prev_pr_number
+        else:
+            pr_number = prev_pr_number + 1
     return GitChanges(
         commits=sorted(commits),
         files_changed=files_changed,

@@ -200,9 +200,6 @@ def default_changelog_path(changelog_dir: Path) -> Path:
 
 def dump_changelog_actions(path: Path, actions: list[ChangelogAction]) -> Path:
     assert actions, "no actions to dump"
-    if path.exists():
-        existing_actions = parse_changelog_file_path(path)
-        actions.extend(existing_actions)
     yaml_content = ACTION_FILE_SPLIT.join(
         action.file_content for action in sorted(actions)
     )

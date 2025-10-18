@@ -1,0 +1,484 @@
+name: configure_logging
+type: expose
+details: created in _internal/typer_command.py
+ts: 2025-10-18 21:33:26.175167+00:00
+---
+name: log_exit_summary
+type: hide
+details: created in _internal/typer_command.py
+ts: 2025-10-18 21:33:26.175322+00:00
+---
+name: except_hook
+type: hide
+details: created in _internal/typer_command.py
+ts: 2025-10-18 21:33:26.175445+00:00
+---
+name: track_progress_decorator
+type: hide
+details: created in _internal/typer_command.py
+ts: 2025-10-18 21:33:26.175564+00:00
+---
+name: remove_secrets
+type: hide
+details: created in _internal/typer_command.py
+ts: 2025-10-18 21:33:26.175679+00:00
+---
+name: hide_secrets
+type: hide
+details: created in _internal/typer_command.py
+ts: 2025-10-18 21:33:26.175792+00:00
+---
+name: default_callbacks_funcs
+type: hide
+details: created in settings.py
+ts: 2025-10-18 21:33:26.175906+00:00
+---
+name: default_remove_os_secrets
+type: hide
+details: created in settings.py
+ts: 2025-10-18 21:33:26.176017+00:00
+---
+name: default_rich_info_style
+type: hide
+details: created in settings.py
+ts: 2025-10-18 21:33:26.176128+00:00
+---
+name: progress_for_runs
+type: hide
+details: created in _internal/rich_run_state.py
+ts: 2025-10-18 21:33:26.176240+00:00
+---
+name: manager_for_runs
+type: hide
+details: created in _internal/rich_run_state.py
+ts: 2025-10-18 21:33:26.176352+00:00
+---
+name: transient_progress
+type: hide
+details: created in _internal/rich_progress.py
+ts: 2025-10-18 21:33:26.176464+00:00
+---
+name: log_task_done
+type: hide
+details: created in _internal/rich_progress.py
+ts: 2025-10-18 21:33:26.176574+00:00
+---
+name: log_task_progress
+type: hide
+details: created in _internal/rich_progress.py
+ts: 2025-10-18 21:33:26.176688+00:00
+---
+name: get_default_progress_manager
+type: hide
+details: created in _internal/rich_progress.py
+ts: 2025-10-18 21:33:26.176803+00:00
+---
+name: rich_live_callback
+type: hide
+details: created in _internal/rich_live_callback.py
+ts: 2025-10-18 21:33:26.176916+00:00
+---
+name: add_renderable
+type: expose
+details: created in _internal/rich_live.py
+ts: 2025-10-18 21:33:26.177029+00:00
+---
+name: get_live_console
+type: expose
+details: created in _internal/rich_live.py
+ts: 2025-10-18 21:33:26.177141+00:00
+---
+name: print_to_live
+type: expose
+details: created in _internal/rich_live.py
+ts: 2025-10-18 21:33:26.177250+00:00
+---
+name: log_to_live
+type: expose
+details: created in _internal/rich_live.py
+ts: 2025-10-18 21:33:26.177359+00:00
+---
+name: reset_live
+type: hide
+details: created in _internal/rich_live.py
+ts: 2025-10-18 21:33:26.177470+00:00
+---
+name: get_live
+type: hide
+details: created in _internal/rich_live.py
+ts: 2025-10-18 21:33:26.177578+00:00
+---
+name: render_live
+type: hide
+details: created in _internal/rich_live.py
+ts: 2025-10-18 21:33:26.177691+00:00
+---
+name: stop_live
+type: hide
+details: created in _internal/rich_live.py
+ts: 2025-10-18 21:33:26.177802+00:00
+---
+name: pause_live
+type: hide
+details: created in _internal/rich_live.py
+ts: 2025-10-18 21:33:26.177912+00:00
+---
+name: RemoveLivePart
+type: expose
+details: exposed in the function _internal.rich_live.add_renderable
+ts: 2025-10-18 21:33:26.178032+00:00
+---
+name: always_retry
+type: hide
+details: created in _internal/models.py
+ts: 2025-10-18 21:33:26.178140+00:00
+---
+name: install_instructions
+type: hide
+details: created in _internal/models.py
+ts: 2025-10-18 21:33:26.178251+00:00
+---
+name: is_executable
+type: hide
+details: created in _internal/models.py
+ts: 2025-10-18 21:33:26.178359+00:00
+---
+name: confirm
+type: expose
+details: created in _internal/interactive.py
+ts: 2025-10-18 21:33:26.178469+00:00
+---
+name: text
+type: expose
+details: created in _internal/interactive.py
+ts: 2025-10-18 21:33:26.178580+00:00
+---
+name: select_list_multiple
+type: expose
+details: created in _internal/interactive.py
+ts: 2025-10-18 21:33:26.178692+00:00
+---
+name: select_list_multiple_choices
+type: expose
+details: created in _internal/interactive.py
+ts: 2025-10-18 21:33:26.178807+00:00
+---
+name: select_dict
+type: expose
+details: created in _internal/interactive.py
+ts: 2025-10-18 21:33:26.178920+00:00
+---
+name: select_list
+type: expose
+details: created in _internal/interactive.py
+ts: 2025-10-18 21:33:26.179028+00:00
+---
+name: select_list_choice
+type: expose
+details: created in _internal/interactive.py
+ts: 2025-10-18 21:33:26.179143+00:00
+---
+name: return_default_if_not_interactive
+type: hide
+details: created in _internal/interactive.py
+ts: 2025-10-18 21:33:26.179264+00:00
+---
+name: wait_on_available_threads
+type: hide
+details: created in _internal/global_callbacks.py
+ts: 2025-10-18 21:33:26.179380+00:00
+---
+name: interactive_shell
+type: expose
+details: created in _internal/_run_env.py
+ts: 2025-10-18 21:33:26.179492+00:00
+---
+name: kill
+type: expose
+details: created in _internal/_run.py
+ts: 2025-10-18 21:33:26.179600+00:00
+---
+name: kill_all_runs
+type: expose
+details: created in _internal/_run.py
+ts: 2025-10-18 21:33:26.179710+00:00
+---
+name: stop_runs_and_pool
+type: expose
+details: created in _internal/_run.py
+ts: 2025-10-18 21:33:26.179821+00:00
+---
+name: run
+type: expose
+details: created in _internal/_run.py
+ts: 2025-10-18 21:33:26.179929+00:00
+---
+name: run_and_wait
+type: expose
+details: created in _internal/_run.py
+ts: 2025-10-18 21:33:26.180039+00:00
+---
+name: run_error
+type: expose
+details: created in _internal/_run.py
+ts: 2025-10-18 21:33:26.180146+00:00
+---
+name: wait_on_ok_errors
+type: expose
+details: created in _internal/_run.py
+ts: 2025-10-18 21:33:26.180257+00:00
+---
+name: get_pool
+type: hide
+details: created in _internal/_run.py
+ts: 2025-10-18 21:33:26.180365+00:00
+---
+name: current_run_count
+type: hide
+details: created in _internal/_run.py
+ts: 2025-10-18 21:33:26.180475+00:00
+---
+name: wait_if_many_runs
+type: hide
+details: created in _internal/_run.py
+ts: 2025-10-18 21:33:26.180596+00:00
+---
+name: max_run_count_for_workers
+type: hide
+details: created in _internal/_run.py
+ts: 2025-10-18 21:33:26.180707+00:00
+---
+name: ShellRun
+type: expose
+details: exposed in the function _internal._run.run
+ts: 2025-10-18 21:33:26.180822+00:00
+---
+name: SecretsHider
+type: hide
+details: created in _internal/typer_command.py
+ts: 2025-10-18 21:33:26.180932+00:00
+---
+name: run_pool
+type: expose
+details: created in _internal/run_pool.py
+ts: 2025-10-18 21:33:26.181041+00:00
+---
+name: SubmitFunc
+type: hide
+details: created in _internal/run_pool.py
+ts: 2025-10-18 21:33:26.181150+00:00
+---
+name: AskShellSettings
+type: expose
+details: created in settings.py
+ts: 2025-10-18 21:33:26.181261+00:00
+---
+name: new_task
+type: expose
+details: created in _internal/rich_progress.py
+ts: 2025-10-18 21:33:26.181381+00:00
+---
+name: ProgressManager
+type: hide
+details: created in _internal/rich_progress.py
+ts: 2025-10-18 21:33:26.181491+00:00
+---
+name: RunConsoleLogger
+type: hide
+details: created in _internal/rich_live_callback.py
+ts: 2025-10-18 21:33:26.181604+00:00
+---
+name: LivePart
+type: hide
+details: created in _internal/rich_live.py
+ts: 2025-10-18 21:33:26.181714+00:00
+---
+name: live_frozen
+type: hide
+details: created in _internal/rich_live.py
+ts: 2025-10-18 21:33:26.181821+00:00
+---
+name: ShellConfig
+type: expose
+details: created in _internal/models.py
+ts: 2025-10-18 21:33:26.181926+00:00
+---
+name: ShellInput
+type: hide
+details: created in _internal/models.py
+ts: 2025-10-18 21:33:26.182032+00:00
+---
+name: NewHandlerChoice
+type: expose
+details: created in _internal/interactive.py
+ts: 2025-10-18 21:33:26.182142+00:00
+---
+name: ChoiceTyped
+type: expose
+details: created in _internal/interactive.py
+ts: 2025-10-18 21:33:26.182249+00:00
+---
+name: SelectOptions
+type: expose
+details: created in _internal/interactive.py
+ts: 2025-10-18 21:33:26.182355+00:00
+---
+name: KeyInput
+type: expose
+details: created in _internal/interactive.py
+ts: 2025-10-18 21:33:26.182461+00:00
+---
+name: PromptMatch
+type: expose
+details: created in _internal/interactive.py
+ts: 2025-10-18 21:33:26.182568+00:00
+---
+name: question_patcher
+type: expose
+details: created in _internal/interactive.py
+ts: 2025-10-18 21:33:26.182675+00:00
+---
+name: SelectChosenOptions
+type: hide
+details: created in _internal/interactive.py
+ts: 2025-10-18 21:33:26.182785+00:00
+---
+name: ShellRunStdStarted
+type: expose
+details: created in _internal/events.py
+ts: 2025-10-18 21:33:26.182895+00:00
+---
+name: ShellRunStdOutput
+type: expose
+details: created in _internal/events.py
+ts: 2025-10-18 21:33:26.183003+00:00
+---
+name: ShellRunPOpenStarted
+type: expose
+details: created in _internal/events.py
+ts: 2025-10-18 21:33:26.183111+00:00
+---
+name: ShellRunStdReadError
+type: expose
+details: created in _internal/events.py
+ts: 2025-10-18 21:33:26.183225+00:00
+---
+name: ShellRunRetryAttempt
+type: expose
+details: created in _internal/events.py
+ts: 2025-10-18 21:33:26.183333+00:00
+---
+name: ShellRunBefore
+type: expose
+details: created in _internal/events.py
+ts: 2025-10-18 21:33:26.183440+00:00
+---
+name: ShellRunAfter
+type: expose
+details: created in _internal/events.py
+ts: 2025-10-18 21:33:26.183547+00:00
+---
+name: OutputCallbackT
+type: expose
+details: created in _internal/events.py
+ts: 2025-10-18 21:33:26.183655+00:00
+---
+name: ShellRunCallbackT
+type: expose
+details: created in _internal/events.py
+ts: 2025-10-18 21:33:26.183762+00:00
+---
+name: handle_interrupt_wait
+type: expose
+details: created in _internal/_run.py
+ts: 2025-10-18 21:33:26.183875+00:00
+---
+name: ShellError
+type: expose
+details: created in _internal/models.py
+ts: 2025-10-18 21:33:26.183982+00:00
+---
+name: RunIncompleteError
+type: hide
+details: created in _internal/models.py
+ts: 2025-10-18 21:33:26.184093+00:00
+---
+name: EmptyOutputError
+type: hide
+details: created in _internal/models.py
+ts: 2025-10-18 21:33:26.184208+00:00
+---
+name: shell
+type: group_module
+details:
+  module_path: _internal.models
+ts: 2025-10-18 21:33:26.184348+00:00
+---
+name: shell
+type: group_module
+details:
+  module_path: _internal._run
+ts: 2025-10-18 21:33:26.184494+00:00
+---
+name: __ROOT__
+type: group_module
+details:
+  module_path: settings
+ts: 2025-10-18 21:33:26.184629+00:00
+---
+name: shell
+type: group_module
+details:
+  module_path: _internal.run_pool
+ts: 2025-10-18 21:33:26.184763+00:00
+---
+name: force_interactive
+type: expose
+details: created in _internal/interactive.py
+ts: 2025-10-18 21:33:26.184881+00:00
+---
+name: raise_on_question
+type: expose
+details: created in _internal/interactive.py
+ts: 2025-10-18 21:33:26.184997+00:00
+---
+name: RaiseOnQuestionError
+type: expose
+details: created in _internal/interactive.py
+ts: 2025-10-18 21:33:26.185113+00:00
+---
+name: ask
+type: group_module
+details:
+  module_path: _internal.interactive
+ts: 2025-10-18 21:33:26.185251+00:00
+---
+name: console
+type: group_module
+details:
+  module_path: _internal._run_env
+ts: 2025-10-18 21:33:26.185384+00:00
+---
+name: console
+type: group_module
+details:
+  module_path: _internal.rich_live
+ts: 2025-10-18 21:33:26.185515+00:00
+---
+name: console
+type: group_module
+details:
+  module_path: _internal.rich_progress
+ts: 2025-10-18 21:33:26.185647+00:00
+---
+name: console
+type: group_module
+details:
+  module_path: _internal.typer_command
+ts: 2025-10-18 21:33:26.185780+00:00
+---
+name: shell_events
+type: group_module
+details:
+  module_path: _internal.events
+ts: 2025-10-18 21:33:26.185914+00:00

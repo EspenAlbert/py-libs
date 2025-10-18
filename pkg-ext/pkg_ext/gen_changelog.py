@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from functools import total_ordering
 from pathlib import Path
 from typing import ClassVar, Generic, Iterable, Literal, TypeVar, Union
@@ -17,6 +18,7 @@ from zero_3rdparty.file_utils import ensure_parents_write_text
 
 from pkg_ext.git_state import GitChanges
 
+logger = logging.getLogger(__name__)
 ACTION_FILE_SPLIT = "---\n"
 
 
@@ -159,6 +161,9 @@ def as_bump_type(action: ChangelogAction) -> BumpType:
 
 
 def parse_changelog_file_path(path: Path) -> list[ChangelogAction]:
+    if not path.exists():
+        logger.warning(f"no changelog file @ {path}")
+        return []
     return [
         parse_model(
             action_raw,

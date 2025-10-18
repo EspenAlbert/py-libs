@@ -56,8 +56,8 @@ ssort:
   @uv run ssort ask-shell/ask_shell pkg-ext/pkg_ext
 ssort-check:
   @uv run ssort --diff --check ask-shell/ask_shell pkg-ext/pkg_ext
-changes-ask-shell-is-bot:
-  just changes-ask-shell --is-bot --dev
+pkg-ext-pre-merge-ask-shell:
+  just pkg-ext pre-merge ./ask-shell/ask_shell
 pre-release-ask-shell:
   just changes-ask-shell --is-bot --bump --tag --tag-prefix a --push
 

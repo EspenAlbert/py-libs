@@ -184,12 +184,12 @@ def _merge_base(repo: Repo, base_branch: str):
 
 
 def solve_since_sha(repo: Repo, repo_path: Path, since: GitSince, ref: str) -> Commit:
-    if since == GitSince.LAST_GIT_TAG:
+    if since == GitSince.LAST_GIT_TAG or since == GitSince.DEFAULT and not ref:
         output = run_and_wait(
             "git describe --tags --abbrev=0", cwd=repo_path
         ).stdout_one_line
         return repo.commit(output)
-    elif since == GitSince.PR_BASE_BRANCH:
+    elif since in {GitSince.PR_BASE_BRANCH, GitSince.DEFAULT}:
         return _merge_base(repo, ref)
     elif since == GitSince.NO_GIT_CHANGES:
         raise _NoGitChangesError

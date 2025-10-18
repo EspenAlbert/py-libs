@@ -42,3 +42,8 @@ class NoHumanRequiredError(Exception):
     def __init__(self, question_text: str):
         self.question_text = question_text
         super().__init__(f"Question asked but no human available: {question_text}")
+
+
+class PRFromCommitsNotFoundError(Exception):
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)

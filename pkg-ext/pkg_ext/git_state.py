@@ -90,12 +90,14 @@ def pr_number_from_url(url: str) -> int:
 
 @dataclass
 class GitChanges:
+    DEFAULT_PR_NUMBER: ClassVar[int] = -1
     commits: list[GitCommit]
     files_changed: set[str]
     git: Git | None
     start_sha: str
     end_sha: str
     current_pr: int
+    last_merge_pr: int
     remote_url: str
 
     @classmethod
@@ -106,13 +108,14 @@ class GitChanges:
             git=None,
             start_sha="",
             end_sha="",
-            current_pr=1,
+            current_pr=cls.DEFAULT_PR_NUMBER,
+            last_merge_pr=cls.DEFAULT_PR_NUMBER,
             remote_url="",
         )
 
     @property
     def pr_url(self) -> str:
-        if not self.remote_url:
+        if not self.remote_url or self.DEFAULT_PR_NUMBER == self.current_pr:
             return ""
         return f"{self.remote_url}/pull{self.current_pr}"
 
@@ -217,11 +220,7 @@ def find_git_changes(event: GitChangesInput) -> GitChanges:
     if pr_url := find_pr_url(event.repo_path):
         pr_number = pr_number_from_url(pr_url)
     else:
-        prev_pr_number = _last_merge_pr_repo(repo, head_sha) or 0
-        if event.use_pr_from_last_merge:
-            pr_number = prev_pr_number
-        else:
-            pr_number = prev_pr_number + 1
+        pr_number = GitChanges.DEFAULT_PR_NUMBER
     return GitChanges(
         commits=sorted(commits),
         files_changed=files_changed,
@@ -230,4 +229,6 @@ def find_git_changes(event: GitChangesInput) -> GitChanges:
         end_sha=head_sha,
         remote_url=remote_url,
         current_pr=pr_number,
+        last_merge_pr=_last_merge_pr_repo(repo, head_sha)
+        or GitChanges.DEFAULT_PR_NUMBER,
     )

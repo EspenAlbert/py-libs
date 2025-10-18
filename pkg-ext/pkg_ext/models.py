@@ -781,4 +781,6 @@ class pkg_ctx:
     def __exit__(self, *_):
         self._actions_dumped = True
         if actions := self._actions:
-            dump_changelog_actions(self.tool_state.changelog_dir, actions)
+            dump_changelog_actions(
+                self.tool_state.changelog_dir, actions, self.git_changes.current_pr
+            )

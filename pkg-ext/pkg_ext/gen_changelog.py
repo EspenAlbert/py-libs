@@ -10,12 +10,12 @@ from model_lib.serialize import dump
 from model_lib.serialize.parse import parse_model
 from pydantic import Field
 from zero_3rdparty.datetime_utils import (
-    date_filename_with_seconds,
-    parse_date_filename_with_seconds,
     utc_now,
 )
 from zero_3rdparty.enum_utils import StrEnum
 from zero_3rdparty.file_utils import ensure_parents_write_text
+
+from pkg_ext.git_state import GitChanges
 
 ACTION_FILE_SPLIT = "---\n"
 
@@ -127,14 +127,11 @@ class ChangelogAction(Entity, Generic[T]):
     )
 
     @property
-    def filename(self) -> str:
-        """Generate a filename for the changelog action based on its timestamp."""
-        return f"{date_filename_with_seconds(self.ts, force_utc=True)}.yaml"
-
-    @property
     def file_content(self) -> str:
         ignored_falsy = self.model_dump(
-            exclude_unset=True, exclude_none=True, exclude_defaults=True, exclude={"ts"}
+            exclude_unset=True,
+            exclude_none=True,
+            exclude_defaults=True,
         )
         return dump(ignored_falsy, format="yaml")
 
@@ -163,12 +160,10 @@ def as_bump_type(action: ChangelogAction) -> BumpType:
 
 
 def parse_changelog_file_path(path: Path) -> list[ChangelogAction]:
-    ts = parse_date_filename_with_seconds(path.stem)
     return [
         parse_model(
             action_raw,
             t=ChangelogAction,
-            extra_kwargs={"ts": ts},
             format="yaml",
         )
         for action_raw in path.read_text().split(ACTION_FILE_SPLIT)
@@ -183,10 +178,19 @@ def parse_changelog_actions(changelog_dir_path: Path) -> list[ChangelogAction]:
     return sorted(actions)
 
 
-def dump_changelog_actions(changelog_dir: Path, actions: list[ChangelogAction]) -> Path:
+def changelog_filename(pr_number: int) -> str:
+    return f"{pr_number:03d}.yaml"
+
+
+def default_changelog_path(changelog_dir: Path) -> Path:
+    return changelog_dir / changelog_filename(GitChanges.DEFAULT_PR_NUMBER)
+
+
+def dump_changelog_actions(
+    changelog_dir: Path, actions: list[ChangelogAction], pr_number: int
+) -> Path:
     assert actions, "no actions to dump"
-    action = min(actions)
-    path = changelog_dir / action.filename
+    path = changelog_dir / changelog_filename(pr_number)
     if path.exists():
         existing_actions = parse_changelog_file_path(path)
         actions.extend(existing_actions)

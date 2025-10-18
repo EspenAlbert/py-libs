@@ -5,7 +5,7 @@ zversion := "1.0.0b6"
 quick: ssort fmt fix lint test-fast
   @echo "Quick checks passed"
 pre-push: lint fmt-check test
-  just changes-ask-shell-is-bot
+  just ask-shell-pre-merge
   @echo "All checks passed"
 build-only pkg_name:
   uv build --package {{pkg_name}}
@@ -60,6 +60,7 @@ ask-shell-changes:
   just pkg-ext pre-push ./ask-shell/ask_shell
 ask-shell-pre-merge:
   just pkg-ext pre-merge ./ask-shell/ask_shell
+  just fmt
 pre-release-ask-shell:
   just changes-ask-shell --is-bot --bump --tag --tag-prefix a --push
 

@@ -134,6 +134,7 @@ class ChangelogAction(Entity, Generic[T]):
             exclude_unset=True,
             exclude_none=True,
         )
+        ignored_falsy.setdefault("ts", self.ts)
         return dump(ignored_falsy, format="yaml")
 
     @property

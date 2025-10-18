@@ -3,7 +3,7 @@ import sys
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import Callable, Protocol
 
 import pytest
 from model_lib.static_settings import StaticSettings
@@ -79,11 +79,15 @@ def file_regression_testdata(file_regression, request) -> LocalRegressionCheck:
 
 
 # 2025-08-30T15-07Z
-_ts_regex = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}-\d{2}Z")
+_ts_regex = re.compile(
+    r"(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\.\d+\S+)"
+    + "|"
+    + r"(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}Z)"
+)
 
 
 def _replace_timestamps(text: str) -> str:
-    return _ts_regex.sub("NOW_TS", text)
+    return _ts_regex.sub("2025-10-18 21:13:06.12345+00:00", text)
 
 
 # 469fb8
@@ -92,6 +96,20 @@ _sha_regex = re.compile(r"[0-9a-f]{6}")
 
 def _replace_shas(text: str) -> str:
     return _sha_regex.sub("GIT_SHA", text)
+
+
+@pytest.fixture()
+def text_normalizer_regression(file_regression) -> Callable[[Path], None]:
+    def replace(text: str) -> str:
+        text = _replace_timestamps(text)
+        return _replace_shas(text)
+
+    def check(path: Path):
+        text = path.read_text()
+        text = replace(text)
+        file_regression.check(text, extension=path.suffix)
+
+    return check
 
 
 @dataclass

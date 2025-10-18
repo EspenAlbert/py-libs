@@ -67,7 +67,6 @@ def test_tool_state_update_state(settings):
             details=GroupModulePathChangelog(
                 module_path="inferred", type="group_module_path"
             ),
-            pr="",
         ),
         ChangelogAction(
             name="inferred",
@@ -75,7 +74,6 @@ def test_tool_state_update_state(settings):
             ts=datetime(2025, 8, 25, 17, 37, 2, tzinfo=timezone.utc),
             author="UNSET",
             details="created in inferred.py",
-            pr="",
         ),
     ]
     dump_changelog_actions(changelog_filepath(settings.changelog_path, 1), actions)

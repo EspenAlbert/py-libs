@@ -1,6 +1,7 @@
 name: chosen
 type: hide
 details: created in chosen.py
+ts: 2025-10-18 21:13:06.12345+00:00
 ---
 name: __ROOT__
 type: fix
@@ -9,3 +10,4 @@ details:
   short_sha: GIT_SHA
   message: 'fix: adds chosen file'
   changelog_message: 'fix: adds chosen file'
+ts: 2025-10-18 21:13:06.12345+00:00

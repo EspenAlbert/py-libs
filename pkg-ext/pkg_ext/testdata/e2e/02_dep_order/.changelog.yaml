@@ -1,26 +1,32 @@
 name: a
 type: expose
 details: created in a.py
+ts: 2025-10-18 21:13:06.12345+00:00
 ---
 name: g1
 type: group_module
 details:
   module_path: a
+ts: 2025-10-18 21:13:06.12345+00:00
 ---
 name: b
 type: expose
 details: created in b.py
+ts: 2025-10-18 21:13:06.12345+00:00
 ---
 name: g1
 type: group_module
 details:
   module_path: b
+ts: 2025-10-18 21:13:06.12345+00:00
 ---
 name: c
 type: expose
 details: created in c.py
+ts: 2025-10-18 21:13:06.12345+00:00
 ---
 name: g1
 type: group_module
 details:
   module_path: c
+ts: 2025-10-18 21:13:06.12345+00:00

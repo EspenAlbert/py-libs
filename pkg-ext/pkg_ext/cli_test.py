@@ -168,8 +168,8 @@ def test_01_initial(e2e_dirs, file_regression_e2e, monkeypatch):
     groups = ["my_group", "my_dep"]
     with _question_patcher({"_internal.py": f" {KeyInput.DOWN} "}, groups):
         settings = run_e2e(e2e_dirs, file_regression_e2e, monkeypatch, groups)
-        # No human after a run should have no effect
-        _run_command(settings, extra_cli_args="--no-human")
+        # is bot after a run should have no effect
+        _run_command(settings, extra_cli_args="--is-bot")
 
 
 def test_02_dep_order(e2e_dirs, file_regression_e2e, monkeypatch):
@@ -232,7 +232,7 @@ def test_04_git_fix(e2e_dirs, file_regression_e2e, monkeypatch):
     chosen_file_commit_message = "fix: adds chosen file"
     git_commit(repo_path, chosen_file_commit_message)
     with pytest.raises(NoHumanRequiredError):
-        _run_command(settings, extra_cli_args="--no-human")
+        _run_command(settings, extra_cli_args="--is-bot")
     with _question_patcher({chosen_filepath.name: ""}, groups=groups) as patcher:
         patcher.dynamic_responses.extend(
             [

@@ -5,7 +5,7 @@ zversion := "1.0.0b6"
 quick: ssort fmt fix lint test-fast
   @echo "Quick checks passed"
 pre-push: lint fmt-check test
-  just changes-ask-shell-no-human
+  just changes-ask-shell-is-bot
   @echo "All checks passed"
 build-only pkg_name:
   uv build --package {{pkg_name}}
@@ -56,10 +56,10 @@ ssort:
   @uv run ssort ask-shell/ask_shell pkg-ext/pkg_ext
 ssort-check:
   @uv run ssort --diff --check ask-shell/ask_shell pkg-ext/pkg_ext
-changes-ask-shell-no-human:
-  just changes-ask-shell --no-human --dev
+changes-ask-shell-is-bot:
+  just changes-ask-shell --is-bot --dev
 pre-release-ask-shell:
-  just changes-ask-shell --no-human --bump --tag --tag-prefix a --push
+  just changes-ask-shell --is-bot --bump --tag --tag-prefix a --push
 
 [positional-arguments]
 changes-ask-shell *args:

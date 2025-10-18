@@ -124,9 +124,9 @@ option_bump_version = typer.Option(
     "--bump",
     help="Use the changelog actions to bump the version",
 )
-option_no_human = typer.Option(
+option_is_bot = typer.Option(
     False,
-    "--no-human",
+    "--is-bot",
     help="For CI to avoid any prompt hanging or accidental defaults made",
 )
 option_create_tag = typer.Option(
@@ -151,7 +151,7 @@ class GenerateApiInput(Entity):
     dev_mode: bool
     git_changes_since: GitSince
     bump_version: bool
-    no_human: bool
+    is_bot: bool
     create_tag: bool
     tag_prefix: str
     push: bool
@@ -168,19 +168,18 @@ class GenerateApiInput(Entity):
         return self
 
 
-def _generate_api(api_input: GenerateApiInput) -> None:
+def _update_changelog_entries(api_input: GenerateApiInput) -> pkg_ctx | None:
     exit_stack = ExitStack()
-    if api_input.no_human:
+    if api_input.is_bot:
         exit_stack.enter_context(raise_on_question(raise_error=NoHumanRequiredError))
-    repo_root = api_input.repo_root
     git_changes_input = GitChangesInput(
-        repo_path=repo_root,
+        repo_path=api_input.repo_root,
         since=api_input.git_changes_since,
     )
     with exit_stack:
         ctx = create_ctx(
             api_input.pkg_path_str,
-            repo_root,
+            api_input.repo_root,
             api_input.skip_open_in_editor,
             api_input.dev_mode,
             git_changes_input,
@@ -200,24 +199,31 @@ def _generate_api(api_input: GenerateApiInput) -> None:
                 f"Interrupted while handling added references, only {ctx.settings.changelog_path} updated"
             )
             return
-        write_groups(ctx)
-        version = ctx.run_state.current_or_next_version(api_input.bump_version)
-        write_init(ctx, version)
-        update_pyproject_toml(ctx, version)
-        if api_input.create_tag:
-            write_changelog_md(ctx, unreleased_version=version)
-        else:
-            write_changelog_md(ctx)
-        if not api_input.create_tag:
-            return
-        repo_path = ctx.settings.repo_root
-        git_tag = f"{api_input.tag_prefix}{version}"
-        git_commit(
-            repo_path,
-            f"chore: pre-release commit for {git_tag}",
-            tag=git_tag,
-            push=api_input.push,
-        )
+    return ctx
+
+
+def _generate_api(api_input: GenerateApiInput) -> None:
+    ctx = _update_changelog_entries(api_input)
+    if not ctx:
+        return
+    write_groups(ctx)
+    version = ctx.run_state.current_or_next_version(api_input.bump_version)
+    write_init(ctx, version)
+    update_pyproject_toml(ctx, version)
+    if api_input.create_tag:
+        write_changelog_md(ctx, unreleased_version=version)
+    else:
+        write_changelog_md(ctx)
+    if not api_input.create_tag:
+        return
+    repo_path = ctx.settings.repo_root
+    git_tag = f"{api_input.tag_prefix}{version}"
+    git_commit(
+        repo_path,
+        f"chore: pre-release commit for {git_tag}",
+        tag=git_tag,
+        push=api_input.push,
+    )
 
 
 @app.command()
@@ -226,6 +232,7 @@ def pre_push(
     repo_root=option_repo_root,
     git_changes_since: GitSince = option_git_changes_since,
 ):
+    """Use this to run before a push. Will ask questions about your changes to ensure the changelog and release can be updated later"""
     api_input = GenerateApiInput(
         pkg_path_str=pkg_path_str,
         repo_root=repo_root,
@@ -233,12 +240,43 @@ def pre_push(
         dev_mode=True,
         git_changes_since=git_changes_since,
         bump_version=False,
-        no_human=False,
+        is_bot=False,
         create_tag=False,
         tag_prefix="",
         push=False,
     )
     _generate_api(api_input)
+
+
+@app.command()
+def pre_merge(
+    pkg_path_str: str = argument_pkg_path,
+    repo_root=option_repo_root,
+    git_changes_since: GitSince = option_git_changes_since,
+):
+    """Use this as a CI check. No merge until this passes. Ensures no manual changes are missing."""
+    api_input = GenerateApiInput(
+        pkg_path_str=pkg_path_str,
+        repo_root=repo_root,
+        skip_open_in_editor=True,
+        dev_mode=False,
+        git_changes_since=git_changes_since,
+        bump_version=True,
+        is_bot=True,
+        create_tag=False,
+        tag_prefix="",
+        push=False,
+    )
+    _generate_api(api_input)
+
+
+@app.command()
+def post_merge(
+    pkg_path_str: str = argument_pkg_path,
+    repo_root=option_repo_root,
+    git_changes_since: GitSince = option_git_changes_since,
+):
+    """Use this after a merge to bump version, create the automated release files"""
 
 
 @app.command()
@@ -249,7 +287,7 @@ def generate_api(
     dev_mode: bool = option_dev_mode,
     git_changes_since: GitSince = option_git_changes_since,
     bump_version: bool = option_bump_version,
-    no_human: bool = option_no_human,
+    is_bot: bool = option_is_bot,
     create_tag: bool = option_create_tag,
     tag_prefix: str = option_tag_prefix,
     push: bool = option_push,
@@ -261,7 +299,7 @@ def generate_api(
         dev_mode=dev_mode,
         git_changes_since=git_changes_since,
         bump_version=bump_version,
-        no_human=no_human,
+        is_bot=is_bot,
         create_tag=create_tag,
         tag_prefix=tag_prefix,
         push=push,

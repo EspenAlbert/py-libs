@@ -84,7 +84,7 @@ def _run_command(
 ):
     execution_e2e_dir = settings.repo_root
     pkg_path_relative = str(settings.pkg_directory.relative_to(execution_e2e_dir))
-    command = f"--repo-root {execution_e2e_dir} {pkg_path_relative} --skip-open --git-since {git_since} --bump"
+    command = f"generate-api --repo-root {execution_e2e_dir} {pkg_path_relative} --skip-open --git-since {git_since} --bump"
     if extra_cli_args:
         command = f"{command} {extra_cli_args}"
     logger.info(f"running command: {command}")

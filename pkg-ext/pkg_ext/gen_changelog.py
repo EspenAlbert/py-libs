@@ -206,12 +206,17 @@ class UnreleasedActions(NamedTuple):
     last_release: ChangelogAction[ReleaseChangelog] | None
 
 
-def unreleased_actions(all_actions: list[ChangelogAction]) -> UnreleasedActions:
-    """Ensure you use pkg_ctx.all_changelog_actions if you have made any actions"""
+def unreleased_actions(
+    all_actions: list[ChangelogAction], *, unreleased_version: str = ""
+) -> UnreleasedActions:
+    """Ensure you use pkg_ctx.all_changelog_actions if you have made any actions. last_released_version ensure we only stopped on a released action"""
     unreleased_actions = []
     last_release = None
     for action in reversed(all_actions):
-        if action.type == ChangelogActionType.RELEASE:
+        if (
+            action.type == ChangelogActionType.RELEASE
+            and action.name != unreleased_version
+        ):
             last_release = action
             break
         unreleased_actions.append(action)

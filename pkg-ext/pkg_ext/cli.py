@@ -151,7 +151,8 @@ def generate_api(
     if no_human:
         exit_stack.enter_context(raise_on_question(raise_error=NoHumanRequiredError))
     git_changes_input = GitChangesInput(
-        repo_path=repo_root, since=git_changes_since, use_pr_from_last_merge=push
+        repo_path=repo_root,
+        since=git_changes_since,
     )
     with exit_stack:
         ctx = create_ctx(
@@ -176,7 +177,10 @@ def generate_api(
         version = ctx.run_state.current_or_next_version(bump_version)
         write_init(ctx, version)
         update_pyproject_toml(ctx, version)
-        write_changelog_md(ctx)
+        if create_tag:
+            write_changelog_md(ctx, unreleased_version=version)
+        else:
+            write_changelog_md(ctx)
         if not create_tag:
             return
         repo_path = ctx.settings.repo_root

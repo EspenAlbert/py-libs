@@ -82,9 +82,13 @@ def as_changelog_line(action: ChangelogAction, remote_url: str, ctx: pkg_ctx) ->
     return ""
 
 
-def _get_changelog_actions(ctx: pkg_ctx) -> UnreleasedActions:
+def _get_changelog_actions(
+    ctx: pkg_ctx, *, unreleased_version: str = ""
+) -> UnreleasedActions:
     all_actions = ctx.all_changelog_actions()
-    actions, last_release = unreleased_actions(all_actions)
+    actions, last_release = unreleased_actions(
+        all_actions, unreleased_version=unreleased_version
+    )
     actions_with_changelog = [
         action for action in actions if as_changelog_line(action, "", ctx)
     ]
@@ -146,10 +150,10 @@ def _create_changelog_content(
     return changelog_md
 
 
-def write_changelog_md(ctx: pkg_ctx) -> Path:
+def write_changelog_md(ctx: pkg_ctx, unreleased_version: str = "") -> Path:
     settings = ctx.settings
     path = settings.changelog_md
-    unreleased = _get_changelog_actions(ctx)
+    unreleased = _get_changelog_actions(ctx, unreleased_version=unreleased_version)
     if not unreleased.actions:
         return path
     old_version = ctx.run_state.old_version

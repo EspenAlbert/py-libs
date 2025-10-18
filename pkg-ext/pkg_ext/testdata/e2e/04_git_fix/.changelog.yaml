@@ -1,14 +1,6 @@
-name: git_inferred
-type: group_module
-details:
-  module_path: inferred
----
-name: inferred
-type: expose
-details: created in inferred.py
----
-name: 0.2.0
-type: release
+name: chosen
+type: hide
+details: created in chosen.py
 ---
 name: __ROOT__
 type: fix
@@ -18,6 +10,5 @@ details:
   message: 'fix: adds chosen file'
   changelog_message: 'fix: adds chosen file'
 ---
-name: chosen
-type: hide
-details: created in chosen.py
+name: 0.2.0
+type: release

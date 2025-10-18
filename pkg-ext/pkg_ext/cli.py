@@ -20,6 +20,7 @@ from pkg_ext.file_parser import parse_code_symbols, parse_symbols
 from pkg_ext.gen_changelog import (
     ChangelogAction,
     ChangelogActionType,
+    changelog_filepath,
     dump_changelog_actions,
     parse_changelog_file_path,
 )
@@ -222,10 +223,8 @@ def _sync_files(api_input: GenerateApiInput, ctx: pkg_ctx):
 
 
 def _generate_api(api_input: GenerateApiInput) -> pkg_ctx | None:
-    ctx = _update_changelog_entries(api_input)
-    if not ctx:  # can be interrupted
-        return
-    _sync_files(api_input, ctx)
+    if ctx := _update_changelog_entries(api_input):
+        _sync_files(api_input, ctx)
 
 
 @app.command()
@@ -281,10 +280,10 @@ def _post_merge_commit(
     push: bool,
 ):
     assert pr_number > 0, f"invalid PR number: {pr_number} must be > 0"
+    changelog_pr_path = changelog_filepath(changelog_dir_path, pr_number)
     changelog_pr_path = dump_changelog_actions(
-        changelog_dir_path,
+        changelog_pr_path,
         [ChangelogAction(name=new_version, type=ChangelogActionType.RELEASE)],
-        pr_number,
     )
     actions = parse_changelog_file_path(changelog_pr_path)
     assert len(actions), "no changelog entries!"

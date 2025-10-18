@@ -2,7 +2,7 @@
 # flake8: noqa
 from my_pkg import git_inferred
 
-VERSION = "0.2.0"
+VERSION = "0.1.1"
 __all__ = [
     "git_inferred",
 ]

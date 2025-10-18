@@ -6,7 +6,7 @@ from pkg_ext.conftest import TEST_PKG_NAME
 from pkg_ext.gen_changelog import ChangelogAction, ChangelogActionType
 from pkg_ext.git_state import GitChanges
 from pkg_ext.models import PkgCodeState, pkg_ctx
-from pkg_ext.version_bump import PkgVersion, bump_or_get_version
+from pkg_ext.version_bump import PkgVersion, bump_version, read_current_version
 
 
 @pytest.fixture()
@@ -22,14 +22,14 @@ def pkg_ctx_instance(settings) -> pkg_ctx:
     )
 
 
-def test_bump_or_get_version_default(pkg_ctx_instance):
-    assert bump_or_get_version(pkg_ctx_instance) == PkgVersion.default()
+def test_read_version_default(pkg_ctx_instance):
+    assert read_current_version(pkg_ctx_instance) == PkgVersion.default()
 
 
-def test_bump_or_get_version_default_from_toml(settings, pkg_ctx_instance):
+def test_read_version_default_from_toml(settings, pkg_ctx_instance):
     pyproject_toml = settings.pyproject_toml
     ensure_parents_write_text(pyproject_toml, '[project]\nversion = "1.2.3"')
-    assert str(bump_or_get_version(pkg_ctx_instance)) == "1.2.3"
+    assert str(read_current_version(pkg_ctx_instance)) == "1.2.3"
 
 
 _actions = [
@@ -52,4 +52,4 @@ def test_bump_major(pkg_ctx_instance, action, new_version):
         action,
     ]
     pkg_ctx_instance._actions = actions
-    assert str(bump_or_get_version(pkg_ctx_instance)) == new_version
+    assert str(bump_version(pkg_ctx_instance, PkgVersion.parse("0.0.1"))) == new_version

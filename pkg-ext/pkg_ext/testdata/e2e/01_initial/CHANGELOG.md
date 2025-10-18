@@ -6,5 +6,5 @@
 - New class MyCls
 
 ### My_Group
-- New function expose_with_arg
 - New function expose
+- New function expose_with_arg

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import re
 from dataclasses import dataclass
@@ -5,12 +7,13 @@ from datetime import datetime, timezone
 from enum import StrEnum
 from functools import total_ordering
 from pathlib import Path
-from typing import ClassVar, Iterable, Self
+from typing import Any, ClassVar, Iterable, Self
 
 from ask_shell._internal._run import run_and_wait
 from git import Commit, Git, GitCommandError, InvalidGitRepositoryError, Repo
 from model_lib import utc_datetime
-from pydantic import BaseModel, model_validator
+from model_lib.model_base import Entity
+from pydantic import BaseModel, Field, model_validator
 
 from pkg_ext.errors import RemoteURLNotFound
 from pkg_ext.git_url import read_remote_url
@@ -21,8 +24,8 @@ logger = logging.getLogger(__name__)
 class GitSince(StrEnum):
     NO_GIT_CHANGES = "no_git_changes"
     LAST_GIT_TAG = "last_git_tag"
-    LAST_REMOTE_SHA = "last_remote_sha"
-    LAST_REMOTE_BRANCH = "last_remote_branch"
+    PR_BASE_BRANCH = "pr_base_branch"
+    DEFAULT = "default"  # use first pr_base_branch and if not last_git_tag
 
 
 def _file_content(git: Git, commit: str, file: str) -> str:
@@ -84,17 +87,26 @@ def pr_number_from_url(url: str) -> int:
     raise ValueError(f"pr url invalid format, expected ending with number, got {url}")
 
 
+class PRInfo(Entity):
+    base_ref_name: str = Field(alias="baseRefName")
+    url: str
+
+    @property
+    def pr_number(self) -> int:
+        return pr_number_from_url(self.url)
+
+
 @dataclass
 class GitChanges:
-    DEFAULT_PR_NUMBER: ClassVar[int] = -1
+    DEFAULT_PR_NUMBER: ClassVar[int] = 0
     commits: list[GitCommit]
     files_changed: set[str]
     git: Git | None
     start_sha: str
     end_sha: str
-    current_pr: int
-    last_merge_pr: int
-    remote_url: str
+    pr_info: PRInfo | None = None
+    last_merge_pr: int = DEFAULT_PR_NUMBER
+    remote_url: str = ""
 
     @classmethod
     def empty(cls) -> Self:
@@ -104,16 +116,23 @@ class GitChanges:
             git=None,
             start_sha="",
             end_sha="",
-            current_pr=cls.DEFAULT_PR_NUMBER,
             last_merge_pr=cls.DEFAULT_PR_NUMBER,
             remote_url="",
         )
 
     @property
     def pr_url(self) -> str:
-        if not self.remote_url or self.DEFAULT_PR_NUMBER == self.current_pr:
-            return ""
-        return f"{self.remote_url}/pull{self.current_pr}"
+        if info := self.pr_info:
+            return info.url
+        return ""
+
+    @property
+    def current_pr(self) -> int:
+        return self.pr_info.pr_number if self.pr_info else self.DEFAULT_PR_NUMBER
+
+    @property
+    def has_pr(self) -> bool:
+        return self.pr_info is not None
 
     def has_change(self, rel_path_repo: str) -> bool:
         return rel_path_repo in self.files_changed
@@ -122,6 +141,14 @@ class GitChanges:
         assert self.has_change(rel_path_repo), f"file hasn't changed: {rel_path_repo}"
         assert self.git, "git repo must be set for reading the old version"
         return _file_content(self.git, self.start_sha, rel_path_repo)
+
+
+def head_merge_pr(repo_path: Path) -> int:
+    repo = Repo(repo_path)
+    message = str(repo.head.commit.message.strip())
+    if merge_match := _merge_message_regex.match(message):
+        return int(merge_match[1])
+    raise ValueError(f"head is not a merge PR commit: {message}")
 
 
 def last_merge_pr(
@@ -147,26 +174,36 @@ class _NoGitChangesError(Exception):
     pass
 
 
-def solve_since_sha(repo: Repo, repo_path: Path, since: GitSince) -> Commit:
+def _merge_base(repo: Repo, base_branch: str):
+    base_commit = repo.commit(base_branch)
+    head_commit = repo.head.commit
+    stop_commits = repo.merge_base(base_commit, head_commit)
+    assert stop_commits, f"Cannot find merge base for {base_branch} and {head_commit}"
+    assert len(stop_commits) == 1, f"Multiple merge bases found: {stop_commits}"
+    return stop_commits[0]
+
+
+def solve_since_sha(repo: Repo, repo_path: Path, since: GitSince, ref: str) -> Commit:
     if since == GitSince.LAST_GIT_TAG:
         output = run_and_wait(
             "git describe --tags --abbrev=0", cwd=repo_path
         ).stdout_one_line
         return repo.commit(output)
+    elif since == GitSince.PR_BASE_BRANCH:
+        return _merge_base(repo, ref)
     elif since == GitSince.NO_GIT_CHANGES:
         raise _NoGitChangesError
     else:
         raise NotImplementedError
 
 
-def find_pr_url(repo_path: Path) -> str:
+def find_pr_info_raw(repo_path: Path) -> dict[str, Any]:
     result = run_and_wait(
-        "gh pr view --json url", cwd=repo_path, allow_non_zero_exit=True
+        "gh pr view --json baseRefName,url", cwd=repo_path, allow_non_zero_exit=True
     )
     if not result.clean_complete:
-        return ""
-    result_json = result.parse_output(dict)
-    return result_json.get("url", "")
+        return {}
+    return result.parse_output(dict)
 
 
 def _parse_changes(
@@ -192,8 +229,14 @@ def _parse_changes(
     return commits, files_changed
 
 
+def find_pr_info_or_none(repo_path: Path) -> PRInfo | None:
+    if raw := find_pr_info_raw(repo_path):
+        return PRInfo(**raw)
+
+
 def find_git_changes(event: GitChangesInput) -> GitChanges:
     repo_path = event.repo_path
+    pr_info = find_pr_info_or_none(repo_path)
     try:
         repo = Repo(repo_path)
         head_sha = repo.head.commit.hexsha
@@ -201,7 +244,9 @@ def find_git_changes(event: GitChangesInput) -> GitChanges:
         logger.warning(f"not a git repo @ {repo_path}: {e!r}")
         return GitChanges.empty()
     try:
-        start_commit = solve_since_sha(repo, event.repo_path, event.since)
+        start_commit = solve_since_sha(
+            repo, event.repo_path, event.since, pr_info.base_ref_name if pr_info else ""
+        )
         start_sha = start_commit.hexsha
         commits, files_changed = _parse_changes(repo, start_sha, head_sha)
     except _NoGitChangesError:
@@ -213,10 +258,6 @@ def find_git_changes(event: GitChangesInput) -> GitChanges:
     except RemoteURLNotFound as e:
         logger.warning(repr(e))
         remote_url = ""
-    if pr_url := find_pr_url(event.repo_path):
-        pr_number = pr_number_from_url(pr_url)
-    else:
-        pr_number = GitChanges.DEFAULT_PR_NUMBER
     return GitChanges(
         commits=sorted(commits),
         files_changed=files_changed,
@@ -224,7 +265,7 @@ def find_git_changes(event: GitChangesInput) -> GitChanges:
         start_sha=start_sha,
         end_sha=head_sha,
         remote_url=remote_url,
-        current_pr=pr_number,
+        pr_info=pr_info,
         last_merge_pr=_last_merge_pr_repo(repo, head_sha)
         or GitChanges.DEFAULT_PR_NUMBER,
     )

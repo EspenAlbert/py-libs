@@ -9,6 +9,3 @@ details:
   short_sha: GIT_SHA
   message: 'fix: adds chosen file'
   changelog_message: 'fix: adds chosen file'
----
-name: 0.2.0
-type: release

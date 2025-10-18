@@ -12,8 +12,6 @@ from pkg_ext.gen_changelog import (
     ChangelogAction,
     ChangelogActionType,
     CommitFixChangelog,
-    UnreleasedActions,
-    unreleased_actions,
 )
 from pkg_ext.models import PublicGroup, pkg_ctx
 
@@ -82,19 +80,6 @@ def as_changelog_line(action: ChangelogAction, remote_url: str, ctx: pkg_ctx) ->
     return ""
 
 
-def _get_changelog_actions(
-    ctx: pkg_ctx, *, unreleased_version: str = ""
-) -> UnreleasedActions:
-    all_actions = ctx.all_changelog_actions()
-    actions, last_release = unreleased_actions(
-        all_actions, unreleased_version=unreleased_version
-    )
-    actions_with_changelog = [
-        action for action in actions if as_changelog_line(action, "", ctx)
-    ]
-    return UnreleasedActions(actions_with_changelog, last_release)
-
-
 def _get_section_header_level(path: Path, version: str):
     section_header_level = 2
     if path.exists():
@@ -119,9 +104,8 @@ def _group_changelog_entries(
 
 
 def _create_changelog_content(
-    ctx: pkg_ctx, unreleased: UnreleasedActions, old_version: str, new_version: str
+    ctx: pkg_ctx, actions: list[ChangelogAction], old_version: str, new_version: str
 ) -> list[str]:
-    actions = unreleased.actions
     git_changes = ctx.git_changes
     remote_url = git_changes.remote_url
     group_sections, other_sections = _group_changelog_entries(ctx, actions, remote_url)
@@ -150,11 +134,15 @@ def _create_changelog_content(
     return changelog_md
 
 
-def write_changelog_md(ctx: pkg_ctx, unreleased_version: str = "") -> Path:
+def write_changelog_md(ctx: pkg_ctx) -> Path:
     settings = ctx.settings
     path = settings.changelog_md
-    unreleased = _get_changelog_actions(ctx, unreleased_version=unreleased_version)
-    if not unreleased.actions:
+    unreleased = [
+        action
+        for action in ctx.unreleased_actions()
+        if as_changelog_line(action, ctx.git_changes.remote_url, ctx)
+    ]
+    if not unreleased:
         return path
     old_version = ctx.run_state.old_version
     new_version = ctx.run_state.new_version

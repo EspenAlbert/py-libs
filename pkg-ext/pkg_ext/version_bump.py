@@ -10,9 +10,6 @@ from model_lib.serialize.parse import parse_dict
 
 from pkg_ext.gen_changelog import (
     BumpType,
-    ChangelogAction,
-    ChangelogActionType,
-    unreleased_actions,
 )
 from pkg_ext.models import pkg_ctx
 
@@ -101,41 +98,32 @@ def _extract_version(text: str) -> str:
     return ""
 
 
-def bump_or_get_version(
-    ctx: pkg_ctx, *, skip_bump: bool = False, add_release_action: bool = False
+def bump_version(
+    ctx: pkg_ctx,
+    old_version: PkgVersion,
 ) -> PkgVersion:
-    """Use the .changelog dir to find the bump type
-    To find the version:
-    1. Look in changelog for release entry
-    2. Look in pyproject.toml
-    3. Look in __init__.py
-    4. Return default 0.0.0
-    """
-    settings = ctx.settings
-    all_actions = ctx.all_changelog_actions()
-    actions, last_release = unreleased_actions(all_actions)
+    """Use the .changelog dir to find the bump type"""
+    actions = ctx.unreleased_actions()
     bumps = [action.bump_type for action in actions]
     bump = BumpType.max_bump_type(bumps)
-    pyproject_toml = settings.pyproject_toml
-    init_path = settings.init_path
+    return old_version.bump(bump)
+
+
+def read_current_version(ctx: pkg_ctx):
+    """To find the version:
+    1. Look in pyproject.toml
+    2. Look in __init__.py
+    3. Return default 0.0.0"""
     version = PkgVersion.default()  # default if not found
-    if last_release:
-        version = PkgVersion.parse(last_release.name)
-    elif pyproject_toml.exists():
+    pyproject_toml = ctx.settings.pyproject_toml
+    if pyproject_toml.exists():
         with suppress(Exception):
             pyproject = parse_dict(pyproject_toml)
             version_raw = pyproject["project"]["version"]
             version = PkgVersion.parse(version_raw)
+    init_path = ctx.settings.init_path
     if version.is_default and init_path.exists():
         if raw_init_version := _extract_version(init_path.read_text()):
             with suppress(Exception):
                 version = PkgVersion.parse(raw_init_version)
-    new_version = str(version.bump(bump))
-    ctx.add_versions(str(version), new_version)
-    if skip_bump:
-        return version
-    if add_release_action:
-        ctx.add_changelog_action(
-            ChangelogAction(name=new_version, type=ChangelogActionType.RELEASE)
-        )
-    return version.bump(bump)
+    return version

@@ -1,10 +1,11 @@
-name: MyCls
-type: expose
-details: exposed in the function _internal.expose_with_arg
----
 name: expose
 type: expose
 details: created in _internal.py
+---
+name: my_group
+type: group_module
+details:
+  module_path: _internal
 ---
 name: expose_with_arg
 type: expose
@@ -14,12 +15,11 @@ name: hidden
 type: hide
 details: created in _internal.py
 ---
+name: MyCls
+type: expose
+details: exposed in the function _internal.expose_with_arg
+---
 name: my_dep
 type: group_module
 details:
   module_path: _internal2
----
-name: my_group
-type: group_module
-details:
-  module_path: _internal

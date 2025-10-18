@@ -124,6 +124,7 @@ def run_e2e(
     )
     regression_check.check_path(settings.public_groups_path)
     regression_check.check_path(settings.init_path)
+    assert changelog_md.exists(), "no changelog generated!"
     if changelog_md.exists():
         regression_check.check_path(changelog_md)
     for group in groups:

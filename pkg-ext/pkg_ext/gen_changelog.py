@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import total_ordering
 from pathlib import Path
-from typing import ClassVar, Generic, Iterable, Literal, NamedTuple, TypeVar, Union
+from typing import ClassVar, Generic, Iterable, Literal, TypeVar, Union
 
 from model_lib import utc_datetime
 from model_lib.model_base import Entity
@@ -131,7 +131,6 @@ class ChangelogAction(Entity, Generic[T]):
         ignored_falsy = self.model_dump(
             exclude_unset=True,
             exclude_none=True,
-            exclude_defaults=True,
         )
         return dump(ignored_falsy, format="yaml")
 
@@ -172,6 +171,9 @@ def parse_changelog_file_path(path: Path) -> list[ChangelogAction]:
 
 
 def parse_changelog_actions(changelog_dir_path: Path) -> list[ChangelogAction]:
+    assert changelog_dir_path.is_dir(), (
+        f"expected a directory @ {changelog_dir_path} got"
+    )
     actions: list[ChangelogAction] = []
     for path in changelog_dir_path.glob("*.yaml"):
         actions.extend(parse_changelog_file_path(path))
@@ -182,15 +184,16 @@ def changelog_filename(pr_number: int) -> str:
     return f"{pr_number:03d}.yaml"
 
 
+def changelog_filepath(changelog_dir: Path, pr_number: int) -> Path:
+    return changelog_dir / changelog_filename(pr_number)
+
+
 def default_changelog_path(changelog_dir: Path) -> Path:
-    return changelog_dir / changelog_filename(GitChanges.DEFAULT_PR_NUMBER)
+    return changelog_filepath(changelog_dir, GitChanges.DEFAULT_PR_NUMBER)
 
 
-def dump_changelog_actions(
-    changelog_dir: Path, actions: list[ChangelogAction], pr_number: int
-) -> Path:
+def dump_changelog_actions(path: Path, actions: list[ChangelogAction]) -> Path:
     assert actions, "no actions to dump"
-    path = changelog_dir / changelog_filename(pr_number)
     if path.exists():
         existing_actions = parse_changelog_file_path(path)
         actions.extend(existing_actions)
@@ -199,25 +202,3 @@ def dump_changelog_actions(
     )
     ensure_parents_write_text(path, yaml_content)
     return path
-
-
-class UnreleasedActions(NamedTuple):
-    actions: list[ChangelogAction]
-    last_release: ChangelogAction[ReleaseChangelog] | None
-
-
-def unreleased_actions(
-    all_actions: list[ChangelogAction], *, unreleased_version: str = ""
-) -> UnreleasedActions:
-    """Ensure you use pkg_ctx.all_changelog_actions if you have made any actions. last_released_version ensure we only stopped on a released action"""
-    unreleased_actions = []
-    last_release = None
-    for action in reversed(all_actions):
-        if (
-            action.type == ChangelogActionType.RELEASE
-            and action.name != unreleased_version
-        ):
-            last_release = action
-            break
-        unreleased_actions.append(action)
-    return UnreleasedActions(unreleased_actions, last_release)

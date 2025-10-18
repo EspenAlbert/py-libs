@@ -21,7 +21,7 @@ from pkg_ext.git_url import read_remote_url
     os.environ.get("MANUAL", "") == "", reason="needs os.environ[MANUAL]"
 )
 def test_solve_since_sha(repo_path):
-    tag_commit = solve_since_sha(Repo(repo_path), repo_path, GitSince.LAST_GIT_TAG)
+    tag_commit = solve_since_sha(Repo(repo_path), repo_path, GitSince.LAST_GIT_TAG, "")
     assert tag_commit.hexsha[:6] == "25e96d"
 
 

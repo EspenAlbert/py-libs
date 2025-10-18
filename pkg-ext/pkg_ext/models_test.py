@@ -9,6 +9,7 @@ from pkg_ext.gen_changelog import (
     ChangelogAction,
     ChangelogActionType,
     GroupModulePathChangelog,
+    changelog_filepath,
     dump_changelog_actions,
 )
 from pkg_ext.models import (
@@ -77,6 +78,6 @@ def test_tool_state_update_state(settings):
             pr="",
         ),
     ]
-    dump_changelog_actions(settings.changelog_path, actions, 1)
+    dump_changelog_actions(changelog_filepath(settings.changelog_path, 1), actions)
     state, _ = parse_changelog(settings)
     assert [group.name for group in state.groups.groups_no_root] == ["git_inferred"]

@@ -20,4 +20,5 @@ def git_commit(
     if tag:
         run_and_wait(f'git tag -a "{tag}" -m "{tag}"', cwd=repo_dir)
     if push:
-        run_and_wait("git push")
+        follow_tags = " --follow-tags" if tag else ""
+        run_and_wait(f"git push{follow_tags}")

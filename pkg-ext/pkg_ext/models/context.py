@@ -11,7 +11,6 @@ from pkg_ext.changelog import (
     changelog_filepath,
     default_changelog_path,
     dump_changelog_actions,
-    parse_changelog_actions,
     parse_changelog_file_path,
 )
 from pkg_ext.errors import NoPublicGroupMatch
@@ -75,13 +74,14 @@ class pkg_ctx:
         type: ChangelogActionType,
         details: ChangelogDetailsT | None = None,
     ) -> list[ChangelogAction]:
+        assert not self._actions_dumped, "cannot add action if actions are dumped"
         action = ChangelogAction(name=name, type=type, details=details)
         return self.add_changelog_action(action)
 
-    def all_changelog_actions(self) -> list[ChangelogAction]:
+    def pr_changelog_actions(self) -> list[ChangelogAction]:
         if self._actions_dumped:
-            return parse_changelog_actions(self.settings.changelog_path)
-        return parse_changelog_actions(self.settings.changelog_path) + self._actions
+            return parse_changelog_file_path(self.changelog_path)
+        return self._actions
 
     def action_group(self, action: ChangelogAction) -> PublicGroup:
         match action:
@@ -92,29 +92,12 @@ class pkg_ctx:
                 return self.tool_state.groups.get_or_create_group(group_name)
         raise NoPublicGroupMatch()
 
-    def unreleased_actions(self) -> list[ChangelogAction]:
-        if not self._actions_dumped:
-            return self._actions
-        actions = parse_changelog_file_path(self.changelog_path)
-        if release_action := next(
-            (
-                action
-                for action in actions
-                if action.type == ChangelogActionType.RELEASE
-            ),
-            None,
-        ):
-            raise ValueError(
-                f"Changelog file {self.changelog_path} contains a RELEASE action, cannot get unreleased actions. {release_action.name}"
-            )
-        return actions
-
     def __enter__(self) -> pkg_ctx:
         changelog_dir = self.settings.changelog_path
         path = self.changelog_path
         default_path = default_changelog_path(changelog_dir)
         if default_path.exists() and path != default_path:
-            self._actions.extend(parse_changelog_actions(default_path))
+            self._actions.extend(parse_changelog_file_path(default_path))
             default_path.unlink()  # avoid storing actions now that we have a new path
         if path.exists():
             self._actions.extend(parse_changelog_file_path(path))

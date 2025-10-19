@@ -103,7 +103,7 @@ def bump_version(
     old_version: PkgVersion,
 ) -> PkgVersion:
     """Use the .changelog dir to find the bump type"""
-    actions = ctx.unreleased_actions()
+    actions = ctx.pr_changelog_actions()
     bumps = [action.bump_type for action in actions]
     bump = BumpType.max_bump_type(bumps)
     return old_version.bump(bump)

@@ -139,7 +139,7 @@ def write_changelog_md(ctx: pkg_ctx) -> Path:
     path = settings.changelog_md
     unreleased = [
         action
-        for action in ctx.unreleased_actions()
+        for action in ctx.pr_changelog_actions()
         if as_changelog_line(action, ctx.git_changes.remote_url, ctx)
     ]
     if not unreleased:

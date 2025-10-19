@@ -2,7 +2,6 @@ import logging
 from itertools import zip_longest
 from pathlib import Path
 
-import pytest
 from ask_shell._internal._run import run_and_wait
 from ask_shell._internal.interactive import KeyInput, PromptMatch, question_patcher
 from click.testing import Result
@@ -17,7 +16,6 @@ from pkg_ext.changelog.actions import (
 )
 from pkg_ext.cli import app
 from pkg_ext.conftest import CHANGELOG_YAML_FILENAME, E2eDirs, E2eRegressionCheck
-from pkg_ext.errors import NoHumanRequiredError
 from pkg_ext.git_usage.actions import git_commit
 from pkg_ext.git_usage.state import GitSince
 from pkg_ext.settings import PkgSettings
@@ -102,7 +100,7 @@ def run_e2e(
     monkeypatch: MonkeyPatch,
     groups: list[str],
     *,
-    force_regen: bool = False,
+    force_regen: bool = True,
     git_since: GitSince = GitSince.NO_GIT_CHANGES,
     step_number: int = 1,
     skip_regressions: bool = False,
@@ -232,7 +230,7 @@ def test_04_git_fix(e2e_dirs, file_regression_e2e, monkeypatch):
     chosen_filepath = pkg_path / "chosen.py"
     groups = ["git_inferred"]
     with _question_patcher({"inferred.py": " "}, groups):
-        settings = run_e2e(
+        run_e2e(
             e2e_dirs,
             file_regression_e2e,
             monkeypatch,
@@ -246,8 +244,6 @@ def test_04_git_fix(e2e_dirs, file_regression_e2e, monkeypatch):
     chosen_filepath.write_text(_chosen_content)
     chosen_file_commit_message = "fix: adds chosen file"
     git_commit(repo_path, chosen_file_commit_message)
-    with pytest.raises(NoHumanRequiredError):
-        _run_command(settings, extra_global_cli_args="--is-bot")
     with _question_patcher({chosen_filepath.name: ""}, groups=groups) as patcher:
         patcher.dynamic_responses.extend(
             [

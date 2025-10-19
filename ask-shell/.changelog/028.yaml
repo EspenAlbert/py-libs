@@ -482,3 +482,8 @@ type: group_module
 ts: 2025-10-18 21:33:26.185914+00:00
 details:
   module_path: _internal.events
+---
+name: except_hook_custom
+type: hide
+ts: 2025-10-19 17:08:57.461768+00:00
+details: created in _internal/typer_command.py

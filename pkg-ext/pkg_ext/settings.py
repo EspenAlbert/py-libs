@@ -69,7 +69,7 @@ class PkgSettings(BaseSettings):
         return self.pkg_directory.parent
 
     @property
-    def changelog_path(self) -> DirectoryPath:
+    def changelog_dir(self) -> DirectoryPath:
         return self.state_dir / ".changelog"
 
     @property

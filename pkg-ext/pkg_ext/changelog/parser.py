@@ -10,7 +10,7 @@ from pkg_ext.settings import PkgSettings
 def parse_changelog(
     settings: PkgSettings, code_state: PkgCodeState | None = None
 ) -> tuple[PkgExtState, list[ChangelogAction]]:
-    changelog_path = settings.changelog_path
+    changelog_path = settings.changelog_dir
     changelog_path.mkdir(parents=True, exist_ok=True)
     actions = parse_changelog_actions(changelog_path)
     groups = PublicGroups(storage_path=settings.public_groups_path)

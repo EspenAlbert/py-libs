@@ -26,6 +26,21 @@ def _header_level(changelog_content: str, version: str) -> int | None:
     return None
 
 
+def read_changelog_section(
+    changelog_content: str, old_version: str, new_version: str
+) -> str:
+    old_version_header_regex = re.compile(_header_regex.pattern + old_version, re.M)
+    new_version_header_regex = re.compile(_header_regex.pattern + new_version, re.M)
+    if header_match := new_version_header_regex.search(changelog_content):
+        section_end = -1
+        if old_version and (
+            old_match := old_version_header_regex.search(changelog_content)
+        ):
+            section_end = old_match.start()
+        return changelog_content[header_match.start() : section_end].strip() + "\n"
+    raise ValueError(f"unable to find {new_version} in changelog")
+
+
 def _add_changelog_section(old_content: str, new_section: str, version: str) -> str:
     _header_start_regex = re.compile(_header_regex.pattern + version, re.M)
     if existing := _header_start_regex.search(old_content):

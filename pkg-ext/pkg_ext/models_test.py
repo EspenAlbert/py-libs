@@ -76,6 +76,6 @@ def test_tool_state_update_state(settings):
             details="created in inferred.py",
         ),
     ]
-    dump_changelog_actions(changelog_filepath(settings.changelog_path, 1), actions)
+    dump_changelog_actions(changelog_filepath(settings.changelog_dir, 1), actions)
     state, _ = parse_changelog(settings)
     assert [group.name for group in state.groups.groups_no_root] == ["git_inferred"]

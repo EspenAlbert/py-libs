@@ -23,6 +23,7 @@ from pkg_ext.changelog import (
     parse_changelog_file_path,
     write_changelog_md,
 )
+from pkg_ext.changelog.actions import ReleaseChangelog
 from pkg_ext.errors import NoHumanRequiredError
 from pkg_ext.file_parser import parse_code_symbols, parse_symbols
 from pkg_ext.generation import update_pyproject_toml, write_groups, write_init
@@ -133,7 +134,7 @@ def update_changelog_entries(api_input: GenerateApiInput) -> pkg_ctx | None:
                 add_git_changes(ctx)
         except KeyboardInterrupt:
             logger.warning(
-                f"Interrupted while handling added references, only {ctx.settings.changelog_path} updated"
+                f"Interrupted while handling added references, only {ctx.settings.changelog_dir} updated"
             )
             return
     return ctx
@@ -160,6 +161,7 @@ def post_merge_commit_workflow(
     changelog_dir_path: Path,
     pr_number: int,
     tag_prefix: str,
+    old_version: str,
     new_version: str,
     push: bool,
 ):
@@ -181,7 +183,13 @@ def post_merge_commit_workflow(
     changelog_pr_path = dump_changelog_actions(
         changelog_pr_path,
         old_actions
-        + [ChangelogAction(name=new_version, type=ChangelogActionType.RELEASE)],
+        + [
+            ChangelogAction(
+                name=new_version,
+                type=ChangelogActionType.RELEASE,
+                details=ReleaseChangelog(old_version=old_version),
+            )
+        ],
     )
     git_tag = f"{tag_prefix}{new_version}"
     git_commit(

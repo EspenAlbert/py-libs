@@ -123,8 +123,8 @@ class ChangelogAction(Entity, Generic[T]):
         default=None,
         description="Details of the action, for example details on changes",
     )
-    pr: str | None = Field(
-        default="",
+    pr: int | None = Field(
+        default=0,
         description="Pull request number, set from default branch before releasing after merge.",
     )
 
@@ -133,6 +133,7 @@ class ChangelogAction(Entity, Generic[T]):
         ignored_falsy = self.model_dump(
             exclude_unset=True,
             exclude_none=True,
+            exclude={"pr"},
         )
         ignored_falsy.setdefault("ts", self.ts)
         return dump(ignored_falsy, format="yaml")
@@ -165,11 +166,10 @@ def parse_changelog_file_path(path: Path) -> list[ChangelogAction]:
     if not path.exists():
         logger.warning(f"no changelog file @ {path}")
         return []
+    pr_number = int(path.stem)
     return [
         parse_model(
-            action_raw,
-            t=ChangelogAction,
-            format="yaml",
+            action_raw, t=ChangelogAction, format="yaml", extra_kwargs={"pr": pr_number}
         )
         for action_raw in path.read_text().split(ACTION_FILE_SPLIT)
         if action_raw.strip()

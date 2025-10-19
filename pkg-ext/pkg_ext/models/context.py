@@ -50,11 +50,11 @@ class pkg_ctx:
     @property
     def changelog_path(self) -> Path:
         pr = self.explicit_pr or self.git_changes.current_pr
-        return changelog_filepath(self.settings.changelog_path, pr)
+        return changelog_filepath(self.settings.changelog_dir, pr)
 
     def __post_init__(self):
         # read existing actions for this pr
-        changelog_dir = self.settings.changelog_path
+        changelog_dir = self.settings.changelog_dir
         path = self.changelog_path
         default_path = default_changelog_path(changelog_dir)
         dump_to_disk = False

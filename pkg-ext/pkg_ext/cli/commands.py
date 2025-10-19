@@ -4,7 +4,15 @@ from pathlib import Path
 
 import typer
 from typer import Typer
+from zero_3rdparty.file_utils import ensure_parents_write_text
 
+from pkg_ext.changelog.actions import (
+    ChangelogAction,
+    ChangelogActionType,
+    ReleaseChangelog,
+    parse_changelog_actions,
+)
+from pkg_ext.changelog.write_changelog_md import read_changelog_section
 from pkg_ext.cli.options import (
     option_bump_version,
     option_create_tag,
@@ -33,24 +41,28 @@ def resolve_repo_root(cwd: Path) -> Path:
     raise ValueError(f"Repository root not found starting from {cwd}")
 
 
+def is_package_dir(path: Path) -> bool:
+    return path.is_dir() and (path / "__init__.py").exists()
+
+
 def resolve_pkg_path_str(cwd: Path, repo_root: Path) -> str:
     """Find the package path by looking for __init__.py in cwd or checking if cwd is within a package."""
     # First, check if cwd itself is a package directory
-    if (cwd / "__init__.py").exists():
+    if is_package_dir(cwd):
         return str(cwd.relative_to(repo_root))
 
     # If not, look for any subdirectory with __init__.py
     for item in cwd.iterdir():
-        if item.is_dir() and (item / "__init__.py").exists():
+        if is_package_dir(item):
             return str(item.relative_to(repo_root))
 
     # If cwd is within a package, find the package root
     current = cwd
-    while current != repo_root:
-        if (current / "__init__.py").exists():
+    for parent in cwd.parents:
+        if parent == repo_root:
+            break
+        if is_package_dir(parent):
             return str(current.relative_to(repo_root))
-        current = current.parent
-
     raise ValueError(f"No package directory found starting from {cwd}")
 
 
@@ -65,7 +77,7 @@ def main(
         "-p",
         "--path",
         "--pkg-path",
-        help="Path to the package directory (auto-detected if not provided), expecting {pkg_path}/__init__.py to exist",
+        help="Path to the package directory (auto-detected if not provided), expecting {pkg_path}/**/__init__.py to exist",
     ),
     repo_root: Path | None = typer.Option(
         None,
@@ -106,12 +118,13 @@ def main(
         resolved_repo_root = repo_root
 
     # Auto-detect pkg_path if not provided
+    if pkg_path_str is not None:
+        candidate = resolved_repo_root / pkg_path_str
+        if not is_package_dir(candidate):
+            pkg_path_str = resolve_pkg_path_str(candidate, resolved_repo_root)
+
     if pkg_path_str is None:
-        try:
-            pkg_path_str = resolve_pkg_path_str(Path.cwd(), resolved_repo_root)
-        except ValueError as e:
-            typer.echo(f"Error: {e}", err=True)
-            raise typer.Exit(1)
+        pkg_path_str = resolve_pkg_path_str(Path.cwd(), resolved_repo_root)
 
     ctx.obj = pkg_settings(
         repo_root=resolved_repo_root,
@@ -183,7 +196,7 @@ def post_merge(
     sync_files(api_input, pkg_ctx)
     post_merge_commit_workflow(
         repo_path=settings.repo_root,
-        changelog_dir_path=pkg_ctx.settings.changelog_path,
+        changelog_dir_path=pkg_ctx.settings.changelog_dir,
         pr_number=pr,
         tag_prefix=settings.tag_prefix,
         new_version=str(pkg_ctx.run_state.new_version),
@@ -214,9 +227,41 @@ def generate_api(
         if api_input.create_tag:
             post_merge_commit_workflow(
                 repo_path=settings.repo_root,
-                changelog_dir_path=pkg_ctx.settings.changelog_path,
+                changelog_dir_path=pkg_ctx.settings.changelog_dir,
                 pr_number=explicit_pr or pkg_ctx.git_changes.current_pr,
                 tag_prefix=settings.tag_prefix,
-                new_version=str(pkg_ctx.run_state.new_version),
+                old_version=pkg_ctx.run_state.old_version,
+                new_version=pkg_ctx.run_state.new_version,
                 push=push,
             )
+
+
+def find_release_action(
+    changelog_dir: Path, version: str
+) -> ChangelogAction[ReleaseChangelog]:
+    for changelog_action in parse_changelog_actions(changelog_dir):
+        if (
+            changelog_action.type == ChangelogActionType.RELEASE
+            and changelog_action.name == version
+        ):
+            pr = changelog_action.pr
+            assert pr, f"found changelog action: {changelog_action} but pr missing"
+            return changelog_action
+    raise ValueError(f"couldn't find a release for {version}")
+
+
+@app.command()
+def release_notes(
+    ctx: typer.Context,
+    tag_name: str = typer.Option(..., "--tag", help="tag to find release notes for"),
+):
+    settings: PkgSettings = ctx.obj
+    version = tag_name.removeprefix(settings.tag_prefix)
+    action = find_release_action(settings.changelog_dir, version)
+    content = read_changelog_section(
+        settings.changelog_md.read_text(),
+        action.details.old_version,
+        action.name,  # type: ignore
+    )
+    output_file = settings.repo_root / f"dist/{tag_name}.txt"
+    ensure_parents_write_text(output_file, content)

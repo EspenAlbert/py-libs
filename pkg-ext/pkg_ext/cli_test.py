@@ -59,7 +59,7 @@ def prepare_test(
     )
     if step_number > 1:
         # rename the old changelog path
-        default_path = default_changelog_path(settings.changelog_path)
+        default_path = default_changelog_path(settings.changelog_dir)
         if default_path.exists():
             new_name = changelog_filename(step_number - 1)
             default_path.rename(default_path.with_name(new_name))
@@ -68,7 +68,7 @@ def prepare_test(
         for group in groups:
             paths.python_actual_group_path(group).unlink(missing_ok=True)
         monkeypatch.syspath_prepend(execution_e2e_dir)
-        clean_dir(settings.changelog_path, recreate=False)
+        clean_dir(settings.changelog_dir, recreate=False)
         settings.public_groups_path.unlink(missing_ok=True)
         settings.init_path.write_text("")
         settings.changelog_md.unlink(missing_ok=True)
@@ -100,7 +100,7 @@ def run_e2e(
     monkeypatch: MonkeyPatch,
     groups: list[str],
     *,
-    force_regen: bool = True,
+    force_regen: bool = False,
     git_since: GitSince = GitSince.NO_GIT_CHANGES,
     step_number: int = 1,
     skip_regressions: bool = False,
@@ -115,7 +115,7 @@ def run_e2e(
         extra_cli_args=extra_cli_args,
         extra_global_cli_args=extra_global_cli_args,
     )
-    actual_changelog_path = default_changelog_path(settings.changelog_path)
+    actual_changelog_path = default_changelog_path(settings.changelog_dir)
     if not actual_changelog_path.exists():
         actual_changelog_path = max(
             path for path in actual_changelog_path.parent.glob("*.yaml")

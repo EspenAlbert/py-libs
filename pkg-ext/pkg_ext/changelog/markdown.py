@@ -6,13 +6,13 @@ from pathlib import Path
 from zero_3rdparty.datetime_utils import date_filename
 from zero_3rdparty.file_utils import ensure_parents_write_text
 
-from pkg_ext.errors import NoPublicGroupMatch
-from pkg_ext.gen_changelog import (
+from pkg_ext.changelog.actions import (
     BumpType,
     ChangelogAction,
     ChangelogActionType,
     CommitFixChangelog,
 )
+from pkg_ext.errors import NoPublicGroupMatch
 from pkg_ext.models import PublicGroup, pkg_ctx
 
 logger = logging.getLogger(__name__)

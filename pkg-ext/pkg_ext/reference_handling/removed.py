@@ -2,8 +2,8 @@ import logging
 
 from ask_shell._internal.rich_progress import new_task
 
-from pkg_ext.gen_changelog import ChangelogActionType, OldNameNewNameChangelog
-from pkg_ext.interactive_choices import (
+from pkg_ext.changelog import ChangelogActionType, OldNameNewNameChangelog
+from pkg_ext.interactive import (
     confirm_create_alias,
     confirm_delete,
     select_multiple_ref_state,

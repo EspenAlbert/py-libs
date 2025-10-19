@@ -10,12 +10,12 @@ from ask_shell._internal.interactive import (
 )
 from zero_3rdparty.enum_utils import StrEnum
 
-from pkg_ext.errors import NoPublicGroupMatch
-from pkg_ext.gen_changelog import (
+from pkg_ext.changelog import (
     ChangelogAction,
     ChangelogActionType,
     GroupModulePathChangelog,
 )
+from pkg_ext.errors import NoPublicGroupMatch
 from pkg_ext.models import (
     PublicGroup,
     PublicGroups,

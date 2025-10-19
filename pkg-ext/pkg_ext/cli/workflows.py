@@ -1,0 +1,191 @@
+"""Business logic workflows for pkg-ext operations."""
+
+from __future__ import annotations
+
+import logging
+from contextlib import ExitStack
+from pathlib import Path
+from typing import Self
+
+from ask_shell._internal.interactive import raise_on_question
+from model_lib.model_base import Entity
+from pydantic import model_validator
+from zero_3rdparty.file_utils import iter_paths_and_relative
+
+from pkg_ext.changelog import (
+    ChangelogAction,
+    ChangelogActionType,
+    add_git_changes,
+    changelog_filepath,
+    dump_changelog_actions,
+    parse_changelog,
+    parse_changelog_file_path,
+    write_changelog_md,
+)
+from pkg_ext.errors import NoHumanRequiredError
+from pkg_ext.generation import update_pyproject_toml, write_groups, write_init
+from pkg_ext.git import (
+    GitChangesInput,
+    GitSince,
+    find_git_changes,
+    find_pr_info_raw,
+    git_commit,
+)
+from pkg_ext.interactive import on_new_ref
+from pkg_ext.models import PkgCodeState, pkg_ctx
+from pkg_ext.parsing import parse_code_symbols, parse_symbols
+from pkg_ext.reference_handling import handle_added_refs, handle_removed_refs
+from pkg_ext.settings import PkgSettings, pkg_settings
+from pkg_ext.versioning import bump_version, read_current_version
+
+logger = logging.getLogger(__name__)
+
+
+class GenerateApiInput(Entity):
+    pkg_path_str: str
+    repo_root: Path
+    skip_open_in_editor: bool
+    dev_mode: bool
+    tag_prefix: str
+
+    git_changes_since: GitSince
+    is_bot: bool
+
+    bump_version: bool
+    create_tag: bool  # can we say always to create the tag when we bump_version?
+    push: bool
+
+    @model_validator(mode="after")
+    def checks(self) -> Self:
+        if self.create_tag:
+            assert self.bump_version, "cannot tag without bumping version"
+        if self.push:
+            assert self.create_tag, "cannot push without tagging/committing"
+            assert not find_pr_info_raw(self.repo_root), (
+                "Never push changes from a branch with an active PR, release jobs only runs from the default branch and wouldn't be triggered leading to tags without releases"
+            )
+        return self
+
+
+def parse_pkg_code_state(settings: PkgSettings) -> PkgCodeState:
+    """PkgDiskState is based only on the current python files in the package"""
+    pkg_py_files = list(
+        iter_paths_and_relative(settings.pkg_directory, "*.py", only_files=True)
+    )
+    pkg_import_name = settings.pkg_import_name
+
+    def is_generated(py_text: str) -> bool:
+        return py_text.startswith(settings.file_header)
+
+    files = sorted(
+        parsed
+        for path, rel_path in pkg_py_files
+        if (
+            parsed := parse_symbols(
+                path, rel_path, pkg_import_name, is_generated=is_generated
+            )
+        )
+    )
+
+    import_id_symbols = parse_code_symbols(files, pkg_import_name)
+    return PkgCodeState(
+        pkg_import_name=pkg_import_name,
+        import_id_refs=import_id_symbols,
+        files=files,
+    )
+
+
+def create_ctx(api_input: GenerateApiInput) -> pkg_ctx:
+    pkg_path_str = api_input.pkg_path_str
+    repo_root = api_input.repo_root
+    skip_open_in_editor = api_input.skip_open_in_editor
+    dev_mode = api_input.dev_mode
+    settings = pkg_settings(
+        repo_root,
+        pkg_path_str,
+        skip_open_in_editor=skip_open_in_editor,
+        dev_mode=dev_mode,
+    )
+    exit_stack = ExitStack()
+    if api_input.is_bot:
+        exit_stack.enter_context(raise_on_question(raise_error=NoHumanRequiredError))
+    with exit_stack:
+        code_state = parse_pkg_code_state(settings)
+        tool_state, extra_actions = parse_changelog(settings, code_state)
+        git_changes_input = GitChangesInput(
+            repo_path=api_input.repo_root,
+            since=api_input.git_changes_since,
+        )
+        git_changes = find_git_changes(git_changes_input)
+        return pkg_ctx(
+            settings=settings,
+            tool_state=tool_state,
+            code_state=code_state,
+            ref_add_callback=[on_new_ref(tool_state.groups)],
+            git_changes=git_changes,
+            _actions=extra_actions,
+        )
+
+
+def update_changelog_entries(api_input: GenerateApiInput) -> pkg_ctx | None:
+    """Should also read the changelog entries from the default file if it is existing."""
+    exit_stack = ExitStack()
+    if api_input.is_bot:
+        exit_stack.enter_context(raise_on_question(raise_error=NoHumanRequiredError))
+    with exit_stack:
+        ctx = create_ctx(api_input)
+        try:
+            with ctx:
+                handle_removed_refs(ctx)
+                handle_added_refs(ctx)
+                add_git_changes(ctx)
+        except KeyboardInterrupt:
+            logger.warning(
+                f"Interrupted while handling added references, only {ctx.settings.changelog_path} updated"
+            )
+            return
+    return ctx
+
+
+def sync_files(api_input: GenerateApiInput, ctx: pkg_ctx):
+    version_old = read_current_version(ctx)
+    version_new = bump_version(ctx, version_old)
+    ctx.add_versions(str(version_old), str(version_new))
+    version_str = str(version_new) if api_input.bump_version else str(version_old)
+    write_groups(ctx)
+    write_init(ctx, version_str)
+    update_pyproject_toml(ctx, version_str)
+    write_changelog_md(ctx)
+
+
+def post_merge_commit_workflow(
+    repo_path: Path,
+    changelog_dir_path: Path,
+    pr_number: int,
+    tag_prefix: str,
+    new_version: str,
+    push: bool,
+):
+    assert pr_number > 0, f"invalid PR number: {pr_number} must be > 0"
+    changelog_pr_path = changelog_filepath(changelog_dir_path, pr_number)
+    changelog_pr_path = dump_changelog_actions(
+        changelog_pr_path,
+        [ChangelogAction(name=new_version, type=ChangelogActionType.RELEASE)],
+    )
+    actions = parse_changelog_file_path(changelog_pr_path)
+    assert len(actions), "no changelog entries!"
+    git_tag = f"{tag_prefix}{new_version}"
+    git_commit(
+        repo_path,
+        f"chore: pre-release commit for {git_tag}",
+        tag=git_tag,
+        push=push,
+    )
+
+
+def generate_api_workflow(api_input: GenerateApiInput) -> pkg_ctx | None:
+    """Main API generation workflow"""
+    if ctx := update_changelog_entries(api_input):
+        sync_files(api_input, ctx)
+        return ctx
+    return None

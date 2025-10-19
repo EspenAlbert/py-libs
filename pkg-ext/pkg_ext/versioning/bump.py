@@ -8,7 +8,7 @@ from typing import Callable
 from model_lib.metadata.context_dict import identity
 from model_lib.serialize.parse import parse_dict
 
-from pkg_ext.gen_changelog import (
+from pkg_ext.changelog import (
     BumpType,
 )
 from pkg_ext.models import pkg_ctx

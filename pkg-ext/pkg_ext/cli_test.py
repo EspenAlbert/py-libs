@@ -10,15 +10,15 @@ from pytest import MonkeyPatch
 from typer.testing import CliRunner
 from zero_3rdparty.file_utils import clean_dir, copy
 
-from pkg_ext.cli import app
-from pkg_ext.conftest import CHANGELOG_YAML_FILENAME, E2eDirs, E2eRegressionCheck
-from pkg_ext.errors import NoHumanRequiredError
-from pkg_ext.gen_changelog import (
+from pkg_ext.changelog.actions import (
     changelog_filename,
     default_changelog_path,
 )
-from pkg_ext.git_actions import git_commit
-from pkg_ext.git_state import GitSince
+from pkg_ext.cli import app
+from pkg_ext.conftest import CHANGELOG_YAML_FILENAME, E2eDirs, E2eRegressionCheck
+from pkg_ext.errors import NoHumanRequiredError
+from pkg_ext.git.actions import git_commit
+from pkg_ext.git.state import GitSince
 from pkg_ext.settings import PkgSettings
 
 logger = logging.getLogger(__name__)
@@ -248,5 +248,5 @@ def test_04_git_fix(e2e_dirs, file_regression_e2e, monkeypatch):
             groups,
             git_since=GitSince.LAST_GIT_TAG,
             step_number=2,
-            extra_cli_args="--tag --tag-prefix v",
+            extra_cli_args="--tag --tag-prefix v --pr 2",
         )

@@ -6,14 +6,14 @@ from pathlib import Path
 from model_lib.model_base import Entity
 from pydantic import DirectoryPath, Field
 
-from pkg_ext.errors import RefSymbolNotInCodeError
-from pkg_ext.gen_changelog import (
+from pkg_ext.changelog import (
     ChangelogAction,
     ChangelogActionType,
     CommitFixChangelog,
     GroupModulePathChangelog,
     OldNameNewNameChangelog,
 )
+from pkg_ext.errors import RefSymbolNotInCodeError
 
 from .code_state import PkgCodeState
 from .groups import PublicGroups

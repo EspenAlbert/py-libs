@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 
 from zero_3rdparty.file_utils import ensure_parents_write_text
 
-from pkg_ext.gen_pyproject_toml import update_pyproject_toml
+from pkg_ext.generation.pyproject import update_pyproject_toml
 
 _pyproject_toml = """\
 [project]

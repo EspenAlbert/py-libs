@@ -8,10 +8,10 @@ from zero_3rdparty.iter_utils import (
     group_by_once,
 )
 
-from pkg_ext.gen_changelog import (
+from pkg_ext.changelog import (
     ChangelogActionType,
 )
-from pkg_ext.interactive_choices import (
+from pkg_ext.interactive import (
     select_multiple_refs,
 )
 from pkg_ext.models import (

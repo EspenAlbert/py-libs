@@ -2,7 +2,7 @@ import logging
 
 from zero_3rdparty.iter_utils import flat_map
 
-from pkg_ext.gen_group import as_import_line
+from pkg_ext.generation.groups import as_import_line
 from pkg_ext.models import (
     PublicGroup,
     SymbolRefId,

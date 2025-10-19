@@ -1,4 +1,4 @@
-from pkg_ext.gen_changelog import (
+from pkg_ext.changelog.actions import (
     ChangelogAction,
     ChangelogActionType,
     dump_changelog_actions,

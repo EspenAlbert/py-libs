@@ -4,14 +4,14 @@ from typing import Callable
 import pytest
 from model_lib.serialize.parse import parse_model
 
-from pkg_ext.changelog_parser import parse_changelog
-from pkg_ext.gen_changelog import (
+from pkg_ext.changelog.actions import (
     ChangelogAction,
     ChangelogActionType,
     GroupModulePathChangelog,
     changelog_filepath,
     dump_changelog_actions,
 )
+from pkg_ext.changelog.parser import parse_changelog
 from pkg_ext.models import (
     PublicGroups,
     RefSymbol,

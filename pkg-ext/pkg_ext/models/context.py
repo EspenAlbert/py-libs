@@ -4,8 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, TypeAlias
 
-from pkg_ext.errors import NoPublicGroupMatch
-from pkg_ext.gen_changelog import (
+from pkg_ext.changelog import (
     ChangelogAction,
     ChangelogActionType,
     ChangelogDetailsT,
@@ -15,7 +14,8 @@ from pkg_ext.gen_changelog import (
     parse_changelog_actions,
     parse_changelog_file_path,
 )
-from pkg_ext.git_state import GitChanges
+from pkg_ext.errors import NoPublicGroupMatch
+from pkg_ext.git import GitChanges
 from pkg_ext.settings import PkgSettings
 
 from .code_state import PkgCodeState

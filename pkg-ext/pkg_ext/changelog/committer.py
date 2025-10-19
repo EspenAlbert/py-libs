@@ -5,14 +5,14 @@ from contextlib import suppress
 from ask_shell._internal.rich_live import print_to_live
 from rich.markdown import Markdown
 
-from pkg_ext.errors import NoPublicGroupMatch
-from pkg_ext.gen_changelog import (
+from pkg_ext.changelog.actions import (
     ChangelogAction,
     ChangelogActionType,
     CommitFixChangelog,
 )
-from pkg_ext.git_state import GitCommit
-from pkg_ext.interactive_choices import (
+from pkg_ext.errors import NoPublicGroupMatch
+from pkg_ext.git.state import GitCommit
+from pkg_ext.interactive import (
     CommitFixAction,
     select_commit_fix,
     select_commit_rephrased,

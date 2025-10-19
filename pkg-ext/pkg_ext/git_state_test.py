@@ -5,7 +5,7 @@ import pytest
 from git import Repo
 from zero_3rdparty.datetime_utils import utc_now
 
-from pkg_ext.git_state import (
+from pkg_ext.git.state import (
     GitChangesInput,
     GitCommit,
     GitSince,
@@ -14,7 +14,7 @@ from pkg_ext.git_state import (
     pr_number_from_url,
     solve_since_sha,
 )
-from pkg_ext.git_url import read_remote_url
+from pkg_ext.git.url import read_remote_url
 
 
 @pytest.mark.skipif(

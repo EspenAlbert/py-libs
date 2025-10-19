@@ -1,12 +1,12 @@
 import pytest
 from zero_3rdparty.file_utils import ensure_parents_write_text
 
-from pkg_ext.changelog_parser import parse_changelog
+from pkg_ext.changelog.actions import ChangelogAction, ChangelogActionType
+from pkg_ext.changelog.parser import parse_changelog
 from pkg_ext.conftest import TEST_PKG_NAME
-from pkg_ext.gen_changelog import ChangelogAction, ChangelogActionType
-from pkg_ext.git_state import GitChanges
+from pkg_ext.git.state import GitChanges
 from pkg_ext.models import PkgCodeState, pkg_ctx
-from pkg_ext.version_bump import PkgVersion, bump_version, read_current_version
+from pkg_ext.versioning.bump import PkgVersion, bump_version, read_current_version
 
 
 @pytest.fixture()

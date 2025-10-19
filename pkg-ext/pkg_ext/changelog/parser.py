@@ -1,8 +1,8 @@
-from pkg_ext.gen_changelog import (
+from pkg_ext.changelog.actions import (
     ChangelogAction,
     parse_changelog_actions,
 )
-from pkg_ext.interactive_choices import on_new_ref
+from pkg_ext.interactive import on_new_ref
 from pkg_ext.models import PkgCodeState, PkgExtState, PublicGroups
 from pkg_ext.settings import PkgSettings
 

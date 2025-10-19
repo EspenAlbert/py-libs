@@ -57,18 +57,9 @@ ssort:
 ssort-check:
   @uv run ssort --diff --check ask-shell/ask_shell pkg-ext/pkg_ext
 ask-shell-changes:
-  just pkg-ext pre-push ./ask-shell/ask_shell
-  just fmt
+  just pkg-ext --pkg-path ./ask-shell/ask_shell pre-push
 ask-shell-pre-merge:
-  just pkg-ext pre-merge ./ask-shell/ask_shell
-  just fmt
-pre-release-ask-shell:
-  just changes-ask-shell --is-bot --bump --tag --tag-prefix a --push
-
-[positional-arguments]
-changes-ask-shell *args:
-  just pkg-ext ./ask-shell/ask_shell {{args}}
-  just fix
+  just pkg-ext --pkg-path ./ask-shell/ask_shell pre-merge
 
 [positional-arguments]
 gh-ext *args:

@@ -88,7 +88,7 @@ def _run_command(
     pkg_path_relative = str(settings.pkg_directory.relative_to(execution_e2e_dir))
     if extra_global_cli_args:
         extra_global_cli_args = ensure_suffix(extra_global_cli_args, " ")
-    command = f"{extra_global_cli_args}--skip-open --repo-root {execution_e2e_dir} {pkg_path_relative} generate-api --git-since {git_since} --bump"
+    command = f"{extra_global_cli_args}--skip-open --repo-root {execution_e2e_dir} --pkg-path {pkg_path_relative} generate-api --git-since {git_since} --bump"
     if extra_cli_args:
         command = f"{command} {extra_cli_args}"
     logger.info(f"running command: {command}")

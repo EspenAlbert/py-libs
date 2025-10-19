@@ -60,8 +60,11 @@ app = Typer(name="pkg-ext", help="Generate public API for a package and more!")
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
-    pkg_path_str: str | None = typer.Argument(
+    pkg_path_str: str | None = typer.Option(
         None,
+        "-p",
+        "--path",
+        "--pkg-path",
         help="Path to the package directory (auto-detected if not provided), expecting {pkg_path}/__init__.py to exist",
     ),
     repo_root: Path | None = typer.Option(
@@ -135,6 +138,7 @@ def pre_push(
 ):
     """Use this to run before a push. Will ask questions about your changes to ensure the changelog and release can be updated later"""
     settings: PkgSettings = ctx.obj
+    settings.dev_mode = True
 
     api_input = GenerateApiInput(
         settings=settings,
@@ -154,6 +158,7 @@ def pre_merge(
     """Use this as a CI check. No merge until this passes. Ensures no manual changes are missing."""
     settings: PkgSettings = ctx.obj
     settings.force_bot()
+    settings.dev_mode = True
 
     api_input = GenerateApiInput(
         settings=settings,

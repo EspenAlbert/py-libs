@@ -63,7 +63,7 @@ ask-shell-pre-merge:
 
 release-build pkg tag_name:
   just build-only {{pkg}}
-  just pkg-ext --pkg-path {{pkg}} --tag {{tag_name}} release-notes
+  just pkg-ext --pkg-path {{pkg}} release-notes --tag {{tag_name}}
 
 [positional-arguments]
 ask-shell-post-merge *args:

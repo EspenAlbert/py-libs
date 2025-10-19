@@ -45,12 +45,28 @@ class pkg_ctx:
     explicit_pr: int = 0
 
     _actions: list[ChangelogAction] = field(default_factory=list)
-    _actions_dumped: bool = False
+    _actions_dumped: bool = True  # starts out on disk
 
     @property
     def changelog_path(self) -> Path:
         pr = self.explicit_pr or self.git_changes.current_pr
         return changelog_filepath(self.settings.changelog_path, pr)
+
+    def __post_init__(self):
+        # read existing actions for this pr
+        changelog_dir = self.settings.changelog_path
+        path = self.changelog_path
+        default_path = default_changelog_path(changelog_dir)
+        dump_to_disk = False
+        if default_path.exists() and path != default_path:
+            self._actions.extend(parse_changelog_file_path(default_path))
+            default_path.unlink()  # avoid storing actions now that we have a new path
+            dump_to_disk = True
+        if path.exists():
+            self._actions.extend(parse_changelog_file_path(path))
+        # ensure we update the file in case a crash to avoid accidental loss of default_path actions
+        if dump_to_disk:
+            dump_changelog_actions(path, self._actions)
 
     def add_versions(self, old_version: str, new_version: str):
         self.run_state.old_version = old_version
@@ -93,14 +109,8 @@ class pkg_ctx:
         raise NoPublicGroupMatch()
 
     def __enter__(self) -> pkg_ctx:
-        changelog_dir = self.settings.changelog_path
-        path = self.changelog_path
-        default_path = default_changelog_path(changelog_dir)
-        if default_path.exists() and path != default_path:
-            self._actions.extend(parse_changelog_file_path(default_path))
-            default_path.unlink()  # avoid storing actions now that we have a new path
-        if path.exists():
-            self._actions.extend(parse_changelog_file_path(path))
+        """Used as a context manager when actions are done by the user so all actions are saved in case of an error"""
+        self._actions_dumped = False
         return self
 
     def __exit__(self, *_):

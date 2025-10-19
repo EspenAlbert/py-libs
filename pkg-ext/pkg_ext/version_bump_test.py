@@ -47,9 +47,12 @@ _actions = [
     "action,new_version", _actions, ids=[action.type for action, _ in _actions]
 )
 def test_bump_major(pkg_ctx_instance, action, new_version):
-    actions = [
-        ChangelogAction(name="0.0.1", type=ChangelogActionType.RELEASE),
-        action,
-    ]
+    actions = [action]
     pkg_ctx_instance._actions = actions
-    assert str(bump_version(pkg_ctx_instance, PkgVersion.parse("0.0.1"))) == new_version
+    with (
+        pkg_ctx_instance
+    ):  # use context manager to read the actions from instance rather than disk
+        assert (
+            str(bump_version(pkg_ctx_instance, PkgVersion.parse("0.0.1")))
+            == new_version
+        )

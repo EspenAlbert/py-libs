@@ -49,12 +49,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: setup-steps
         uses: "./.github/templates/setup-steps"
       - name: setup-settings
         uses: "./.github/templates/setup-settings"
       - name: pre-merge
         run: just ask-shell-pre-merge
+      - name: Store the run logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: cache
   build:
     needs: pre_job
     if: needs.pre_job.outputs.should_skip != 'true'

@@ -61,6 +61,10 @@ ask-shell-changes:
 ask-shell-pre-merge:
   just pkg-ext --pkg-path ./ask-shell/ask_shell pre-merge
 
+release-build pkg tag_name:
+  just build-only {{pkg}}
+  just pkg-ext --pkg-path {{pkg}} --tag {{tag_name}} release-notes
+
 [positional-arguments]
 ask-shell-post-merge *args:
   just pkg-ext --pkg-path ./ask-shell/ask_shell post-merge {{args}}

@@ -6,7 +6,6 @@ on:
     branches: 
     - "main"
     paths:
-    - "ask-shell/ask_shell/__init__.py"
     - "model-lib/model_lib/__init__.py"
     - "zero-3rdparty/zero_3rdparty/__init__.py"
 

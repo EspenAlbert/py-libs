@@ -9,6 +9,7 @@ from click.testing import Result
 from pytest import MonkeyPatch
 from typer.testing import CliRunner
 from zero_3rdparty.file_utils import clean_dir, copy
+from zero_3rdparty.str_utils import ensure_suffix
 
 from pkg_ext.changelog.actions import (
     changelog_filename,
@@ -81,10 +82,13 @@ def _run_command(
     *,
     git_since: GitSince = GitSince.NO_GIT_CHANGES,
     extra_cli_args: str = "",
+    extra_global_cli_args: str = "",
 ):
     execution_e2e_dir = settings.repo_root
     pkg_path_relative = str(settings.pkg_directory.relative_to(execution_e2e_dir))
-    command = f"generate-api --repo-root {execution_e2e_dir} {pkg_path_relative} --skip-open --git-since {git_since} --bump"
+    if extra_global_cli_args:
+        extra_global_cli_args = ensure_suffix(extra_global_cli_args, " ")
+    command = f"{extra_global_cli_args}--skip-open --repo-root {execution_e2e_dir} {pkg_path_relative} generate-api --git-since {git_since} --bump"
     if extra_cli_args:
         command = f"{command} {extra_cli_args}"
     logger.info(f"running command: {command}")
@@ -104,9 +108,15 @@ def run_e2e(
     skip_regressions: bool = False,
     copy_ignore_globs: list[str] | None = None,
     extra_cli_args: str = "",
+    extra_global_cli_args: str = "",
 ) -> PkgSettings:
     settings = prepare_test(paths, monkeypatch, groups, step_number, copy_ignore_globs)
-    _run_command(settings, git_since=git_since, extra_cli_args=extra_cli_args)
+    _run_command(
+        settings,
+        git_since=git_since,
+        extra_cli_args=extra_cli_args,
+        extra_global_cli_args=extra_global_cli_args,
+    )
     actual_changelog_path = default_changelog_path(settings.changelog_path)
     changelog_md = settings.changelog_md
     if force_regen:
@@ -170,7 +180,7 @@ def test_01_initial(e2e_dirs, file_regression_e2e, monkeypatch):
     with _question_patcher({"_internal.py": f" {KeyInput.DOWN} "}, groups):
         settings = run_e2e(e2e_dirs, file_regression_e2e, monkeypatch, groups)
         # is bot after a run should have no effect
-        _run_command(settings, extra_cli_args="--is-bot")
+        _run_command(settings, extra_global_cli_args="--is-bot")
 
 
 def test_02_dep_order(e2e_dirs, file_regression_e2e, monkeypatch):
@@ -233,7 +243,7 @@ def test_04_git_fix(e2e_dirs, file_regression_e2e, monkeypatch):
     chosen_file_commit_message = "fix: adds chosen file"
     git_commit(repo_path, chosen_file_commit_message)
     with pytest.raises(NoHumanRequiredError):
-        _run_command(settings, extra_cli_args="--is-bot")
+        _run_command(settings, extra_global_cli_args="--is-bot")
     with _question_patcher({chosen_filepath.name: ""}, groups=groups) as patcher:
         patcher.dynamic_responses.extend(
             [
@@ -248,5 +258,6 @@ def test_04_git_fix(e2e_dirs, file_regression_e2e, monkeypatch):
             groups,
             git_since=GitSince.LAST_GIT_TAG,
             step_number=2,
-            extra_cli_args="--tag --tag-prefix v --pr 2",
+            extra_cli_args="--tag --pr 2",
+            extra_global_cli_args="--tag-prefix v",
         )

@@ -35,21 +35,15 @@ from pkg_ext.git import (
 from pkg_ext.interactive import on_new_ref
 from pkg_ext.models import PkgCodeState, pkg_ctx
 from pkg_ext.reference_handling import handle_added_refs, handle_removed_refs
-from pkg_ext.settings import PkgSettings, pkg_settings
+from pkg_ext.settings import PkgSettings
 from pkg_ext.version_bump import bump_version, read_current_version
 
 logger = logging.getLogger(__name__)
 
 
 class GenerateApiInput(Entity):
-    pkg_path_str: str
-    repo_root: Path
-    skip_open_in_editor: bool
-    dev_mode: bool
-    tag_prefix: str
-
+    settings: PkgSettings
     git_changes_since: GitSince
-    is_bot: bool
 
     bump_version: bool
     create_tag: bool  # can we say always to create the tag when we bump_version?
@@ -61,10 +55,14 @@ class GenerateApiInput(Entity):
             assert self.bump_version, "cannot tag without bumping version"
         if self.push:
             assert self.create_tag, "cannot push without tagging/committing"
-            assert not find_pr_info_raw(self.repo_root), (
+            assert not find_pr_info_raw(self.settings.repo_root), (
                 "Never push changes from a branch with an active PR, release jobs only runs from the default branch and wouldn't be triggered leading to tags without releases"
             )
         return self
+
+    @property
+    def is_bot(self) -> bool:
+        return self.settings.is_bot
 
 
 def parse_pkg_code_state(settings: PkgSettings) -> PkgCodeState:
@@ -96,18 +94,7 @@ def parse_pkg_code_state(settings: PkgSettings) -> PkgCodeState:
 
 
 def create_ctx(api_input: GenerateApiInput) -> pkg_ctx:
-    pkg_path_str = api_input.pkg_path_str
-    repo_root = api_input.repo_root
-    skip_open_in_editor = api_input.skip_open_in_editor
-    dev_mode = api_input.dev_mode
-    tag_prefix = api_input.tag_prefix
-    settings = pkg_settings(
-        repo_root,
-        pkg_path_str,
-        skip_open_in_editor=skip_open_in_editor,
-        dev_mode=dev_mode,
-        tag_prefix=tag_prefix,
-    )
+    settings = api_input.settings
     exit_stack = ExitStack()
     if api_input.is_bot:
         exit_stack.enter_context(raise_on_question(raise_error=NoHumanRequiredError))
@@ -115,7 +102,7 @@ def create_ctx(api_input: GenerateApiInput) -> pkg_ctx:
         code_state = parse_pkg_code_state(settings)
         tool_state, extra_actions = parse_changelog(settings, code_state)
         git_changes_input = GitChangesInput(
-            repo_path=api_input.repo_root,
+            repo_path=settings.repo_root,
             since=api_input.git_changes_since,
         )
         git_changes = find_git_changes(git_changes_input)

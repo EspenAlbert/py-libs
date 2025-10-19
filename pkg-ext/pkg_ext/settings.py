@@ -28,6 +28,7 @@ class PkgSettings(BaseSettings):
     pkg_directory: DirectoryPath
     skip_open_in_editor: bool = False
     dev_mode: bool = False
+    is_bot: bool = False
     commit_fix_prefixes: tuple[str, ...] = Field(
         default_factory=default_commit_fix_prefixes
     )
@@ -50,6 +51,8 @@ class PkgSettings(BaseSettings):
             f"Package directory does not exist: {self.pkg_directory}"
         )
         assert self.init_path.exists(), f"Init path does not exist: {self.init_path}"
+        if self.is_bot:
+            self.skip_open_in_editor = True
         return self
 
     @property
@@ -82,6 +85,10 @@ class PkgSettings(BaseSettings):
     def pyproject_toml(self) -> Path:
         return self.state_dir / "pyproject.toml"
 
+    def force_bot(self) -> None:
+        self.is_bot = True
+        self.skip_open_in_editor = True
+
     def parse_computed_public_groups(self, t: type[T]) -> T:
         from pkg_ext.models import PublicGroups  # avoid dependency
 
@@ -104,6 +111,7 @@ def pkg_settings(
     pkg_path: str,
     *,
     skip_open_in_editor: bool = False,
+    is_bot: bool = False,
     dev_mode: bool = False,
     tag_prefix: str = "",
     file_header: str | None = None,
@@ -115,6 +123,7 @@ def pkg_settings(
 
     return PkgSettings(
         repo_root=repo_root,
+        is_bot=is_bot,
         pkg_directory=repo_root / pkg_path,
         skip_open_in_editor=skip_open_in_editor,
         dev_mode=dev_mode,

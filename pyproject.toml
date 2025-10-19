@@ -25,7 +25,7 @@ members = ["ask-shell", "model-lib", "pkg-ext", "pytest-model-lib", "zero-3rdpar
 exclude=['model_lib', 'docker_example', 'compose_chart_export', 'docker_compose_parser']
 
 [tool.pytest.ini_options]
-addopts = "-s -vv --log-cli-level=INFO --ignore=.venv/* --ignore=.venv-ci/* --ignore=archive/* --capture=no --durations=0 -n auto -p pytest_model_lib"
+addopts = "-s -vv --log-cli-level=INFO --ignore=.venv/* --ignore=.venv-ci/* --ignore=archive/* --capture=no -n auto -p pytest_model_lib"
 # addopts = "-s -vv --log-cli-level=INFO --ignore=.venv/* --ignore=.venv-ci/* --ignore=archive/* --capture=no --durations=0 -n auto -p pytest_model_lib --force-regen"
 # addopts = "-s -vv --log-cli-level=INFO --ignore=.venv/* --ignore=.venv-ci/* --ignore=archive/* --capture=no"
 testpaths = ["ask-shell/ask_shell", "model-lib/model_lib", "pkg-ext/pkg_ext", "zero-3rdparty/zero_3rdparty"]

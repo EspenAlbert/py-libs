@@ -1,0 +1,3 @@
+uv run ruff format .
+Uninstalled 1 package in 0.29ms
+Installed 1 package in 0.84ms

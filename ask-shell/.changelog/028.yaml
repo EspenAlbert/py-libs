@@ -487,3 +487,9 @@ name: except_hook_custom
 type: hide
 ts: 2025-10-19 17:08:57.461768+00:00
 details: created in _internal/typer_command.py
+---
+name: 0.2.0
+type: release
+details:
+  old_version: 0.1.0
+ts: 2025-10-19 17:16:50.463390+00:00

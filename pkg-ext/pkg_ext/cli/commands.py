@@ -22,9 +22,24 @@ from pkg_ext.cli.workflows import (
     generate_api_workflow,
     post_merge_commit_workflow,
 )
+from pkg_ext.config import load_project_config, load_user_config
 from pkg_ext.git import GitSince, head_merge_pr
 
 app = Typer(name="pkg-ext", help="Generate public API for a package and more!")
+
+
+def resolve_skip_open_in_editor(cli_value: bool | None) -> bool:
+    """Resolve skip_open_in_editor with fallback to user config."""
+    if cli_value is not None:
+        return cli_value
+    return load_user_config().skip_open_in_editor
+
+
+def resolve_tag_prefix(cli_value: str | None, repo_root: Path) -> str:
+    """Resolve tag_prefix with fallback to project config."""
+    if cli_value is not None:
+        return cli_value
+    return load_project_config(repo_root).tag_prefix
 
 
 @app.command()
@@ -32,18 +47,21 @@ def pre_push(
     pkg_path_str: str = argument_pkg_path,
     repo_root=option_repo_root,
     git_changes_since: GitSince = option_git_changes_since,
+    skip_open_in_editor: bool | None = option_skip_open_in_editor,
 ):
     """Use this to run before a push. Will ask questions about your changes to ensure the changelog and release can be updated later"""
     api_input = GenerateApiInput(
         pkg_path_str=pkg_path_str,
         repo_root=repo_root,
-        skip_open_in_editor=False,
+        skip_open_in_editor=resolve_skip_open_in_editor(skip_open_in_editor),
         dev_mode=True,
         git_changes_since=git_changes_since,
         bump_version=False,
         is_bot=False,
         create_tag=False,
-        tag_prefix="",
+        tag_prefix=resolve_tag_prefix(
+            None, repo_root
+        ),  # Use default from project config
         push=False,
     )
     generate_api_workflow(api_input)
@@ -59,13 +77,15 @@ def pre_merge(
     api_input = GenerateApiInput(
         pkg_path_str=pkg_path_str,
         repo_root=repo_root,
-        skip_open_in_editor=True,
+        skip_open_in_editor=True,  # Always skip in CI
         dev_mode=True,
         git_changes_since=git_changes_since,
         bump_version=False,
         is_bot=True,
         create_tag=False,
-        tag_prefix="",
+        tag_prefix=resolve_tag_prefix(
+            None, repo_root
+        ),  # Use default from project config
         push=False,
     )
     generate_api_workflow(api_input)
@@ -75,7 +95,7 @@ def pre_merge(
 def post_merge(
     pkg_path_str: str = argument_pkg_path,
     repo_root=option_repo_root,
-    tag_prefix: str = option_tag_prefix,
+    tag_prefix: str | None = option_tag_prefix,
     explicit_pr: int = typer.Option(
         0, help="Use this if the HEAD commit is not a merge"
     ),
@@ -90,7 +110,7 @@ def post_merge(
         repo_root=repo_root,
         skip_open_in_editor=True,
         dev_mode=False,
-        tag_prefix=tag_prefix,
+        tag_prefix=resolve_tag_prefix(tag_prefix, repo_root),
         git_changes_since=GitSince.NO_GIT_CHANGES,  # will not add new entries
         is_bot=True,
         bump_version=True,
@@ -103,7 +123,7 @@ def post_merge(
         repo_path=repo_root,
         changelog_dir_path=ctx.settings.changelog_path,
         pr_number=pr,
-        tag_prefix=tag_prefix,
+        tag_prefix=resolve_tag_prefix(tag_prefix, repo_root),
         new_version=str(ctx.run_state.new_version),
         push=push,
     )
@@ -113,13 +133,13 @@ def post_merge(
 def generate_api(
     pkg_path_str: str = argument_pkg_path,
     repo_root: Path = option_repo_root,
-    skip_open_in_editor: bool = option_skip_open_in_editor,
+    skip_open_in_editor: bool | None = option_skip_open_in_editor,
     dev_mode: bool = option_dev_mode,
     git_changes_since: GitSince = option_git_changes_since,
     bump_version: bool = option_bump_version,
     is_bot: bool = option_is_bot,
     create_tag: bool = option_create_tag,
-    tag_prefix: str = option_tag_prefix,
+    tag_prefix: str | None = option_tag_prefix,
     push: bool = option_push,
     explicit_pr: int = typer.Option(
         0, "--pr", help="Use this if the HEAD commit is not a merge"
@@ -128,13 +148,13 @@ def generate_api(
     api_input = GenerateApiInput(
         pkg_path_str=pkg_path_str,
         repo_root=repo_root,
-        skip_open_in_editor=skip_open_in_editor,
+        skip_open_in_editor=resolve_skip_open_in_editor(skip_open_in_editor),
         dev_mode=dev_mode,
         git_changes_since=git_changes_since,
         bump_version=bump_version,
         is_bot=is_bot,
         create_tag=create_tag,
-        tag_prefix=tag_prefix,
+        tag_prefix=resolve_tag_prefix(tag_prefix, repo_root),
         push=push,
     )
     if ctx := generate_api_workflow(api_input):
@@ -143,7 +163,7 @@ def generate_api(
                 repo_path=repo_root,
                 changelog_dir_path=ctx.settings.changelog_path,
                 pr_number=explicit_pr or ctx.git_changes.current_pr,
-                tag_prefix=tag_prefix,
+                tag_prefix=resolve_tag_prefix(tag_prefix, repo_root),
                 new_version=str(ctx.run_state.new_version),
                 push=push,
             )

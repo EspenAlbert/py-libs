@@ -11,6 +11,7 @@ from zero_3rdparty.iter_utils import (
 from pkg_ext.changelog import (
     ChangelogActionType,
 )
+from pkg_ext.cli.options import get_default_editor
 from pkg_ext.interactive import (
     select_multiple_refs,
 )
@@ -22,7 +23,7 @@ from pkg_ext.models import (
     SymbolType,
     pkg_ctx,
 )
-from pkg_ext.settings import PkgSettings, get_editor
+from pkg_ext.settings import PkgSettings
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,7 @@ def make_expose_decisions(
     decided_refs: list[RefStateWithSymbol | RefSymbol] = []
     for rel_path, file_states in refs.items():
         if not settings.skip_open_in_editor:
-            run_and_wait(f"{get_editor()} {tool_state.pkg_path / rel_path}")
+            run_and_wait(f"{get_default_editor()} {tool_state.pkg_path / rel_path}")
         exposed = select_multiple_refs(
             f"Select references of type {symbol_type} to expose from {rel_path} (if any):",
             file_states,

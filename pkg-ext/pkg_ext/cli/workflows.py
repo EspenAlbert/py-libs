@@ -100,11 +100,13 @@ def create_ctx(api_input: GenerateApiInput) -> pkg_ctx:
     repo_root = api_input.repo_root
     skip_open_in_editor = api_input.skip_open_in_editor
     dev_mode = api_input.dev_mode
+    tag_prefix = api_input.tag_prefix
     settings = pkg_settings(
         repo_root,
         pkg_path_str,
         skip_open_in_editor=skip_open_in_editor,
         dev_mode=dev_mode,
+        tag_prefix=tag_prefix,
     )
     exit_stack = ExitStack()
     if api_input.is_bot:

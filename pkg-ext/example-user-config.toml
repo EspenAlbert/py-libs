@@ -1,0 +1,9 @@
+# Example user configuration for pkg-ext
+# Save this as ~/.config/pkg-ext/config.toml
+
+[user]
+# Editor preference (fallback to $EDITOR if not set)
+editor = "cursor"  # or "code", "vim", etc.
+
+# UI preferences - whether to automatically open files in editor
+skip_open_in_editor = false  # Set to true for automated workflows

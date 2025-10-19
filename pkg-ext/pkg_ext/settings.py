@@ -1,4 +1,3 @@
-from os import getenv
 from pathlib import Path
 from typing import ClassVar, Self, TypeVar
 
@@ -7,11 +6,9 @@ from pydantic import DirectoryPath, Field, model_validator
 from pydantic_settings import BaseSettings
 from zero_3rdparty import file_utils
 
+from pkg_ext.config import load_project_config
+
 T = TypeVar("T")
-
-
-def get_editor() -> str:
-    return getenv("EDITOR", "code")
 
 
 def default_commit_fix_prefixes() -> tuple[str, ...]:
@@ -37,6 +34,7 @@ class PkgSettings(BaseSettings):
     commit_fix_diff_suffixes: tuple[str, ...] = Field(
         default_factory=default_commit_diff_suffixes
     )
+    tag_prefix: str = ""
 
     def _with_dev_suffix(self, path: Path) -> Path:
         if self.dev_mode:
@@ -107,10 +105,22 @@ def pkg_settings(
     *,
     skip_open_in_editor: bool = False,
     dev_mode: bool = False,
+    tag_prefix: str = "",
+    file_header: str | None = None,
+    commit_fix_prefixes: tuple[str, ...] | None = None,
+    commit_fix_diff_suffixes: tuple[str, ...] | None = None,
 ) -> PkgSettings:
+    # Load project config for defaults when not provided
+    project_config = load_project_config(repo_root)
+
     return PkgSettings(
         repo_root=repo_root,
         pkg_directory=repo_root / pkg_path,
         skip_open_in_editor=skip_open_in_editor,
         dev_mode=dev_mode,
+        file_header=file_header or project_config.file_header,
+        commit_fix_prefixes=commit_fix_prefixes or project_config.commit_fix_prefixes,
+        commit_fix_diff_suffixes=commit_fix_diff_suffixes
+        or project_config.commit_diff_suffixes,
+        tag_prefix=tag_prefix or project_config.tag_prefix,
     )

@@ -1,10 +1,19 @@
 """CLI options and arguments for pkg-ext commands."""
 
+from os import getenv
 from pathlib import Path
 
 import typer
 
+from pkg_ext.config import load_user_config
 from pkg_ext.git import GitSince
+
+
+def get_default_editor() -> str:
+    """Get default editor from user config with fallback to EDITOR env var."""
+    user_config = load_user_config()
+    return user_config.editor or getenv("EDITOR", "code")
+
 
 # Argument definitions
 argument_pkg_path = typer.Argument(
@@ -21,9 +30,10 @@ option_repo_root = typer.Option(
 )
 
 option_skip_open_in_editor = typer.Option(
-    False,
+    None,
     "--skip-open",
-    help="By default files are opened in $EDITOR when asked to expose/hide",
+    envvar="PKG_EXT_SKIP_OPEN_IN_EDITOR",
+    help="Skip opening files in editor. Uses user config or env var if not set explicitly.",
 )
 
 option_dev_mode = typer.Option(
@@ -58,9 +68,10 @@ option_create_tag = typer.Option(
 )
 
 option_tag_prefix = typer.Option(
-    "",
+    None,
     "--tag-prefix",
-    help="{tag_prefix}{version} used in the git tag not in the version",
+    envvar="PKG_EXT_TAG_PREFIX",
+    help="{tag_prefix}{version} used in the git tag. Uses project config or env var if not set.",
 )
 
 option_push = typer.Option(False, "--push", help="Push commit and tag")

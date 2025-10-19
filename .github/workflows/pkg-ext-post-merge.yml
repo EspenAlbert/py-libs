@@ -20,6 +20,9 @@ jobs:
           fetch-depth: 0
       - name: setup-steps
         uses: "./.github/templates/setup-steps"
+      
+      - name: setup-settings
+        uses: "./.github/templates/setup-settings"
       - name: post-merge
         run: just ask-shell-post-merge --push
       - name: Get the tag

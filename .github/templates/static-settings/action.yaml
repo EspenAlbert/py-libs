@@ -1,0 +1,13 @@
+name: setup-settings
+description: 'Setup env vars for a StaticSettings'
+
+runs:
+  using: composite
+  steps:
+  - name: Set environment variables
+    shell: bash
+    run: |
+      echo "STATIC_DIR="${{ github.workspace }}/static" >> $GITHUB_ENV
+      echo "CACHE_DIR="${{ github.workspace }}/cache" >> $GITHUB_ENV
+      mkdir -p "${{ github.workspace }}/cache"
+      mkdir -p "${{ github.workspace }}/static"

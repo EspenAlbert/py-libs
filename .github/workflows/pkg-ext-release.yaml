@@ -13,6 +13,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: setup-steps
         uses: "./.github/templates/setup-steps"
+      - name: setup-settings
+        uses: "./.github/templates/setup-settings"
       - name: build
         run: just release-build ask-shell
       - name: Store the distribution packages
@@ -69,11 +71,8 @@ jobs:
     - name: Create GitHub Release
       env:
         GITHUB_TOKEN: ${{ github.token }}
-      run: >-
-        gh release create
-        '${{ github.ref_name }}'
-        --repo '${{ github.repository }}'
-        --notes-file dist/${{ github.ref_name }}.txt"
+      run: |
+        gh release create '${{ github.ref_name }}' --repo '${{ github.repository }}' --notes-file 'dist/${{ github.ref_name }}.txt'
     - name: Upload artifact signatures to GitHub Release
       env:
         GITHUB_TOKEN: ${{ github.token }}

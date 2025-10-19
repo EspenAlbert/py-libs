@@ -177,6 +177,7 @@ def post_merge(
         bump_version=True,
         create_tag=True,
         push=push,
+        explicit_pr=pr,
     )
     pkg_ctx = create_ctx(api_input)
     sync_files(api_input, pkg_ctx)
@@ -207,6 +208,7 @@ def generate_api(
         bump_version=bump_version,
         create_tag=create_tag,
         push=push,
+        explicit_pr=explicit_pr,
     )
     if pkg_ctx := generate_api_workflow(api_input):
         if api_input.create_tag:

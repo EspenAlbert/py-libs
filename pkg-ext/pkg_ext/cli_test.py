@@ -118,6 +118,10 @@ def run_e2e(
         extra_global_cli_args=extra_global_cli_args,
     )
     actual_changelog_path = default_changelog_path(settings.changelog_path)
+    if not actual_changelog_path.exists():
+        actual_changelog_path = max(
+            path for path in actual_changelog_path.parent.glob("*.yaml")
+        )
     changelog_md = settings.changelog_md
     if force_regen:
         copy(settings.pkg_directory, paths.e2e_pkg_dir, clean_dest=True)

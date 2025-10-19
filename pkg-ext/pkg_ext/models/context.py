@@ -43,15 +43,15 @@ class pkg_ctx:
     git_changes: GitChanges
     ref_add_callback: list[RefAddCallback] = field(default_factory=list)
     run_state: RunState = field(default_factory=RunState)
+    explicit_pr: int = 0
 
     _actions: list[ChangelogAction] = field(default_factory=list)
     _actions_dumped: bool = False
 
     @property
     def changelog_path(self) -> Path:
-        return changelog_filepath(
-            self.settings.changelog_path, self.git_changes.current_pr
-        )
+        pr = self.explicit_pr or self.git_changes.current_pr
+        return changelog_filepath(self.settings.changelog_path, pr)
 
     def add_versions(self, old_version: str, new_version: str):
         self.run_state.old_version = old_version

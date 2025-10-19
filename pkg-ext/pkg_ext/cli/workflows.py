@@ -49,6 +49,7 @@ class GenerateApiInput(Entity):
     bump_version: bool
     create_tag: bool  # can we say always to create the tag when we bump_version?
     push: bool
+    explicit_pr: int = 0
 
     @model_validator(mode="after")
     def checks(self) -> Self:
@@ -114,6 +115,7 @@ def create_ctx(api_input: GenerateApiInput) -> pkg_ctx:
             ref_add_callback=[on_new_ref(tool_state.groups)],
             git_changes=git_changes,
             _actions=extra_actions,
+            explicit_pr=api_input.explicit_pr,
         )
 
 
@@ -167,7 +169,7 @@ def post_merge_commit_workflow(
     if not old_actions:
         logger.warning(f"no changes to commit for {pr_number}")
         return
-    if release_action := (
+    if release_action := next(
         (
             action
             for action in old_actions

@@ -8,23 +8,22 @@ from zero_3rdparty.iter_utils import (
     group_by_once,
 )
 
-from pkg_ext.gen_changelog import (
+from pkg_ext.changelog import (
     ChangelogActionType,
 )
-from pkg_ext.interactive_choices import (
-    select_group,
-    select_groups,
+from pkg_ext.cli.options import get_default_editor
+from pkg_ext.interactive import (
     select_multiple_refs,
 )
 from pkg_ext.models import (
-    AddChangelogAction,
     PkgCodeState,
     PkgExtState,
     RefStateWithSymbol,
     RefSymbol,
     SymbolType,
+    pkg_ctx,
 )
-from pkg_ext.settings import PkgSettings, get_editor
+from pkg_ext.settings import PkgSettings
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +44,7 @@ def ensure_function_args_exposed(
 
 def make_expose_decisions(
     refs: dict[str, list[RefStateWithSymbol]],
-    add_changelog: AddChangelogAction,
+    ctx: pkg_ctx,
     tool_state: PkgExtState,
     code_state: PkgCodeState,
     symbol_type: str,
@@ -54,42 +53,37 @@ def make_expose_decisions(
     decided_refs: list[RefStateWithSymbol | RefSymbol] = []
     for rel_path, file_states in refs.items():
         if not settings.skip_open_in_editor:
-            run_and_wait(f"{get_editor()} {tool_state.pkg_path / rel_path}")
+            run_and_wait(f"{get_default_editor()} {tool_state.pkg_path / rel_path}")
         exposed = select_multiple_refs(
             f"Select references of type {symbol_type} to expose from {rel_path} (if any):",
             file_states,
         )
         for ref in exposed:
-            add_changelog(
+            ctx.add_action(
                 ref.name, ChangelogActionType.EXPOSE, details=f"created in {rel_path}"
             )
         hidden = [state for state in file_states if state not in exposed]
         for ref in hidden:
-            add_changelog(
+            ctx.add_action(
                 ref.name, ChangelogActionType.HIDE, details=f"created in {rel_path}"
             )
-        if exposed:
-            select_groups(tool_state.groups, exposed)
-            if symbol_type == SymbolType.FUNCTION:
-                args_exposed = ensure_function_args_exposed(code_state, exposed)
-                for func_ref, arg_refs in args_exposed.items():
-                    decided_refs.extend(arg_refs)  # avoid asking again
-                    for ref in arg_refs:
-                        add_changelog(
-                            ref.name,
-                            ChangelogActionType.EXPOSE,
-                            details=f"exposed in the function {func_ref.symbol.local_id}",
-                        )
-                        select_group(tool_state.groups, ref)
+        if exposed and symbol_type == SymbolType.FUNCTION:
+            args_exposed = ensure_function_args_exposed(code_state, exposed)
+            for func_ref, arg_refs in args_exposed.items():
+                decided_refs.extend(arg_refs)  # avoid asking again
+                for ref in arg_refs:
+                    if tool_state.current_state(ref.name).exist_in_code:
+                        # already exposed
+                        continue
+                    ctx.add_action(
+                        ref.name,
+                        ChangelogActionType.EXPOSE,
+                        details=f"exposed in the function {func_ref.symbol.local_id}",
+                    )
     return decided_refs
 
 
-def handle_added_refs(
-    tool_state: PkgExtState,
-    code_state: PkgCodeState,
-    add_changelog: AddChangelogAction,
-    settings: PkgSettings,
-) -> None:
+def handle_added_refs(ctx: pkg_ctx) -> None:
     """
     # Processing Order
     1. functions
@@ -108,6 +102,8 @@ def handle_added_refs(
     2. Any errors raised by the function must also be exposed
 
     """
+    tool_state = ctx.tool_state
+    code_state = ctx.code_state
     added_refs = tool_state.added_refs(code_state.named_refs)
     if not added_refs:
         logger.info("No new references found in the package")
@@ -149,7 +145,7 @@ def handle_added_refs(
             file_added = group_by_once(relevant_refs, key=group_by_rel_path)
             file_added = sort_by_dep_order(file_added)
             extra_refs_decided = make_expose_decisions(
-                file_added, add_changelog, tool_state, code_state, symbol_type, settings
+                file_added, ctx, tool_state, code_state, symbol_type, ctx.settings
             )
             all_refs_decided = relevant_refs + extra_refs_decided
             decide_refs(all_refs_decided)

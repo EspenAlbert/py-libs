@@ -1,7 +1,15 @@
 name: a
-action: expose
+type: expose
 details: created in _internal/a.py
+ts: 2025-10-18 21:13:06.12345+00:00
+---
+name: n1
+type: group_module
+details:
+  module_path: _internal.a
+ts: 2025-10-18 21:13:06.12345+00:00
 ---
 name: b
-action: expose
+type: expose
 details: created in _internal/a.py
+ts: 2025-10-18 21:13:06.12345+00:00

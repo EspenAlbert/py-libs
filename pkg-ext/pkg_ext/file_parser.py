@@ -163,3 +163,9 @@ def parse_code_symbols(
     for global_import in globals_added:
         refs.pop(global_import, None)
     return refs
+
+
+__all__ = [
+    "parse_code_symbols",
+    "parse_symbols",
+]

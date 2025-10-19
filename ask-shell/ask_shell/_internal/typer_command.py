@@ -28,26 +28,34 @@ def log_exit_summary(settings: AskShellSettings):
     )
 
 
-def except_hook(
-    exc_type: type[BaseException], exc_value: BaseException, tb: TracebackType | None
-) -> None:
-    """Similar to typer's except hook"""
-    internal_modules = [typer, click, ask_shell]
-    console = get_live_console()
-    rich_tb = Traceback.from_exception(
-        exc_type,
-        exc_value,
-        tb,
-        show_locals=True,
-        suppress=internal_modules,
-        width=console.width,
-    )
-    console.print(rich_tb)
-    standard_exception = traceback.TracebackException(
-        exc_type, exc_value, tb, limit=-7, compact=True
-    )
-    for line in standard_exception.format(chain=True):
-        console.print(line, end="")
+def except_hook_custom(
+    skip_rich_exception: bool,
+) -> Callable[[type[BaseException], BaseException, TracebackType | None], None]:
+    def except_hook(
+        exc_type: type[BaseException],
+        exc_value: BaseException,
+        tb: TracebackType | None,
+    ) -> None:
+        """Similar to typer's except hook"""
+        internal_modules = [typer, click, ask_shell]
+        console = get_live_console()
+        rich_tb = Traceback.from_exception(
+            exc_type,
+            exc_value,
+            tb,
+            show_locals=True,
+            suppress=internal_modules,
+            width=console.width,
+        )
+        if not skip_rich_exception:
+            console.print(rich_tb)
+        standard_exception = traceback.TracebackException(
+            exc_type, exc_value, tb, limit=-7, compact=True
+        )
+        for line in standard_exception.format(chain=True):
+            console.print(line, end="")
+
+    return except_hook
 
 
 def track_progress_decorator(
@@ -57,12 +65,13 @@ def track_progress_decorator(
     use_app_name_command_for_logs: bool = True,
     app_name: str,
     command_name: str,
+    skip_rich_exception: bool = False,
 ) -> Callable[[T], T]:
     def decorator(command: T) -> T:
         @wraps(command)
         def wrapper(*args, **kwargs):
             if not skip_except_hook:  # this must be done inside of the call as the typer.main sets the except hook when the app is called
-                sys.excepthook = except_hook  # type: ignore
+                sys.excepthook = except_hook_custom(skip_rich_exception)  # type: ignore
             if use_app_name_command_for_logs:
                 settings.configure_run_logs_dir_if_unset(
                     new_relative_path=f"{app_name}/{command_name}"
@@ -143,6 +152,7 @@ def configure_logging(
             use_app_name_command_for_logs=use_app_name_command_for_logs,
             app_name=app_name,
             command_name=command.name or command.callback.__name__,  # type: ignore
+            skip_rich_exception=True,  # TODO: Update me later
         )(
             command.callback  # type: ignore
         )

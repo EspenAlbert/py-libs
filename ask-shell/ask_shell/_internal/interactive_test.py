@@ -6,9 +6,11 @@ from ask_shell._internal.interactive import (
     KeyInput,
     NewHandlerChoice,
     PromptMatch,
+    RaiseOnQuestionError,
     SelectOptions,
     confirm,
     question_patcher,
+    raise_on_question,
     select_dict,
     select_list,
     select_list_choice,
@@ -19,7 +21,7 @@ from ask_shell._internal.interactive import (
 
 
 def test_confirm():
-    with question_patcher(["y", "n", "", ""]):
+    with question_patcher(responses=["y", "n", "", ""]):
         assert confirm("Can you confirm? (should answer yes)")
         assert not confirm("Can you confirm? (should answer no)")
         assert confirm("Can you confirm? (use default yes)", default=True)
@@ -27,11 +29,11 @@ def test_confirm():
 
 
 def test_text():
-    with question_patcher(["Jane Doe", ""]):
+    with question_patcher(responses=["Jane Doe", ""]):
         assert text("Enter your name:") == "Jane Doe"
         assert text("Enter your name:", default="John Doe") == "John Doe"
     with pytest.raises(KeyboardInterrupt):
-        with question_patcher([KeyInput.CONTROLC]):
+        with question_patcher(responses=[KeyInput.CONTROLC]):
             text("Enter your name:")
 
 
@@ -51,12 +53,12 @@ def test_text():
     ],
 )
 def test_select_list_multiple(inputs, options, expected):
-    with question_patcher(inputs):
+    with question_patcher(responses=inputs):
         assert select_list_multiple("Select options:", options) == expected
 
 
 def test_select_list_multiple_with_default():
-    with question_patcher([""]):
+    with question_patcher(responses=[""]):
         options = ["Option 1", "Option 2", "Option 3"]
         assert (
             select_list_multiple("Select options:", options, default=options) == options
@@ -91,19 +93,19 @@ def test_select_list_multiple_with_default():
     ],
 )
 def test_select_list(inputs, options, default, expected):
-    with question_patcher(inputs):
+    with question_patcher(responses=inputs):
         assert select_list("Select an option:", options, default=default) == expected
 
 
 def test_select_list_many_options_supports_search():
-    with question_patcher(["q", ""]):
+    with question_patcher(responses=["q", ""]):
         assert select_list("Choose a letter", list("abcdefghijklmnopqrstuvwxyz")) == "q"
 
 
 def test_select_list_supports_shortcut_on_shorter_lists():
-    with question_patcher(["3"]):
+    with question_patcher(responses=["3"]):
         assert select_list("Choose a number", ["1", "2", "3"]) == "3"
-    with question_patcher([f"{SEARCH_ENABLED_AFTER_CHOICES}"]):
+    with question_patcher(responses=[f"{SEARCH_ENABLED_AFTER_CHOICES}"]):
         assert (
             select_list(
                 "Choose a number",
@@ -114,7 +116,7 @@ def test_select_list_supports_shortcut_on_shorter_lists():
 
 
 def test_explicit_select_options():
-    with question_patcher(["j"]):
+    with question_patcher(responses=["j"]):
         assert (
             select_list(
                 "Choose a letter",
@@ -126,7 +128,7 @@ def test_explicit_select_options():
 
 
 def test_select_dict():
-    with question_patcher(["", "Option 2"]):
+    with question_patcher(responses=["", "Option 2"]):
         assert (
             select_dict(
                 "Select an option:", {"Option 1": 1, "Option 2": 2}, default="Option 2"
@@ -143,7 +145,7 @@ def test_SelectOptions_should_raise_value_error():
 
 def test_question_patcher_should_raise_value_error_when_there_are_no_more_input():
     with pytest.raises(ValueError):
-        with question_patcher([]):
+        with question_patcher(responses=[]):
             select_list("Select an option:", ["Option 1", "Option 2"])
 
 
@@ -160,7 +162,7 @@ def test_select_list_multiple_choices_one_selection():
         ChoiceTyped(name="Option 1", value=1),
         ChoiceTyped(name="Option 2", value=2),
     ]
-    with question_patcher([" "]):
+    with question_patcher(responses=[" "]):
         assert select_list_multiple_choices("Select options:", choices) == [1]
 
 
@@ -169,7 +171,7 @@ def test_select_list_multiple_choices_two_selections():
         ChoiceTyped(name="Option 1", value=1, description="First option"),
         ChoiceTyped(name="Option 2", value=2, description="Second option"),
     ]
-    with question_patcher([f" {KeyInput.DOWN} "]):
+    with question_patcher(responses=[f" {KeyInput.DOWN} "]):
         assert select_list_multiple_choices("Select options:", choices) == [1, 2]
 
 
@@ -178,19 +180,19 @@ def test_select_list_typed():
         ChoiceTyped(name="Option 1", value=1, description="First option"),
         ChoiceTyped(name="Option 2", value=2, description="Second option"),
     ]
-    with question_patcher([""]):
+    with question_patcher(responses=[""]):
         assert select_list_choice("Select an option", choices) == 1
 
 
 @pytest.mark.asyncio()
 async def test_confirm_async():
-    with question_patcher([""]):
+    with question_patcher(responses=[""]):
         assert confirm("Confirm from async", default=True)
 
 
 def test_new_handler_choice():
     new_handler = NewHandlerChoice(int, new_prompt="choose different value")
-    with question_patcher([KeyInput.CONTROLC, "3"]):
+    with question_patcher(responses=[KeyInput.CONTROLC, "3"]):
         choice = select_list_choice(
             "select me",
             [ChoiceTyped(name="c1", value=1), ChoiceTyped(name="c2", value=2)],
@@ -201,7 +203,7 @@ def test_new_handler_choice():
 
 def test_new_handler_choice_multiple():
     new_handler = NewHandlerChoice(int, new_prompt="choose different value")
-    with question_patcher([KeyInput.CONTROLC, "3", ""]):
+    with question_patcher(responses=[KeyInput.CONTROLC, "3", ""]):
         choice = select_list_multiple_choices(
             "select me",
             [ChoiceTyped(name="c1", value=1), ChoiceTyped(name="c2", value=2)],
@@ -212,7 +214,7 @@ def test_new_handler_choice_multiple():
 
 def test_new_handler_choice_multiple_with_extra():
     new_handler = NewHandlerChoice(int, new_prompt="choose different value")
-    with question_patcher([KeyInput.CONTROLC, "3", f"{KeyInput.DOWN} "]):
+    with question_patcher(responses=[KeyInput.CONTROLC, "3", f"{KeyInput.DOWN} "]):
         choice = select_list_multiple_choices(
             "select me",
             [ChoiceTyped(name="c1", value=1), ChoiceTyped(name="c2", value=2)],
@@ -267,3 +269,9 @@ def test_no_dynamic_match():
     ):
         with question_patcher():
             text(prompt_text)
+
+
+def test_raise_on_question():
+    with pytest.raises(RaiseOnQuestionError, match="Question asked: 'hello error'"):
+        with raise_on_question():
+            text("hello error")

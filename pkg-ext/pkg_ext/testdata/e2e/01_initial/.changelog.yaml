@@ -1,15 +1,31 @@
 name: expose
-action: expose
+type: expose
 details: created in _internal.py
+ts: 2025-10-18 21:13:06.12345+00:00
+---
+name: my_group
+type: group_module
+details:
+  module_path: _internal
+ts: 2025-10-18 21:13:06.12345+00:00
 ---
 name: expose_with_arg
-action: expose
+type: expose
 details: created in _internal.py
+ts: 2025-10-18 21:13:06.12345+00:00
 ---
 name: hidden
-action: hide
+type: hide
 details: created in _internal.py
+ts: 2025-10-18 21:13:06.12345+00:00
 ---
 name: MyCls
-action: expose
+type: expose
 details: exposed in the function _internal.expose_with_arg
+ts: 2025-10-18 21:13:06.12345+00:00
+---
+name: my_dep
+type: group_module
+details:
+  module_path: _internal2
+ts: 2025-10-18 21:13:06.12345+00:00

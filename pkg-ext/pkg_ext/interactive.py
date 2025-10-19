@@ -1,29 +1,39 @@
-import contextlib
-
 from ask_shell._internal.interactive import (
     ChoiceTyped,
     NewHandlerChoice,
     SelectOptions,
     confirm,
+    select_dict,
     select_list_choice,
     select_list_multiple_choices,
+    text,
 )
+from zero_3rdparty.enum_utils import StrEnum
 
+from pkg_ext.changelog import (
+    ChangelogAction,
+    ChangelogActionType,
+    GroupModulePathChangelog,
+)
 from pkg_ext.errors import NoPublicGroupMatch
 from pkg_ext.models import (
     PublicGroup,
     PublicGroups,
+    RefAddCallback,
     RefState,
     RefStateWithSymbol,
     RefSymbol,
 )
 
 
-def as_choices(groups: PublicGroups) -> list[ChoiceTyped[PublicGroup]]:
+def as_choices(
+    groups: PublicGroups, default: str = ""
+) -> list[ChoiceTyped[PublicGroup]]:
     return [
         ChoiceTyped(
             name=group.name,
             value=group,
+            checked=group.name == default,
             description="Don't belong to a group, rather at top level"
             if group.is_root
             else "",
@@ -45,10 +55,32 @@ def new_public_group_constructor(
     )
 
 
+class CommitFixAction(StrEnum):
+    INCLUDE = "include"
+    EXCLUDE = "exclude"
+    REPHRASE = "rephrase"
+
+
+def select_commit_fix(prompt_text: str) -> CommitFixAction:
+    return select_dict(
+        prompt_text,
+        {option: option for option in list(CommitFixAction)},
+        default=CommitFixAction.INCLUDE,
+    )
+
+
+def select_commit_rephrased(commit_message: str) -> str:
+    return text("rephrase commit message", default=commit_message)
+
+
+def select_group_name(
+    prompt_text: str, groups: PublicGroups, default: str = ""
+) -> PublicGroup:
+    choices = as_choices(groups, default)
+    return select_list_choice(prompt_text, choices)
+
+
 def select_group(groups: PublicGroups, ref: RefSymbol) -> PublicGroup:
-    with contextlib.suppress(NoPublicGroupMatch):
-        group = groups.matching_group(ref)
-        return groups.add_ref(ref, group.name)
     choices = as_choices(groups)
     group = select_list_choice(
         f"Choose public API group name for {ref.local_id}",
@@ -56,17 +88,6 @@ def select_group(groups: PublicGroups, ref: RefSymbol) -> PublicGroup:
         options=new_public_group_constructor(groups, ref),
     )
     return groups.add_ref(ref, group.name)
-
-
-def select_groups(
-    groups: PublicGroups,
-    refs: list[RefStateWithSymbol | RefSymbol] | list[RefStateWithSymbol],
-) -> None:
-    for ref in refs:
-        if isinstance(ref, RefSymbol):
-            select_group(groups, ref)
-        else:
-            select_group(groups, ref.symbol)
 
 
 def _as_choice_ref_symbol(ref: RefSymbol, checked: bool) -> ChoiceTyped[RefSymbol]:
@@ -115,3 +136,34 @@ def confirm_create_alias(ref: RefState, new_ref: RefStateWithSymbol) -> bool:
 def confirm_delete(refs: list[RefState]) -> bool:
     delete_names = ", ".join(ref.name for ref in refs)
     return confirm(f"Confirm deleting remaining refs: {delete_names}")
+
+
+def on_new_ref(groups: PublicGroups) -> RefAddCallback:
+    def on_ref(ref: RefSymbol) -> ChangelogAction | None:
+        try:
+            found_group = groups.matching_group(ref)
+            groups.add_ref(ref, found_group.name)
+        except NoPublicGroupMatch:
+            new_group = select_group(groups, ref)
+            return ChangelogAction(
+                name=new_group.name,
+                type=ChangelogActionType.GROUP_MODULE,
+                details=GroupModulePathChangelog(module_path=ref.module_path),
+            )
+
+    return on_ref
+
+
+__all__ = [
+    "CommitFixAction",
+    "confirm_create_alias",
+    "confirm_delete",
+    "on_new_ref",
+    "select_commit_fix",
+    "select_commit_rephrased",
+    "select_group",
+    "select_group_name",
+    "select_multiple_ref_state",
+    "select_multiple_refs",
+    "select_ref",
+]

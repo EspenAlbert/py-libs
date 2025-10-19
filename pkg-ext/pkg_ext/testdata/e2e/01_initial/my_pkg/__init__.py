@@ -3,6 +3,7 @@
 from my_pkg import my_dep
 from my_pkg import my_group
 
+VERSION = "0.1.0"
 __all__ = [
     "my_dep",
     "my_group",

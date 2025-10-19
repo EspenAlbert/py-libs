@@ -18,7 +18,6 @@ from pkg_ext.cli.workflows import (
     post_merge_commit_workflow,
     sync_files,
 )
-from pkg_ext.config import load_user_config
 from pkg_ext.git_usage import GitSince, head_merge_pr
 from pkg_ext.settings import PkgSettings, pkg_settings
 
@@ -113,21 +112,13 @@ def main(
             typer.echo(f"Error: {e}", err=True)
             raise typer.Exit(1)
 
-    # Resolve global settings with proper precedence: CLI arg → Env var → Config file(user or proejct) → Default
-    user_config = load_user_config()
-
-    # Create PkgSettings once in the callback
-    settings = pkg_settings(
+    ctx.obj = pkg_settings(
         repo_root=resolved_repo_root,
         is_bot=is_bot,
         pkg_path=pkg_path_str,
-        skip_open_in_editor=skip_open
-        if skip_open is not None
-        else user_config.skip_open_in_editor,
+        skip_open_in_editor=skip_open,
         tag_prefix=tag_prefix,
     )
-    # Store settings for use by subcommands
-    ctx.obj = settings
 
 
 @app.command()
@@ -178,11 +169,8 @@ def post_merge(
     push: bool = option_push,
 ):
     """Use this after a merge to bump version, creates the automated release files"""
-
     settings: PkgSettings = ctx.obj
     settings.force_bot()
-    # Use local tag_prefix override if provided, otherwise use global
-
     pr = explicit_pr or head_merge_pr(Path(settings.repo_root))
     api_input = GenerateApiInput(
         settings=settings,
@@ -216,7 +204,6 @@ def generate_api(
 ):
     """Generate API documentation and manage package releases."""
     settings: PkgSettings = ctx.obj
-    # Use command-specific overrides if provided, otherwise use global settings
     api_input = GenerateApiInput(
         settings=settings,
         git_changes_since=git_changes_since,

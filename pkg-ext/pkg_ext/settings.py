@@ -6,7 +6,7 @@ from pydantic import DirectoryPath, Field, model_validator
 from pydantic_settings import BaseSettings
 from zero_3rdparty import file_utils
 
-from pkg_ext.config import load_project_config
+from pkg_ext.config import load_project_config, load_user_config
 
 T = TypeVar("T")
 
@@ -111,7 +111,7 @@ def pkg_settings(
     repo_root: Path,
     pkg_path: str,
     *,
-    skip_open_in_editor: bool = False,
+    skip_open_in_editor: bool | None = None,
     is_bot: bool = False,
     dev_mode: bool = False,
     tag_prefix: str | None = None,
@@ -120,14 +120,17 @@ def pkg_settings(
     commit_fix_diff_suffixes: tuple[str, ...] | None = None,
     after_file_write_hooks: tuple[str, ...] | None = None,
 ) -> PkgSettings:
-    # Load project config for defaults when not provided
+    # Resolve global settings with proper precedence: CLI arg → Env var → Config file(user or proejct) → Default
+    user_config = load_user_config()
     project_config = load_project_config((repo_root / pkg_path).parent)
 
     return PkgSettings(
         repo_root=repo_root,
         is_bot=is_bot,
         pkg_directory=repo_root / pkg_path,
-        skip_open_in_editor=skip_open_in_editor,
+        skip_open_in_editor=skip_open_in_editor
+        if skip_open_in_editor is not None
+        else user_config.skip_open_in_editor,
         dev_mode=dev_mode,
         file_header=file_header or project_config.file_header,
         commit_fix_prefixes=commit_fix_prefixes or project_config.commit_fix_prefixes,

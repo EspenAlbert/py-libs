@@ -89,6 +89,7 @@ def pr_number_from_url(url: str) -> int:
 
 class PRInfo(Entity):
     base_ref_name: str = Field(alias="baseRefName")
+    base_ref_oid: str = Field(alias="baseRefOid")
     url: str
 
     @property
@@ -199,7 +200,9 @@ def solve_since_sha(repo: Repo, repo_path: Path, since: GitSince, ref: str) -> C
 
 def find_pr_info_raw(repo_path: Path) -> dict[str, Any]:
     result = run_and_wait(
-        "gh pr view --json baseRefName,url", cwd=repo_path, allow_non_zero_exit=True
+        "gh pr view --json baseRefName,url,baseRefOid",
+        cwd=repo_path,
+        allow_non_zero_exit=True,
     )
     if not result.clean_complete:
         return {}
@@ -245,7 +248,7 @@ def find_git_changes(event: GitChangesInput) -> GitChanges:
         return GitChanges.empty()
     try:
         start_commit = solve_since_sha(
-            repo, event.repo_path, event.since, pr_info.base_ref_name if pr_info else ""
+            repo, event.repo_path, event.since, pr_info.base_ref_oid if pr_info else ""
         )
         start_sha = start_commit.hexsha
         commits, files_changed = _parse_changes(repo, start_sha, head_sha)

@@ -16,7 +16,7 @@ jobs:
       - name: setup-settings
         uses: "./.github/templates/setup-settings"
       - name: build
-        run: just release-build ask-shell
+        run: just release-build ask-shell ${{ github.ref_name }}
       - name: Store the distribution packages
         uses: actions/upload-artifact@v4
         with:

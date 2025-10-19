@@ -5,7 +5,7 @@ from os import getenv
 import typer
 
 from pkg_ext.config import load_user_config
-from pkg_ext.git import GitSince
+from pkg_ext.git_usage import GitSince
 
 
 def get_default_editor() -> str:

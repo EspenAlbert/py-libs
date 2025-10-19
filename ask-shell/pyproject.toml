@@ -26,3 +26,9 @@ exclude = [
   "conftest.py",
   "test_*.json",
 ]
+
+[tool.pkg-ext]
+tag_prefix = "a"
+after_file_write_hooks = [
+  "just fmt",
+]

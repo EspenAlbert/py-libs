@@ -16,7 +16,7 @@ from model_lib.model_base import Entity
 from pydantic import BaseModel, Field, model_validator
 
 from pkg_ext.errors import RemoteURLNotFound
-from pkg_ext.git.url import read_remote_url
+from pkg_ext.git_usage.url import read_remote_url
 
 logger = logging.getLogger(__name__)
 

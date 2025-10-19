@@ -16,7 +16,7 @@ from zero_3rdparty.datetime_utils import (
 from zero_3rdparty.enum_utils import StrEnum
 from zero_3rdparty.file_utils import ensure_parents_write_text
 
-from pkg_ext.git.state import GitChanges
+from pkg_ext.git_usage.state import GitChanges
 
 logger = logging.getLogger(__name__)
 ACTION_FILE_SPLIT = "---\n"

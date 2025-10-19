@@ -18,8 +18,8 @@ from pkg_ext.cli.workflows import (
     post_merge_commit_workflow,
     sync_files,
 )
-from pkg_ext.config import load_project_config, load_user_config
-from pkg_ext.git import GitSince, head_merge_pr
+from pkg_ext.config import load_user_config
+from pkg_ext.git_usage import GitSince, head_merge_pr
 from pkg_ext.settings import PkgSettings, pkg_settings
 
 app = Typer(name="pkg-ext", help="Generate public API for a package and more!")
@@ -115,7 +115,6 @@ def main(
 
     # Resolve global settings with proper precedence: CLI arg → Env var → Config file(user or proejct) → Default
     user_config = load_user_config()
-    project_config = load_project_config(resolved_repo_root)
 
     # Create PkgSettings once in the callback
     settings = pkg_settings(
@@ -125,7 +124,7 @@ def main(
         skip_open_in_editor=skip_open
         if skip_open is not None
         else user_config.skip_open_in_editor,
-        tag_prefix=tag_prefix if tag_prefix is not None else project_config.tag_prefix,
+        tag_prefix=tag_prefix,
     )
     # Store settings for use by subcommands
     ctx.obj = settings

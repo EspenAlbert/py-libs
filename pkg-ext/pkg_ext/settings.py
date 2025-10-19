@@ -35,6 +35,7 @@ class PkgSettings(BaseSettings):
     commit_fix_diff_suffixes: tuple[str, ...] = Field(
         default_factory=default_commit_diff_suffixes
     )
+    after_file_write_hooks: tuple[str, ...] | None = Field(default=None)
     tag_prefix: str = ""
 
     def _with_dev_suffix(self, path: Path) -> Path:
@@ -113,13 +114,14 @@ def pkg_settings(
     skip_open_in_editor: bool = False,
     is_bot: bool = False,
     dev_mode: bool = False,
-    tag_prefix: str = "",
+    tag_prefix: str | None = None,
     file_header: str | None = None,
     commit_fix_prefixes: tuple[str, ...] | None = None,
     commit_fix_diff_suffixes: tuple[str, ...] | None = None,
+    after_file_write_hooks: tuple[str, ...] | None = None,
 ) -> PkgSettings:
     # Load project config for defaults when not provided
-    project_config = load_project_config(repo_root)
+    project_config = load_project_config((repo_root / pkg_path).parent)
 
     return PkgSettings(
         repo_root=repo_root,
@@ -131,5 +133,8 @@ def pkg_settings(
         commit_fix_prefixes=commit_fix_prefixes or project_config.commit_fix_prefixes,
         commit_fix_diff_suffixes=commit_fix_diff_suffixes
         or project_config.commit_diff_suffixes,
-        tag_prefix=tag_prefix or project_config.tag_prefix,
+        after_file_write_hooks=after_file_write_hooks
+        if after_file_write_hooks is not None
+        else project_config.after_file_write_hooks,
+        tag_prefix=tag_prefix if tag_prefix is not None else project_config.tag_prefix,
     )

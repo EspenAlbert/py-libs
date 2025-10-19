@@ -7,6 +7,7 @@ from contextlib import ExitStack
 from pathlib import Path
 from typing import Self
 
+from ask_shell._internal._run import run_and_wait
 from ask_shell._internal.interactive import raise_on_question
 from model_lib.model_base import Entity
 from pydantic import model_validator
@@ -25,7 +26,7 @@ from pkg_ext.changelog import (
 from pkg_ext.errors import NoHumanRequiredError
 from pkg_ext.file_parser import parse_code_symbols, parse_symbols
 from pkg_ext.generation import update_pyproject_toml, write_groups, write_init
-from pkg_ext.git import (
+from pkg_ext.git_usage import (
     GitChangesInput,
     GitSince,
     find_git_changes,
@@ -145,6 +146,11 @@ def sync_files(api_input: GenerateApiInput, ctx: pkg_ctx):
     write_init(ctx, version_str)
     update_pyproject_toml(ctx, version_str)
     write_changelog_md(ctx)
+    settings = api_input.settings
+    if hooks := settings.after_file_write_hooks:
+        for hook in hooks:
+            logger.info(f"running hook: {hook}")
+            run_and_wait(hook, cwd=settings.repo_root)
 
 
 def post_merge_commit_workflow(

@@ -18,8 +18,8 @@ from pkg_ext.changelog.actions import (
 from pkg_ext.cli import app
 from pkg_ext.conftest import CHANGELOG_YAML_FILENAME, E2eDirs, E2eRegressionCheck
 from pkg_ext.errors import NoHumanRequiredError
-from pkg_ext.git.actions import git_commit
-from pkg_ext.git.state import GitSince
+from pkg_ext.git_usage.actions import git_commit
+from pkg_ext.git_usage.state import GitSince
 from pkg_ext.settings import PkgSettings
 
 logger = logging.getLogger(__name__)

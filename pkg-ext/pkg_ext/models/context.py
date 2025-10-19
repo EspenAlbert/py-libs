@@ -15,7 +15,7 @@ from pkg_ext.changelog import (
     parse_changelog_file_path,
 )
 from pkg_ext.errors import NoPublicGroupMatch
-from pkg_ext.git import GitChanges
+from pkg_ext.git_usage import GitChanges
 from pkg_ext.settings import PkgSettings
 
 from .code_state import PkgCodeState

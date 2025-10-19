@@ -199,7 +199,8 @@ def post_merge(
         changelog_dir_path=pkg_ctx.settings.changelog_dir,
         pr_number=pr,
         tag_prefix=settings.tag_prefix,
-        new_version=str(pkg_ctx.run_state.new_version),
+        old_version=pkg_ctx.run_state.old_version,
+        new_version=pkg_ctx.run_state.new_version,
         push=push,
     )
 

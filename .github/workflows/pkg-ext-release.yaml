@@ -9,17 +9,12 @@ jobs:
     name: >-
       Build Python 🐍 distribution 📦
     runs-on: ubuntu-latest
-    outputs:
-      pkg: ${{ steps.get_package.outputs.pkg }}
     steps:
       - uses: actions/checkout@v4
       - name: setup-steps
         uses: "./.github/templates/setup-steps"
-      - name: Get the package
-        id: get_package
-        run: echo "pkg=$(just pkg-find ${{ github.ref_name }})" >> "$GITHUB_OUTPUT"
       - name: build
-        run: just release-build ${{ steps.get_package.outputs.pkg }}
+        run: just release-build ask-shell
       - name: Store the distribution packages
         uses: actions/upload-artifact@v4
         with:
@@ -35,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/${{needs.build.outputs.pkg}}  # Replace <package-name> with your PyPI project name
+      url: https://pypi.org/p/ask-shell  # Replace <package-name> with your PyPI project name
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
 

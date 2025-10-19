@@ -1,5 +1,6 @@
 """CLI commands for pkg-ext."""
 
+import logging
 from pathlib import Path
 
 import typer
@@ -30,6 +31,7 @@ from pkg_ext.cli.workflows import (
 from pkg_ext.git_usage import GitSince, head_merge_pr
 from pkg_ext.settings import PkgSettings, pkg_settings
 
+logger = logging.getLogger(__name__)
 app = Typer(name="pkg-ext", help="Generate public API for a package and more!")
 
 
@@ -184,6 +186,7 @@ def post_merge(
     settings: PkgSettings = ctx.obj
     settings.force_bot()
     pr = explicit_pr or head_merge_pr(Path(settings.repo_root))
+    logger.info(f"pr found: {pr}")
     api_input = GenerateApiInput(
         settings=settings,
         git_changes_since=GitSince.NO_GIT_CHANGES,  # will not add new entries
@@ -261,8 +264,8 @@ def release_notes(
     action = find_release_action(settings.changelog_dir, version)
     content = read_changelog_section(
         settings.changelog_md.read_text(),
-        action.details.old_version,
-        action.name,  # type: ignore
+        old_version=action.details.old_version,  # type: ignore
+        new_version=action.name,
     )
     output_file = settings.repo_root / f"dist/{tag_name}.txt"
     ensure_parents_write_text(output_file, content)

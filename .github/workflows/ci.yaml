@@ -1,5 +1,7 @@
 name: CI - Lint Test Package
 
+env:
+  GH_TOKEN: ${{ github.token }}
 on:
   pull_request:
     types: [opened, reopened]

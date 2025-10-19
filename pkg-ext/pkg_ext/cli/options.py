@@ -33,3 +33,4 @@ option_create_tag = typer.Option(
     help="Add a git commit and tag for the bumped version",
 )
 option_push = typer.Option(False, "--push", help="Push commit and tag")
+option_pr = typer.Option(0, "--pr", help="Use this if the HEAD commit is not a merge")

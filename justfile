@@ -62,6 +62,10 @@ ask-shell-pre-merge:
   just pkg-ext --pkg-path ./ask-shell/ask_shell pre-merge
 
 [positional-arguments]
+ask-shell-post-merge *args:
+  just pkg-ext --pkg-path ./ask-shell/ask_shell post-merge {{args}}
+
+[positional-arguments]
 gh-ext *args:
   @uv run scripts/gh_ext.py {{args}}
 

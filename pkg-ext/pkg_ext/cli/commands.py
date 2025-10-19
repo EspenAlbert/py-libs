@@ -9,6 +9,7 @@ from pkg_ext.cli.options import (
     option_bump_version,
     option_create_tag,
     option_git_changes_since,
+    option_pr,
     option_push,
 )
 from pkg_ext.cli.workflows import (
@@ -163,9 +164,7 @@ def pre_merge(
 @app.command()
 def post_merge(
     ctx: typer.Context,
-    explicit_pr: int = typer.Option(
-        0, help="Use this if the HEAD commit is not a merge"
-    ),
+    explicit_pr: int = option_pr,
     push: bool = option_push,
 ):
     """Use this after a merge to bump version, creates the automated release files"""
@@ -198,9 +197,7 @@ def generate_api(
     bump_version: bool = option_bump_version,
     create_tag: bool = option_create_tag,
     push: bool = option_push,
-    explicit_pr: int = typer.Option(
-        0, "--pr", help="Use this if the HEAD commit is not a merge"
-    ),
+    explicit_pr: int = option_pr,
 ):
     """Generate API documentation and manage package releases."""
     settings: PkgSettings = ctx.obj

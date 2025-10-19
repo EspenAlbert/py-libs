@@ -163,12 +163,24 @@ def post_merge_commit_workflow(
 ):
     assert pr_number > 0, f"invalid PR number: {pr_number} must be > 0"
     changelog_pr_path = changelog_filepath(changelog_dir_path, pr_number)
+    old_actions = parse_changelog_file_path(changelog_pr_path)
+    if not old_actions:
+        logger.warning(f"no changes to commit for {pr_number}")
+        return
+    if release_action := (
+        (
+            action
+            for action in old_actions
+            if action.type == ChangelogActionType.RELEASE
+        ),
+        None,
+    ):
+        raise ValueError(f"pr has already been release: {release_action!r}")
     changelog_pr_path = dump_changelog_actions(
         changelog_pr_path,
-        [ChangelogAction(name=new_version, type=ChangelogActionType.RELEASE)],
+        old_actions
+        + [ChangelogAction(name=new_version, type=ChangelogActionType.RELEASE)],
     )
-    actions = parse_changelog_file_path(changelog_pr_path)
-    assert len(actions), "no changelog entries!"
     git_tag = f"{tag_prefix}{new_version}"
     git_commit(
         repo_path,

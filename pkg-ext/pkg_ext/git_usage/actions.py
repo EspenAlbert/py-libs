@@ -7,9 +7,16 @@ _GIT_AUTHOR = (
 )
 
 
-def git_commit(repo_dir: Path, message: str, tag: str = "", push: bool = False):
+def git_commit(
+    repo_dir: Path,
+    message: str,
+    tag: str = "",
+    push: bool = False,
+    verify: bool = False,
+):
     run_and_wait("git add .", cwd=repo_dir)
-    run_and_wait(f'git commit {_GIT_AUTHOR} -m "{message}"', cwd=repo_dir)
+    verify_arg = "" if verify else " --no-verify"
+    run_and_wait(f'git commit {_GIT_AUTHOR} -m "{message}"{verify_arg}', cwd=repo_dir)
     if tag:
         run_and_wait(f'git tag -a "{tag}" -m "{tag}"', cwd=repo_dir)
     if push:

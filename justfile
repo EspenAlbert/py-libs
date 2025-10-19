@@ -58,6 +58,7 @@ ssort-check:
   @uv run ssort --diff --check ask-shell/ask_shell pkg-ext/pkg_ext
 ask-shell-changes:
   just pkg-ext pre-push ./ask-shell/ask_shell
+  just fmt
 ask-shell-pre-merge:
   just pkg-ext pre-merge ./ask-shell/ask_shell
   just fmt

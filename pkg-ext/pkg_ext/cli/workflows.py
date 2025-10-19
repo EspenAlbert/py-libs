@@ -23,6 +23,7 @@ from pkg_ext.changelog import (
     write_changelog_md,
 )
 from pkg_ext.errors import NoHumanRequiredError
+from pkg_ext.file_parser import parse_code_symbols, parse_symbols
 from pkg_ext.generation import update_pyproject_toml, write_groups, write_init
 from pkg_ext.git import (
     GitChangesInput,
@@ -33,10 +34,9 @@ from pkg_ext.git import (
 )
 from pkg_ext.interactive import on_new_ref
 from pkg_ext.models import PkgCodeState, pkg_ctx
-from pkg_ext.parsing import parse_code_symbols, parse_symbols
 from pkg_ext.reference_handling import handle_added_refs, handle_removed_refs
 from pkg_ext.settings import PkgSettings, pkg_settings
-from pkg_ext.versioning import bump_version, read_current_version
+from pkg_ext.version_bump import bump_version, read_current_version
 
 logger = logging.getLogger(__name__)
 

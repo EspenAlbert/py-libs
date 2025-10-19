@@ -15,8 +15,8 @@ from .actions import (
     parse_changelog_file_path,
 )
 from .committer import add_git_changes
-from .markdown import write_changelog_md
 from .parser import parse_changelog
+from .write_changelog_md import write_changelog_md
 
 __all__ = [
     "BumpType",

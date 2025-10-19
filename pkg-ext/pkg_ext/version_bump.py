@@ -127,3 +127,10 @@ def read_current_version(ctx: pkg_ctx):
             with suppress(Exception):
                 version = PkgVersion.parse(raw_init_version)
     return version
+
+
+__all__ = [
+    "bump_version",
+    "read_current_version",
+    "PkgVersion",
+]

@@ -267,5 +267,5 @@ def release_notes(
         old_version=action.details.old_version,  # type: ignore
         new_version=action.name,
     )
-    output_file = settings.repo_root / f"dist/{tag_name}.txt"
+    output_file = settings.repo_root / f"dist/{tag_name}.changelog.md"
     ensure_parents_write_text(output_file, content)

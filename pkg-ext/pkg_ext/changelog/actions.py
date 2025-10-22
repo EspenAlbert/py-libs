@@ -232,6 +232,7 @@ def archive_old_actions(
     for index in range(move_count):
         file = files[index]
         archive_path = changelog_archive_path(file, changelog_dir_path.name)
+        archive_path.parent.mkdir(parents=True, exist_ok=True)
         file.rename(archive_path)
         logger.info(f"moving {file} to {archive_path}")
     return True

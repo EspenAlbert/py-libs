@@ -7,9 +7,9 @@ runs:
   - name: Set environment variables
     shell: bash
     run: |
-      echo "STATIC_DIR=${{ github.workspace }}/static" >> $GITHUB_ENV
-      echo "CACHE_DIR=${{ github.workspace }}/cache" >> $GITHUB_ENV
-      mkdir -p "${{ github.workspace }}/cache"
-      mkdir -p "${{ github.workspace }}/static"
-      echo "${{ github.workspace }}/cache"
-      echo "${{ github.workspace }}/static"
+      echo "STATIC_DIR=${{ runner.temp }}/static" >> $GITHUB_ENV
+      echo "CACHE_DIR=${{ runner.temp }}/cache" >> $GITHUB_ENV
+      mkdir -p "${{ runner.temp }}/cache"
+      mkdir -p "${{ runner.temp }}/static"
+      echo "${{ runner.temp }}/cache"
+      echo "${{ runner.temp }}/static"

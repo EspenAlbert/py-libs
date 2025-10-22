@@ -23,6 +23,7 @@ from pkg_ext.cli.options import (
 )
 from pkg_ext.cli.workflows import (
     GenerateApiInput,
+    clean_old_entries,
     create_ctx,
     generate_api_workflow,
     post_merge_commit_workflow,
@@ -181,6 +182,10 @@ def post_merge(
     ctx: typer.Context,
     explicit_pr: int = option_pr,
     push: bool = option_push,
+    skip_clean_old_entries: bool = typer.Option(
+        False,
+        "--skip-clean",
+    ),
 ):
     """Use this after a merge to bump version, creates the automated release files"""
     settings: PkgSettings = ctx.obj
@@ -206,6 +211,8 @@ def post_merge(
         new_version=pkg_ctx.run_state.new_version,
         push=push,
     )
+    if not skip_clean_old_entries:
+        clean_old_entries(settings)
 
 
 @app.command()

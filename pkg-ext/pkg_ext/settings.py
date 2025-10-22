@@ -22,11 +22,12 @@ def default_commit_diff_suffixes() -> tuple[str, ...]:
 class PkgSettings(BaseSettings):
     PUBLIC_GROUPS_STORAGE_FILENAME: ClassVar[str] = ".groups.yaml"
     CHANGELOG_FILENAME: ClassVar[str] = "CHANGELOG.md"
+    CHANGELOG_DIR_NAME: ClassVar[str] = ".changelog"
 
     after_file_write_hooks: tuple[str, ...] | None = Field(default=None)
     changelog_cleanup_count: int = Field(
         default=ProjectConfig.DEFAULT_CHANGELOG_CLEANUP_COUNT,
-        description="If the .changelog reach more than `changelog_cleanup_count`, we archive the `changelog_cleanup_count` - `changelog_keep_count`",
+        description="If the .changelog reach more than `changelog_cleanup_count` post-merge we will add an extra commit cleaning up the old entries. We archive the `changelog_cleanup_count` - `changelog_keep_count` to directories.",
     )
     changelog_keep_count: int = Field(
         default=ProjectConfig.DEFAULT_CHANGELOG_KEEP_COUNT,
@@ -81,7 +82,7 @@ class PkgSettings(BaseSettings):
 
     @property
     def changelog_dir(self) -> DirectoryPath:
-        return self.state_dir / ".changelog"
+        return self.state_dir / self.CHANGELOG_DIR_NAME
 
     @property
     def changelog_md(self) -> Path:

@@ -23,7 +23,7 @@ from pkg_ext.changelog import (
     parse_changelog_file_path,
     write_changelog_md,
 )
-from pkg_ext.changelog.actions import ReleaseChangelog
+from pkg_ext.changelog.actions import ReleaseChangelog, archive_old_actions
 from pkg_ext.errors import NoHumanRequiredError
 from pkg_ext.file_parser import parse_code_symbols, parse_symbols
 from pkg_ext.generation import update_pyproject_toml, write_groups, write_init
@@ -202,3 +202,11 @@ def generate_api_workflow(api_input: GenerateApiInput) -> pkg_ctx | None:
         sync_files(api_input, ctx)
         return ctx
     return None
+
+
+def clean_old_entries(settings: PkgSettings):
+    archive_old_actions(
+        settings.changelog_dir,
+        settings.changelog_cleanup_count,
+        settings.changelog_keep_count,
+    )

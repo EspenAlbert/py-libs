@@ -1,0 +1,8 @@
+name: console
+type: fix
+ts: 2025-10-22 06:46:37.528267+00:00
+author: EspenAlbert
+details:
+  short_sha: 123bf4
+  message: 'fix: Adds flag for skip_rich_exception instead of hard-coded'
+  changelog_message: 'fix: Adds flag for skip_rich_exception instead of hard-coded'

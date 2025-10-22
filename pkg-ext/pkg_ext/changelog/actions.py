@@ -181,13 +181,61 @@ def parse_changelog_actions(changelog_dir_path: Path) -> list[ChangelogAction]:
         f"expected a directory @ {changelog_dir_path} got"
     )
     actions: list[ChangelogAction] = []
-    for path in changelog_dir_path.glob("*.yaml"):
+    for path in changelog_dir_path.rglob(
+        "*.yaml"
+    ):  # support reading archived changelog actions
         actions.extend(parse_changelog_file_path(path))
     return sorted(actions)
 
 
 def changelog_filename(pr_number: int) -> str:
     return f"{pr_number:03d}.yaml"
+
+
+def changelog_archive_path(changelog_file_path: Path, changelog_dir_name: str) -> Path:
+    # sourcery skip: raise-from-previous-error
+    try:
+        pr_number = int(changelog_file_path.stem)
+    except ValueError:
+        raise ValueError(
+            f"changelog file path is not a number, got: {changelog_file_path.stem}"
+        )
+    changelog_dir_path = next(
+        (
+            parent
+            for parent in changelog_file_path.parents
+            if parent.name == changelog_dir_name
+        ),
+        None,
+    )
+    assert changelog_dir_path, (
+        f"unable to find parent {changelog_dir_name} for {changelog_file_path}"
+    )
+    archive_directory_name = pr_number // 1000
+    return (
+        changelog_dir_path
+        / f"{archive_directory_name:03d}"
+        / changelog_filename(pr_number)
+    )
+
+
+def archive_old_actions(
+    changelog_dir_path: Path, cleanup_trigger: int, keep_count: int
+) -> bool:
+    """Cleans old entries from the .changelog/ directory returns `true` if cleanup was done."""
+    files = sorted(changelog_dir_path.glob("*.yaml"))  # only top level files
+    file_count = len(files)
+    if file_count < cleanup_trigger:
+        return False
+    move_count = file_count - keep_count
+    logger.warning(f"Will archive {move_count} changelog entries")
+    for index in range(move_count):
+        file = files[index]
+        archive_path = changelog_archive_path(file, changelog_dir_path.name)
+        archive_path.parent.mkdir(parents=True, exist_ok=True)
+        file.rename(archive_path)
+        logger.info(f"moving {file} to {archive_path}")
+    return True
 
 
 def changelog_filepath(changelog_dir: Path, pr_number: int) -> Path:

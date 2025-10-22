@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 2025-10-22T06-49Z
+
+### Console
+- fix: Adds flag for skip_rich_exception instead of hard-coded [123bf4](https://github.com/EspenAlbert/py-libs/commit/123bf4)
+
+
 ## 0.2.0 2025-10-19T17-16Z
 
 ### __Root__

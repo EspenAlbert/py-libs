@@ -34,4 +34,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh workflow run pkg-ext-release.yaml --ref ${{ steps.get_tag.outputs.tag }}
+          gh workflow run pkg-ext-release.yaml --ref ${{ steps.get_tag.outputs.tag }} -f tag ${{ steps.get_tag.outputs.tag }}

@@ -142,6 +142,7 @@ def configure_logging(
     app_pretty_exceptions_show_locals: bool = False,
     skip_except_hook: bool = False,
     use_app_name_command_for_logs: bool = True,
+    render_rich_error_on_sys_exit: bool = False,
 ) -> logging.Handler:
     settings = settings or AskShellSettings.from_env()
     app_name = app.info.name or "typer_app"
@@ -152,7 +153,7 @@ def configure_logging(
             use_app_name_command_for_logs=use_app_name_command_for_logs,
             app_name=app_name,
             command_name=command.name or command.callback.__name__,  # type: ignore
-            skip_rich_exception=True,  # TODO: Update me later
+            skip_rich_exception=not render_rich_error_on_sys_exit,
         )(
             command.callback  # type: ignore
         )

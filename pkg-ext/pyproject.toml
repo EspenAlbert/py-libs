@@ -1,11 +1,11 @@
 [project]
 name = "pkg-ext"
 version = "1.0.0+rc1"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
   "ask-shell",
   "pycobertura==4.0.0",
-  "GitPython>=3.1.44",
+  "GitPython",
   "model-lib[toml]",
 ]
 

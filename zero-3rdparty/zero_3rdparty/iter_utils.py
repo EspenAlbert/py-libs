@@ -13,7 +13,6 @@ from typing import (
     Dict,
     Iterable,
     List,
-    Optional,
     Sequence,
     Tuple,
     Type,
@@ -24,7 +23,7 @@ from typing import (
 T = TypeVar("T")
 
 
-async def first_async(async_iter: AsyncIterable[T], default=None) -> Optional[T]:
+async def first_async(async_iter: AsyncIterable[T], default=None) -> T | None:
     async for t in async_iter:
         return t
     return default
@@ -106,8 +105,8 @@ def first_or_none(
     first_type: Type[T] | None = None,
     *,
     condition: Callable[[T], bool] | None = None,
-    default: Optional[T] = None,
-) -> Optional[T]:
+    default: T | None = None,
+) -> T | None:
     """
     >>> first_or_none(['a', 'b', 2], float)
 
@@ -243,7 +242,7 @@ def transpose(d: Dict[KT, VT]) -> Dict[VT, KT]:
 
 
 def partition(
-    iterable: Iterable[T], pred: Optional[Callable[[T], bool]] = None
+    iterable: Iterable[T], pred: Callable[[T], bool] | None = None
 ) -> Tuple[List[T], List[T]]:
     """From more_iterutils Returns a 2-tuple of iterables derived from the
     input iterable. The first yields the items that have ``pred(item) ==
@@ -270,7 +269,7 @@ def partition(
     return [x for (cond, x) in t1 if not cond], [x for (cond, x) in t2 if cond]
 
 
-def last(iterable: Iterable[T]) -> Optional[T]:
+def last(iterable: Iterable[T]) -> T | None:
     """
     >>> last([1, 2, 3])
     3
@@ -309,19 +308,19 @@ def _unpack(raw: object, allowed_falsy: set[object] | None):
 
 
 @_unpack.register
-def _unpack_list(raw: list, allowed_falsy: Optional[set[object]]):
+def _unpack_list(raw: list, allowed_falsy: set[object] | None):
     return [_unpack(each_raw, allowed_falsy) for each_raw in raw]
 
 
 @_unpack.register
-def _unpack_dict(raw: dict, allowed_falsy: Optional[set[object]]):
+def _unpack_dict(raw: dict, allowed_falsy: set[object] | None):
     return ignore_falsy_recurse(**raw, allowed_falsy=allowed_falsy)
 
 
 _allowed_falsy = {False, 0}
 
 
-def ignore_falsy_recurse(allowed_falsy: Optional[set[Any]] = None, **kwargs) -> dict:
+def ignore_falsy_recurse(allowed_falsy: set[Any] | None = None, **kwargs) -> dict:
     """Ignores empty dictionaries or lists and None values.
     Warning:
         Keeps False & 0

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from functools import total_ordering, wraps
 from sys import stderr
 from threading import RLock
-from typing import Any, Callable, Optional, Protocol, TypeVar, Union
+from typing import Any, Callable, Protocol, TypeVar, Union
 
 from rich.console import Console, Group, JustifyMethod, OverflowMethod, RenderableType
 from rich.live import Live
@@ -179,17 +179,17 @@ def print_to_live(
     *objects: Any,
     sep: str = " ",
     end: str = "\n",
-    style: Optional[Union[str, Style]] = None,
-    justify: Optional[JustifyMethod] = None,
-    overflow: Optional[OverflowMethod] = None,
-    no_wrap: Optional[bool] = None,
-    emoji: Optional[bool] = None,
-    markup: Optional[bool] = None,
-    highlight: Optional[bool] = None,
-    width: Optional[int] = None,
-    height: Optional[int] = None,
+    style: Union[str, Style] | None = None,
+    justify: JustifyMethod | None = None,
+    overflow: OverflowMethod | None = None,
+    no_wrap: bool | None = None,
+    emoji: bool | None = None,
+    markup: bool | None = None,
+    highlight: bool | None = None,
+    width: int | None = None,
+    height: int | None = None,
     crop: bool = True,
-    soft_wrap: Optional[bool] = None,
+    soft_wrap: bool | None = None,
     new_line_start: bool = False,
 ):
     get_live_console().print(
@@ -215,11 +215,11 @@ def log_to_live(
     *objects: Any,
     sep: str = " ",
     end: str = "\n",
-    style: Optional[Union[str, Style]] = None,
-    justify: Optional[JustifyMethod] = None,
-    emoji: Optional[bool] = None,
-    markup: Optional[bool] = None,
-    highlight: Optional[bool] = None,
+    style: Union[str, Style] | None = None,
+    justify: JustifyMethod | None = None,
+    emoji: bool | None = None,
+    markup: bool | None = None,
+    highlight: bool | None = None,
     log_locals: bool = False,
     _stack_offset: int = 1,
 ) -> None:

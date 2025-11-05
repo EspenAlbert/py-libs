@@ -9,7 +9,6 @@ from typing import (
     Callable,
     Iterable,
     List,
-    Optional,
     Pattern,
     Set,
     TextIO,
@@ -22,7 +21,7 @@ from zero_3rdparty.iter_utils import key_values, select_attrs
 def words_to_list(
     s: str,
     split_char: str = " ",
-    alternative_split_char: Optional[str] = None,
+    alternative_split_char: str | None = None,
     skip_strip: bool = False,
 ) -> List[str]:
     """

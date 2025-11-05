@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Callable, Optional, TypeVar
+from typing import Any, Callable, TypeVar
 
 import pydantic
 from typing_extensions import TypeAlias
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 dump_call: TypeAlias = Callable[[T], str]
-dump_parse: TypeAlias = Optional[tuple[dump_call, dump_call, Callable[[str], Any]]]
+dump_parse: TypeAlias = tuple[dump_call, dump_call, Callable[[str], Any]] | None
 
 
 def dump(instance: Any) -> str:

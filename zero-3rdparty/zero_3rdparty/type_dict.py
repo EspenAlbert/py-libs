@@ -1,5 +1,5 @@
 from inspect import isclass
-from typing import Dict, Iterable, Optional, Type, TypeVar
+from typing import Dict, Iterable, Type, TypeVar
 
 from zero_3rdparty.iter_utils import first_or_none
 
@@ -21,7 +21,7 @@ class TypeDict(Dict[Type | tuple[Type, bool], Iterable[tuple[V, bool]]]):
         assert isinstance(values, list)
         values.append((value, strict))
 
-    def get_by_key_and_strict(self, key: Type, strict=False) -> Optional[V]:
+    def get_by_key_and_strict(self, key: Type, strict=False) -> V | None:
         assert isclass(key), f"not a class: {key}"
         values: list[tuple[V, bool]] = super().__getitem__(key)  # type: ignore
         return first_or_none(

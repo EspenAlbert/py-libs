@@ -8,7 +8,7 @@ _pyproject_toml = """\
 [project]
 name = "pkg-ext"
 version = "1.0.0"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 """
 
 

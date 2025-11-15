@@ -5,10 +5,10 @@ from functools import cached_property, lru_cache
 from pathlib import Path
 from pydoc import locate
 from threading import RLock
-from typing import Any, Callable, ClassVar, Literal, Self
+from typing import Annotated, Any, Callable, ClassVar, Literal, Self, TypeAlias
 
 from model_lib.static_settings import StaticSettings
-from pydantic import ConfigDict, Field, model_validator
+from pydantic import BeforeValidator, ConfigDict, Field, model_validator
 from zero_3rdparty.datetime_utils import utc_now
 from zero_3rdparty.file_utils import clean_dir
 from zero_3rdparty.object_name import as_name
@@ -82,11 +82,19 @@ def _clean_run_logs(run_logs: Path, clean_value: str) -> None:
 _rlock = RLock()
 
 
+def as_upper(v: str) -> str:
+    return v.upper()
+
+
+LogLevelIgnoredCase: TypeAlias = Annotated[
+    Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "UNSET"],
+    BeforeValidator(as_upper),
+]
+
+
 class AskShellSettings(StaticSettings):
     model_config = ConfigDict(populate_by_name=True)  # type: ignore
-    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "UNSET"] = (
-        "UNSET"
-    )
+    log_level: LogLevelIgnoredCase = "UNSET"
 
     ENV_NAME_FORCE_INTERACTIVE_SHELL: ClassVar[str] = (
         f"{ENV_PREFIX}FORCE_INTERACTIVE_SHELL"

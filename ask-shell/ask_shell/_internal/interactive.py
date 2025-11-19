@@ -77,6 +77,7 @@ def _set_prompt_text(q: Question, prompt_text: str) -> None:
     setattr(q, _PROMPT_TEXT_ATTR_NAME, prompt_text)
 
 
+@pause_live
 def confirm(prompt_text: str, *, default: bool | None = None) -> bool:
     if default is None:
         question = _confirm(prompt_text)

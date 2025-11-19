@@ -3,6 +3,9 @@ name = "pytest-model-lib"
 version = "0.0.1"
 requires-python = ">=3.12"
 
+[project.entry-points.pytest11]
+model_lib = "pytest_model_lib.plugin"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

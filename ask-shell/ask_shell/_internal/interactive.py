@@ -515,7 +515,9 @@ if __name__ == "__main__":
     choices = [ChoiceTyped(name="c1", value=1)]
     _create = object()
     _skip = object()
-    choices.append(ChoiceTyped(name="Create new Jira issue", value=_create, checked=True))
+    choices.append(
+        ChoiceTyped(name="Create new Jira issue", value=_create, checked=True)
+    )
     choices.append(ChoiceTyped(name="Skip for now", value=_skip))
     selected = select_list_choice("select me", choices)
     if selected is _create:

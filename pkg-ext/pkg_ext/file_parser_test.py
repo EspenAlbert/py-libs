@@ -32,6 +32,7 @@ def test_parse_symbols():
     assert symbols.functions == [
         "default_callbacks_funcs",
         "default_remove_os_secrets",
+        "as_upper",
         "default_rich_info_style",
     ]
 

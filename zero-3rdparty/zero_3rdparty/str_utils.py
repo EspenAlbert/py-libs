@@ -12,6 +12,7 @@ from typing import (
     Pattern,
     Set,
     TextIO,
+    TypeVar,
     Union,
 )
 
@@ -322,3 +323,70 @@ def ensure_suffix(original: str, endswith: str) -> str:
     'my_file.txt'
     """
     return original.removesuffix(endswith) + endswith
+
+
+T = TypeVar("T")
+
+
+def markdown_table_lines(
+    header: str | None,
+    rows: list[T],
+    columns: list[str],
+    row_to_line: Callable[[T], list[str]],
+    *,
+    header_level: int = 2,
+) -> list[str]:
+    """
+    Generate markdown table lines from rows and columns.
+
+    Args:
+        rows: List of row objects
+        columns: List of column names
+        row_to_line: Function to convert a row object to a list of string values
+        header: Optional markdown header for the table
+        header_level: Markdown header level (1-6), only used if header is provided
+
+    Returns:
+        List of markdown table lines
+
+    >>> rows = [{"name": "Alice", "age": "30"}, {"name": "Bob", "age": "25"}]
+    >>> columns = ["name", "age"]
+    >>> result = markdown_table_lines(None, rows, columns, lambda r: [r["name"], r["age"]])
+    >>> print("\\n".join(result))
+    name | age
+    --- | ---
+    Alice | 30
+    Bob | 25
+    <BLANKLINE>
+    >>> result = markdown_table_lines("Users", rows, columns, lambda r: [r["name"], r["age"]])
+    >>> print("\\n".join(result))
+    ## Users
+    <BLANKLINE>
+    name | age
+    --- | ---
+    Alice | 30
+    Bob | 25
+    <BLANKLINE>
+    >>> result = markdown_table_lines(None, rows, columns, lambda r: [r["name"], r["age"]])
+    >>> print("\\n".join(result))
+    name | age
+    --- | ---
+    Alice | 30
+    Bob | 25
+    <BLANKLINE>
+    """
+    if not rows:
+        return []
+    lines = []
+    if header:
+        lines.append(f"{'#' * header_level} {header}")
+        lines.append("")
+    lines.extend(
+        [
+            " | ".join(columns),
+            " | ".join("---" for _ in columns),
+            *(" | ".join(row_to_line(row)) for row in rows),
+            "",
+        ]
+    )
+    return lines

@@ -205,6 +205,82 @@ class multiline_pipe_style:
         yaml.add_representer(str, self.old_representer_safe_dumper, yaml.SafeDumper)
 
 
+class _NoAliasSafeDumper(yaml.SafeDumper):
+    """Custom SafeDumper that ignores aliases to prevent *id001 references."""
+
+    def ignore_aliases(self, data):
+        return True
+
+
+class no_yaml_anchors:
+    """Context manager to disable YAML anchors/aliases during serialization.
+
+    This prevents duplicate objects from being represented as anchors (*id001)
+    and aliases (&id001), which can happen with datetime objects or other
+    repeated values in the data structure.
+
+    Usage:
+        with no_yaml_anchors():
+            yaml_str = dump(data, "yaml")
+    """
+
+    def __enter__(self):
+        self.old_dumper = yaml.SafeDumper
+        # Replace SafeDumper with our custom dumper that ignores aliases
+        yaml.SafeDumper = _NoAliasSafeDumper
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # Restore original SafeDumper
+        yaml.SafeDumper = self.old_dumper
+
+
+def _construct_timestamp_as_str(loader, node):
+    """Construct timestamp-tagged values as strings instead of datetime objects."""
+    return node.value
+
+
+class _NoTimestampSafeLoader(yaml.SafeLoader):
+    """Custom SafeLoader that disables timestamp auto-conversion to prevent precision loss."""
+
+
+class no_timestamp_conversion:
+    """Context manager to disable PyYAML's timestamp auto-conversion during parsing.
+
+    PyYAML's SafeLoader automatically converts datetime-like strings to datetime objects,
+    which can cause floating-point precision loss in microseconds. This context manager
+    temporarily replaces the timestamp constructor with one that preserves datetime strings
+    as strings, allowing Pydantic to parse them with exact precision.
+
+    Usage:
+        with no_timestamp_conversion():
+            data = yaml.safe_load(yaml_string)
+    """
+
+    def __enter__(self):
+        self.old_loader = yaml.SafeLoader
+        # Store the original timestamp constructor if it exists
+        timestamp_tag = "tag:yaml.org,2002:timestamp"
+        self.old_timestamp_constructor = _NoTimestampSafeLoader.yaml_constructors.get(
+            timestamp_tag
+        )
+        # Replace timestamp constructor with one that returns strings
+        _NoTimestampSafeLoader.yaml_constructors[timestamp_tag] = (
+            _construct_timestamp_as_str
+        )
+        # Replace SafeLoader with our custom loader
+        yaml.SafeLoader = _NoTimestampSafeLoader
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # Restore timestamp constructor if it existed
+        timestamp_tag = "tag:yaml.org,2002:timestamp"
+        if self.old_timestamp_constructor is not None:
+            _NoTimestampSafeLoader.yaml_constructors[timestamp_tag] = (
+                self.old_timestamp_constructor
+            )
+        # Restore original SafeLoader
+        yaml.SafeLoader = self.old_loader
+
+
 def _add_brackets(raw_yaml: str) -> str:
     template = []
     start_bracket = edit_helm_template.START_BRACKETS_REPLACEMENT[1:]

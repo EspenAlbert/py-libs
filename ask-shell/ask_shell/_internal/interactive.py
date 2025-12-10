@@ -457,17 +457,14 @@ class question_patcher(force_interactive):
         return self._next_index_response("")
 
     def ask_question(self, q: Question, response_type: type[T]) -> T:
-        q.application.output = DummyOutput()
-
-        def run(inp) -> T:
+        with create_pipe_input() as inp:
+            # Set both input and output BEFORE sending any text or calling unsafe_ask
+            # This prevents cursor position queries from being sent to the real terminal
+            q.application.input = inp
+            q.application.output = DummyOutput()
             input_response = self._next_response(q)
             inp.send_text(input_response + KeyInput.ENTER + "\r")
-            q.application.output = DummyOutput()
-            q.application.input = inp
             return _default_asker(q, response_type)
-
-        with create_pipe_input() as inp:
-            return run(inp)
 
     def __enter__(self) -> Self:
         global _question_asker

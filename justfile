@@ -23,7 +23,7 @@ lint: ssort-check
 type:
   uv run pyright
 test-fast:
-  export PYTHONPATH=scripts && export SKIP_MARKED_TESTS=true && uv run pytest -p pytest_skip_marked
+  export PYTHONPATH=scripts && export SKIP_MARKED_TESTS=true && uv run pytest
 test version='3.13' test-path='':
   uv run --python {{version}} pytest {{test-path}}
 test-all:

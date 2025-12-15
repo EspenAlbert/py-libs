@@ -1,0 +1,183 @@
+from __future__ import annotations
+
+import glob as glob_mod
+from datetime import UTC, datetime
+from enum import StrEnum
+from pathlib import Path
+from typing import ClassVar
+
+from pydantic import BaseModel, Field
+
+LOG_FORMAT = "%(asctime)s %(levelname)s %(message)s"
+
+
+class ConfigType(StrEnum):
+    SRC = "SRC"
+    DEST = "DEST"
+
+
+class PathMapping(BaseModel):
+    src_path: str
+    dest_path: str = ""
+
+    def resolved_dest_path(self) -> str:
+        return self.dest_path or self.src_path
+
+    def expand_dest_paths(self, repo_root: Path) -> list[Path]:
+        dest_path = self.resolved_dest_path()
+        pattern = repo_root / dest_path
+
+        if "*" in dest_path:
+            return [Path(p) for p in glob_mod.glob(str(pattern), recursive=True)]
+        if pattern.is_dir():
+            return [p for p in pattern.rglob("*") if p.is_file()]
+        if pattern.exists():
+            return [pattern]
+        return []
+
+
+DEFAULT_HEADER_TEXT = "DO NOT EDIT: path-sync destination file"
+DEFAULT_COMMENT_PREFIXES: dict[str, str] = {
+    ".py": "#",
+    ".sh": "#",
+    ".yaml": "#",
+    ".yml": "#",
+    ".go": "//",
+    ".js": "//",
+    ".ts": "//",
+    ".md": "<!--",
+    ".mdc": "<!--",
+    ".html": "<!--",
+}
+DEFAULT_COMMENT_SUFFIXES: dict[str, str] = {
+    ".md": " -->",
+    ".mdc": " -->",
+    ".html": " -->",
+}
+
+
+class HeaderConfig(BaseModel):
+    header_text: str = DEFAULT_HEADER_TEXT
+    comment_prefixes: dict[str, str] = Field(
+        default_factory=DEFAULT_COMMENT_PREFIXES.copy
+    )
+    comment_suffixes: dict[str, str] = Field(
+        default_factory=DEFAULT_COMMENT_SUFFIXES.copy
+    )
+
+
+class ToolsUpdate(BaseModel):
+    justfile: bool = True
+    path_sync_wheel: bool = True
+    github_workflows: bool = True
+
+
+class SrcToolsUpdate(BaseModel):
+    justfile: bool = True
+    github_workflows: bool = True
+
+
+DEFAULT_BODY_TEMPLATE = """\
+Synced from [{src_repo_name}]({src_repo_url}) @ `{src_sha_short}`
+
+<details>
+<summary>Sync Log</summary>
+
+```
+{sync_log}
+```
+
+</details>
+"""
+
+
+class PRDefaults(BaseModel):
+    title: str = "chore: sync {name} files"
+    body_template: str = DEFAULT_BODY_TEMPLATE
+    body_suffix: str = ""
+    labels: list[str] = Field(default_factory=list)
+    reviewers: list[str] = Field(default_factory=list)
+    assignees: list[str] = Field(default_factory=list)
+
+    def format_body(
+        self,
+        src_repo_url: str,
+        src_sha: str,
+        sync_log: str,
+        dest_name: str,
+    ) -> str:
+        src_repo_name = src_repo_url.rstrip("/").rsplit("/", 1)[-1].removesuffix(".git")
+        body = self.body_template.format(
+            src_repo_url=src_repo_url,
+            src_repo_name=src_repo_name,
+            src_sha=src_sha,
+            src_sha_short=src_sha[:8],
+            sync_log=sync_log,
+            dest_name=dest_name,
+        )
+        if self.body_suffix:
+            body = f"{body}\n---\n{self.body_suffix}"
+        return body
+
+
+class Destination(BaseModel):
+    name: str
+    repo_url: str = ""
+    dest_path_relative: str
+    copy_branch: str = "sync/path-sync"
+    default_branch: str = "main"
+    template_vars: dict[str, str] = Field(default_factory=dict)
+    tools_update: ToolsUpdate = Field(default_factory=ToolsUpdate)
+
+
+class SrcConfig(BaseModel):
+    CONFIG_EXT: ClassVar[str] = ".src.yaml"
+
+    type: ConfigType = ConfigType.SRC
+    name: str
+    git_remote: str = "origin"
+    src_repo_url: str = ""
+    schedule: str = "0 6 * * *"
+    header_config: HeaderConfig = Field(default_factory=HeaderConfig)
+    src_tools_update: SrcToolsUpdate = Field(default_factory=SrcToolsUpdate)
+    pr_defaults: PRDefaults = Field(default_factory=PRDefaults)
+    always_paths: list[PathMapping] = Field(default_factory=list)
+    scaffold_paths: list[PathMapping] = Field(default_factory=list)
+    destinations: list[Destination] = Field(default_factory=list)
+
+    def find_destination(self, name: str) -> Destination:
+        for dest in self.destinations:
+            if dest.name == name:
+                return dest
+        raise ValueError(f"Destination not found: {name}")
+
+
+class DestConfig(BaseModel):
+    CONFIG_EXT: ClassVar[str] = ".dest.yaml"
+
+    type: ConfigType = ConfigType.DEST
+    src_name: str
+    dest_name: str
+    default_branch: str = "main"
+    header_config: HeaderConfig = Field(default_factory=HeaderConfig)
+    always_paths: list[PathMapping] = Field(default_factory=list)
+    scaffold_paths: list[PathMapping] = Field(default_factory=list)
+    src_sha: str = ""
+    src_repo_url: str = ""
+    ts: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+def resolve_config_path(
+    repo_root: Path, name: str, config_type: type[SrcConfig] | type[DestConfig]
+) -> Path:
+    ext = config_type.CONFIG_EXT
+    return repo_root / ".github" / f"{name}{ext}"
+
+
+def find_repo_root(start_path: Path) -> Path:
+    current = start_path.resolve()
+    while current != current.parent:
+        if (current / ".git").exists():
+            return current
+        current = current.parent
+    raise ValueError(f"No git repository found from {start_path}")

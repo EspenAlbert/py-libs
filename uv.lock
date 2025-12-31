@@ -625,7 +625,7 @@ wheels = [
 
 [[package]]
 name = "pkg-ext"
-version = "1.0.0+rc1"
+version = "0.0.1"
 source = { editable = "pkg-ext" }
 dependencies = [
     { name = "ask-shell" },

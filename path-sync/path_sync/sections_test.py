@@ -66,3 +66,63 @@ def test_wrap_in_default_section():
     assert "DO_NOT_EDIT: path-sync default" in result
     assert "content here" in result
     assert result.endswith("# === OK_EDIT ===")
+
+
+def test_extract_sections():
+    result = sections.extract_sections(JUSTFILE_CONTENT)
+    assert result == {
+        "standard": "pre-push: lint test",
+        "coverage": "cov:\n  uv run pytest --cov",
+    }
+
+
+def test_replace_sections_updates_content():
+    dest = """\
+# === DO_NOT_EDIT: path-sync standard ===
+old content
+# === OK_EDIT ==="""
+    src_sections = {"standard": "new content"}
+    result = sections.replace_sections(dest, src_sections)
+    assert "new content" in result
+    assert "old content" not in result
+
+
+def test_replace_sections_preserves_ok_edit():
+    dest = """\
+# custom header
+# === DO_NOT_EDIT: path-sync standard ===
+old
+# === OK_EDIT ===
+# my custom stuff"""
+    result = sections.replace_sections(dest, {"standard": "new"})
+    assert "# custom header" in result
+    assert "# my custom stuff" in result
+
+
+def test_replace_sections_skip():
+    dest = """\
+# === DO_NOT_EDIT: path-sync standard ===
+keep this
+# === OK_EDIT ==="""
+    result = sections.replace_sections(
+        dest, {"standard": "replaced"}, skip_sections=["standard"]
+    )
+    assert "keep this" in result  # skipped sections preserve dest content
+    assert "replaced" not in result
+
+
+def test_replace_sections_adds_new():
+    dest = "# plain file"
+    result = sections.replace_sections(dest, {"newid": "new content"})
+    assert "DO_NOT_EDIT: path-sync newid" in result
+    assert "new content" in result
+
+
+def test_replace_sections_keeps_dest_only():
+    dest = """\
+# === DO_NOT_EDIT: path-sync custom ===
+my custom section
+# === OK_EDIT ==="""
+    result = sections.replace_sections(dest, {})
+    assert "my custom section" in result  # dest-only sections preserved
+    assert "DO_NOT_EDIT: path-sync custom" in result

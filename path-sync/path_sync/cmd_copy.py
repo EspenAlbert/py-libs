@@ -250,7 +250,12 @@ def _sync_paths(
     content_changes = 0
     for mapping in config.always_paths:
         content_changes += _sync_always_path(
-            mapping, src_root, dest_root, opts.dry_run, opts.force_overwrite
+            mapping,
+            src_root,
+            dest_root,
+            config.name,
+            opts.dry_run,
+            opts.force_overwrite,
         )
     for mapping in config.scaffold_paths:
         content_changes += _sync_scaffold_path(
@@ -426,6 +431,7 @@ def _sync_always_path(
     mapping: PathMapping,
     src_root: Path,
     dest_root: Path,
+    config_name: str,
     dry_run: bool,
     force_overwrite: bool = False,
 ) -> int:
@@ -444,7 +450,7 @@ def _sync_always_path(
                 rel = src_path.relative_to(src_root / glob_prefix)
                 dest_path = dest_root / dest_base / rel
                 changes += _copy_with_header(
-                    src_path, dest_path, dry_run, force_overwrite
+                    src_path, dest_path, config_name, dry_run, force_overwrite
                 )
     elif src_pattern.is_dir():
         dest_base = mapping.resolved_dest_path()
@@ -453,12 +459,14 @@ def _sync_always_path(
                 rel = src_file.relative_to(src_pattern)
                 dest_path = dest_root / dest_base / rel
                 changes += _copy_with_header(
-                    src_file, dest_path, dry_run, force_overwrite
+                    src_file, dest_path, config_name, dry_run, force_overwrite
                 )
     elif src_pattern.is_file():
         dest_base = mapping.resolved_dest_path()
         dest_path = dest_root / dest_base
-        changes += _copy_with_header(src_pattern, dest_path, dry_run, force_overwrite)
+        changes += _copy_with_header(
+            src_pattern, dest_path, config_name, dry_run, force_overwrite
+        )
     else:
         logger.warning(f"Source not found: {mapping.src_path}")
 
@@ -466,7 +474,11 @@ def _sync_always_path(
 
 
 def _copy_with_header(
-    src: Path, dest: Path, dry_run: bool, force_overwrite: bool = False
+    src: Path,
+    dest: Path,
+    config_name: str,
+    dry_run: bool,
+    force_overwrite: bool = False,
 ) -> int:
     content = src.read_text()
 
@@ -479,7 +491,7 @@ def _copy_with_header(
         if existing_without_header == content:
             return 0
 
-    new_content = header.add_header(content, dest.suffix)
+    new_content = header.add_header(content, dest.suffix, config_name)
 
     if dry_run:
         logger.info(f"[DRY RUN] Would write: {dest}")

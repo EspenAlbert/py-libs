@@ -36,7 +36,7 @@ class PathMapping(BaseModel):
         return []
 
 
-DEFAULT_HEADER_TEXT = "DO NOT EDIT: path-sync destination file"
+HEADER_TEMPLATE = "path-sync copy -n {config_name}"
 DEFAULT_COMMENT_PREFIXES: dict[str, str] = {
     ".py": "#",
     ".sh": "#",
@@ -57,7 +57,6 @@ DEFAULT_COMMENT_SUFFIXES: dict[str, str] = {
 
 
 class HeaderConfig(BaseModel):
-    header_text: str = DEFAULT_HEADER_TEXT
     comment_prefixes: dict[str, str] = Field(
         default_factory=DEFAULT_COMMENT_PREFIXES.copy
     )

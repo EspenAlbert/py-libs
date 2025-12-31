@@ -1,0 +1,36 @@
+type: SRC
+name: python-template
+src_repo_url: https://github.com/EspenAlbert/py-libs
+
+always_paths:
+  - src_path: code/_tmpl_py/justfile
+    dest_path: justfile
+
+  - src_path: code/_tmpl_py/pyproject.toml
+    dest_path: pyproject.toml
+
+  - src_path: code/_tmpl_py/.gitignore
+    dest_path: .gitignore
+
+  - src_path: code/_tmpl_py/.github/actions/setup/action.yml
+    dest_path: .github/actions/setup/action.yml
+
+  - src_path: code/_tmpl_py/.github/workflows/ci.yaml
+    dest_path: .github/workflows/ci.yaml
+
+  - src_path: code/_tmpl_py/.github/workflows/release.yaml
+    dest_path: .github/workflows/release.yaml
+
+  - src_path: code/_tmpl_py/.github/workflows/path_sync_validate.yaml
+    dest_path: .github/workflows/path_sync_validate.yaml
+
+destinations:
+  - name: model-lib
+    repo_url: https://github.com/EspenAlbert/model-lib
+    dest_path_relative: ../model-lib
+
+  - name: atlas-init
+    repo_url: https://github.com/EspenAlbert/atlas-init
+    dest_path_relative: ../atlas-init
+    # skip_sections:  # Future: when section sync is implemented
+    #   - pkg-ext

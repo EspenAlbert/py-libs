@@ -31,7 +31,7 @@ def get_header_line(
     return f"{prefix} {header_text}{suffix}"
 
 
-def has_header(content: str, extension: str) -> bool:
+def has_header(content: str) -> bool:
     first_line = content.split("\n", 1)[0] if content else ""
     return bool(HEADER_PATTERN.search(first_line))
 
@@ -46,8 +46,8 @@ def add_header(
     return f"{header}\n{content}"
 
 
-def remove_header(content: str, extension: str) -> str:
-    if not has_header(content, extension):
+def remove_header(content: str) -> str:
+    if not has_header(content):
         return content
     lines = content.split("\n", 1)
     return lines[1] if len(lines) > 1 else ""
@@ -63,4 +63,4 @@ def file_has_header(path: Path, config: HeaderConfig | None = None) -> bool:
         content = path.read_text()
     except UnicodeDecodeError:
         return False
-    return has_header(content, path.suffix)
+    return has_header(content)

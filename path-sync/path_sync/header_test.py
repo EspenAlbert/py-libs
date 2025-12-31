@@ -13,19 +13,17 @@ def test_header_generation():
 
 
 def test_has_header_matches_any_config_name():
-    assert header.has_header("# path-sync copy -n my-config\ncode", ".py")
-    assert header.has_header("# path-sync copy -n other_name\ncode", ".py")
-    assert not header.has_header(
-        "# DO NOT EDIT: path-sync destination file\ncode", ".py"
-    )
-    assert not header.has_header("print('hello')", ".py")
+    assert header.has_header("# path-sync copy -n my-config\ncode")
+    assert header.has_header("# path-sync copy -n other_name\ncode")
+    assert not header.has_header("# DO NOT EDIT: path-sync destination file\ncode")
+    assert not header.has_header("print('hello')")
 
 
 def test_add_remove_header():
     content = "print('hello')"
     with_header = header.add_header(content, ".py", "test-config")
-    assert header.has_header(with_header, ".py")
-    without = header.remove_header(with_header, ".py")
+    assert header.has_header(with_header)
+    without = header.remove_header(with_header)
     assert without == content
 
 

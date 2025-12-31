@@ -484,10 +484,10 @@ def _copy_with_header(
 
     if dest.exists():
         existing = dest.read_text()
-        if not header.has_header(existing, dest.suffix) and not force_overwrite:
+        if not header.has_header(existing) and not force_overwrite:
             logger.info(f"Skipping {dest} (header removed - opted out)")
             return 0
-        existing_without_header = header.remove_header(existing, dest.suffix)
+        existing_without_header = header.remove_header(existing)
         if existing_without_header == content:
             return 0
 

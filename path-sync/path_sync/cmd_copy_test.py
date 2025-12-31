@@ -20,7 +20,7 @@ def test_sync_single_file(tmp_path):
 
     assert changes == 1
     result = (dest_root / "out.py").read_text()
-    assert has_header(result, ".py")
+    assert has_header(result)
     assert "content" in result
     assert f"path-sync copy -n {CONFIG_NAME}" in result
 

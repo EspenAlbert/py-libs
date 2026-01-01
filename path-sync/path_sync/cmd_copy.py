@@ -75,6 +75,7 @@ class CopyOptions:
     local: bool = False
     no_prompt: bool = False
     no_pr: bool = False
+    skip_orphan_cleanup: bool = False
     pr_title: str = ""
     pr_labels: str = ""
     pr_reviewers: str = ""
@@ -144,6 +145,11 @@ def copy(
         "--pr-assignees",
         help="Comma-separated PR assignees",
     ),
+    skip_orphan_cleanup: bool = typer.Option(
+        False,
+        "--skip-orphan-cleanup",
+        help="Skip deletion of orphaned synced files",
+    ),
 ) -> None:
     """Copy files from SRC to DEST repositories."""
     src_root = find_repo_root(Path.cwd())
@@ -166,6 +172,7 @@ def copy(
         local=local,
         no_prompt=no_prompt,
         no_pr=no_pr,
+        skip_orphan_cleanup=skip_orphan_cleanup,
         pr_title=pr_title or config.pr_defaults.title,
         pr_labels=pr_labels or ",".join(config.pr_defaults.labels),
         pr_reviewers=pr_reviewers or ",".join(config.pr_defaults.reviewers),
@@ -287,9 +294,10 @@ def _sync_paths(
         result.content_changes += changes
         result.synced_paths.update(paths)
 
-    result.orphans_deleted = _cleanup_orphans(
-        dest_root, config.name, result.synced_paths, opts.dry_run
-    )
+    if not opts.skip_orphan_cleanup:
+        result.orphans_deleted = _cleanup_orphans(
+            dest_root, config.name, result.synced_paths, opts.dry_run
+        )
     return result
 
 

@@ -60,6 +60,7 @@ By default, prompts before each git operation. See [Usage Scenarios](#usage-scen
 | `--no-pr` | Push but skip PR creation |
 | `--force-overwrite` | Overwrite files even if header removed (opted out) |
 | `--detailed-exit-code` | Exit 0=no changes, 1=changes, 2=error |
+| `--skip-orphan-cleanup` | Skip deletion of orphaned synced files |
 | `--pr-title` | Override PR title (supports `{name}`, `{dest_name}`) |
 | `--pr-labels` | Comma-separated PR labels |
 | `--pr-reviewers` | Comma-separated PR reviewers |

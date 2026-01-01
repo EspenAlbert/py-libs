@@ -237,9 +237,10 @@ def _sync_destination(
     if opts.dry_run:
         return result.total
 
-    return _commit_and_pr(
+    _commit_and_pr(
         config, dest_repo, dest_root, dest, current_sha, src_repo_url, opts, log_path
     )
+    return result.total
 
 
 def _print_sync_summary(dest: Destination, result: SyncResult) -> None:
@@ -470,29 +471,26 @@ def _commit_and_pr(
     src_repo_url: str,
     opts: CopyOptions,
     log_path: Path,
-) -> int:
+) -> None:
     if opts.local:
         logger.info("Local mode: skipping commit/push/PR")
-        return 1
+        return
 
     if not _prompt("Commit changes?", opts.no_prompt):
-        return 1
+        return
 
     commit_msg = f"chore: sync {config.name} from {sha[:8]}"
     git_ops.commit_changes(repo, commit_msg)
     typer.echo(f"  Committed: {commit_msg}", err=True)
 
     if not _prompt("Push to origin?", opts.no_prompt):
-        return 1
+        return
 
     git_ops.push_branch(repo, dest.copy_branch, force=True)
     typer.echo(f"  Pushed: {dest.copy_branch} (force)", err=True)
 
-    if opts.no_pr:
-        return 1
-
-    if not _prompt("Create PR?", opts.no_prompt):
-        return 1
+    if opts.no_pr or not _prompt("Create PR?", opts.no_prompt):
+        return
 
     sync_log = log_path.read_text() if log_path.exists() else ""
     pr_body = config.pr_defaults.format_body(
@@ -514,4 +512,3 @@ def _commit_and_pr(
     )
     if pr_url:
         typer.echo(f"  Created PR: {pr_url}", err=True)
-    return 1

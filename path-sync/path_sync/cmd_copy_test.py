@@ -1,4 +1,4 @@
-from pathlib import Path
+import pytest
 
 from path_sync.cmd_copy import (
     CopyOptions,
@@ -59,13 +59,15 @@ def test_cleanup_orphans(tmp_path):
     dest_root = tmp_path / "dest"
     dest_root.mkdir()
 
+    # File with matching config header - will be orphaned
     orphan = dest_root / "orphan.py"
     orphan.write_text(add_header("orphan content", ".py", CONFIG_NAME))
 
+    # File with different config - should not be deleted
     other = dest_root / "other.py"
     other.write_text(add_header("other content", ".py", "other-config"))
 
-    synced: set[Path] = set()
+    synced: set = set()  # No files synced
     deleted = _cleanup_orphans(dest_root, CONFIG_NAME, synced, dry_run=False)
 
     assert deleted == 1
@@ -143,9 +145,6 @@ keep this
 def test_ensure_dest_repo_dry_run_errors_if_missing(tmp_path):
     dest = _make_dest()
     dest_root = tmp_path / "missing_repo"
-
-    import pytest
-
     with pytest.raises(ValueError, match="Destination repo not found"):
         _ensure_dest_repo(dest, dest_root, dry_run=True)
 

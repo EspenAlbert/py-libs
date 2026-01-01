@@ -2,6 +2,25 @@
 
 Sync files from a source repo to multiple destination repos.
 
+## Overview
+
+**Problem**: You have shared config files (linter rules, CI templates, editor settings) that should be consistent across multiple repositories. Manual copying leads to drift.
+
+**Solution**: path-sync provides one-way file syncing with clear ownership:
+
+| Term | Definition |
+|------|------------|
+| **SRC** | Source repository containing the canonical files |
+| **DEST** | Destination repository receiving synced files |
+| **Header** | Comment added to synced files marking them as managed |
+| **Section** | Marked region within a file for partial syncing |
+
+**Key behaviors**:
+- SRC owns synced content; DEST should not edit it
+- Files with headers are updated on each sync
+- Remove a header to opt-out (file becomes DEST-owned)
+- Orphaned files (removed from SRC) are deleted in DEST
+
 ## Installation
 
 ```bash
@@ -93,15 +112,6 @@ destinations:
     skip_sections:
       justfile: [coverage]  # keep local coverage recipe
 ```
-
-## Design Principles
-
-1. **One-way sync**: SRC owns synced files/sections, DEST never edits them
-2. **Opt-out via header removal**: Delete the header comment to stop syncing a file
-3. **Section-level control**: Sync parts of files while preserving local additions
-4. **Interactive by default**: Prompts before git operations (use `-y` for CI)
-5. **Orphan cleanup built-in**: Synced files no longer in SRC are deleted automatically
-
 ## Config Reference
 
 **Source config** (`.github/{name}.src.yaml`):
@@ -182,7 +192,14 @@ Create `.github/workflows/path_sync_validate.yaml`:
 
 ```yaml
 name: path-sync validate
-on: [push, pull_request]
+on:
+  push:
+    branches-ignore:
+      - main
+      - sync/**
+  pull_request:
+    branches:
+      - main
 
 jobs:
   validate:
@@ -194,6 +211,12 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - run: uvx path-sync validate-no-changes -b main
 ```
+
+**Validation skips automatically when:**
+- On a `sync/*` branch (path-sync uses `sync/path-sync` by default)
+- On the default branch (comparing against itself)
+
+The workflow triggers exclude these branches too, reducing unnecessary CI runs.
 
 ### PAT Requirements
 

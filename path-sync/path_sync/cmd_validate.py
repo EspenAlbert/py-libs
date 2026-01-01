@@ -32,6 +32,9 @@ def validate_no_changes(
     if current_branch.startswith("sync/"):
         logger.info(f"On sync branch {current_branch}, validation skipped")
         return
+    if current_branch == branch:
+        logger.info(f"On default branch {branch}, validation skipped")
+        return
 
     skip_sections = (
         parse_skip_sections(skip_sections_opt) if skip_sections_opt else None

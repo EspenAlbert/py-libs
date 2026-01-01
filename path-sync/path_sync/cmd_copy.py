@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import glob
 import logging
-import subprocess
 import tempfile
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -10,7 +9,7 @@ from pathlib import Path
 
 import typer
 
-from path_sync import git_ops, header, sections, workflow_gen
+from path_sync import git_ops, header, sections
 from path_sync.file_utils import ensure_parents_write_text
 from path_sync.models import (
     LOG_FORMAT,
@@ -33,13 +32,12 @@ EXIT_ERROR = 2
 @dataclass
 class SyncResult:
     content_changes: int = 0
-    tools_changes: int = 0
     orphans_deleted: int = 0
     synced_paths: set[Path] = field(default_factory=set)
 
     @property
     def total(self) -> int:
-        return self.content_changes + self.tools_changes + self.orphans_deleted
+        return self.content_changes + self.orphans_deleted
 
 
 @contextmanager
@@ -65,7 +63,6 @@ class CopyOptions:
     skip_checkout: bool = False
     checkout_from_default: bool = False
     force_push: bool = True
-    force_tools_pr: bool = False
     no_commit: bool = False
     no_push: bool = False
     no_pr: bool = False
@@ -95,9 +92,6 @@ def copy(
         help="Reset to origin/default before sync (for CI)",
     ),
     force_push: bool = typer.Option(True, "--force-push/--no-force-push"),
-    force_tools_pr: bool = typer.Option(
-        False, "--force-tools-pr", help="Create PR even if only tools changed"
-    ),
     no_commit: bool = typer.Option(False, "--no-commit"),
     no_push: bool = typer.Option(False, "--no-push"),
     no_pr: bool = typer.Option(False, "--no-pr"),
@@ -125,7 +119,6 @@ def copy(
         skip_checkout=skip_dest_checkout,
         checkout_from_default=checkout_from_default,
         force_push=force_push,
-        force_tools_pr=force_tools_pr,
         no_commit=no_commit,
         no_push=no_push,
         no_pr=no_pr,
@@ -184,13 +177,6 @@ def _sync_destination(
         logger.info(f"{dest.name}: No changes")
         return 0
     logger.info(f"{dest.name}: Found {result.total} changes")
-    if (
-        result.content_changes == 0
-        and result.orphans_deleted == 0
-        and not opts.force_tools_pr
-    ):
-        logger.info(f"{dest.name}: Tools-only changes, skipping PR")
-        return 0
 
     if opts.dry_run:
         logger.info(f"{dest.name}: Would make {result.total} changes")
@@ -230,7 +216,6 @@ def _sync_paths(
         result.content_changes += changes
         result.synced_paths.update(paths)
 
-    result.tools_changes = _sync_tools_update(config, dest, dest_root, opts)
     result.orphans_deleted = _cleanup_orphans(
         dest_root, config.name, result.synced_paths, opts.dry_run
     )
@@ -325,7 +310,6 @@ def _copy_with_header(
             src_content, dest_path, skip_list, config_name, dry_run, force_overwrite
         )
 
-    # No sections: full-file replacement
     if dest_path.exists():
         existing = dest_path.read_text()
         if not header.has_header(existing) and not force_overwrite:
@@ -366,9 +350,8 @@ def _copy_with_sections(
 
     new_content = header.add_header(new_body, dest_path.suffix, config_name)
 
-    if dest_path.exists():
-        if dest_path.read_text() == new_content:
-            return 0
+    if dest_path.exists() and dest_path.read_text() == new_content:
+        return 0
 
     if dry_run:
         logger.info(f"[DRY RUN] Would write: {dest_path}")
@@ -406,100 +389,6 @@ def _find_files_with_config(dest_root: Path, config_name: str) -> list[Path]:
             if header.file_get_config_name(path) == config_name:
                 result.append(path)
     return result
-
-
-def _sync_tools_update(
-    config: SrcConfig,
-    dest: Destination,
-    dest_root: Path,
-    opts: CopyOptions,
-) -> int:
-    changes = 0
-
-    if dest.tools_update.github_workflows:
-        wf_path = dest_root / workflow_gen.validate_workflow_path(config.name)
-        if not wf_path.exists():
-            content = workflow_gen.generate_validate_workflow(
-                name=config.name,
-                copy_branch=dest.copy_branch,
-                default_branch=dest.default_branch,
-            )
-            if opts.dry_run:
-                logger.info(f"[DRY RUN] Would write workflow: {wf_path}")
-            else:
-                ensure_parents_write_text(wf_path, content)
-                logger.info(f"Wrote workflow: {wf_path}")
-            changes += 1
-
-    if dest.tools_update.justfile:
-        changes += _sync_justfile_recipe(config.name, dest_root, opts)
-
-    if dest.tools_update.path_sync_wheel:
-        _sync_wheel(dest_root, opts)
-
-    return changes
-
-
-def _sync_justfile_recipe(name: str, dest_root: Path, opts: CopyOptions) -> int:
-    justfile_path = dest_root / "justfile"
-    changed = workflow_gen.update_justfile(
-        justfile_path, name, workflow_gen.JustfileRecipeKind.VALIDATE, opts.dry_run
-    )
-    return 1 if changed else 0
-
-
-def _sync_wheel(dest_root: Path, opts: CopyOptions) -> None:
-    pkg_root = Path(__file__).parent.parent
-    wheel = _build_wheel(pkg_root, opts.dry_run)
-    if not wheel:
-        return
-
-    dest_dir = dest_root / ".github"
-    dest_wheel = dest_dir / wheel.name
-
-    for old_wheel in dest_dir.glob("path_sync-*.whl"):
-        if old_wheel != dest_wheel:
-            if opts.dry_run:
-                logger.info(f"[DRY RUN] Would remove old wheel: {old_wheel}")
-            else:
-                old_wheel.unlink()
-                logger.info(f"Removed old wheel: {old_wheel}")
-
-    if opts.dry_run:
-        logger.info(f"[DRY RUN] Would copy wheel: {dest_wheel}")
-        return
-
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    dest_wheel.write_bytes(wheel.read_bytes())
-    logger.info(f"Copied wheel: {dest_wheel}")
-
-
-def _build_wheel(pkg_root: Path, dry_run: bool) -> Path | None:
-    dist_dir = pkg_root / "dist"
-
-    if dry_run:
-        logger.info("[DRY RUN] Would build wheel")
-        wheels = sorted(dist_dir.glob("path_sync-*.whl")) if dist_dir.exists() else []
-        return wheels[-1] if wheels else None
-
-    if dist_dir.exists():
-        for old in dist_dir.glob("path_sync-*.whl"):
-            old.unlink()
-
-    logger.info("Building wheel...")
-    result = subprocess.run(
-        ["uv", "build", "--wheel"],
-        cwd=pkg_root,
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        logger.error(f"Failed to build wheel: {result.stderr}")
-        raise RuntimeError("Wheel build failed")
-
-    wheels = sorted(dist_dir.glob("path_sync-*.whl"))
-    assert len(wheels) == 1, f"Expected 1 wheel, got {len(wheels)}"
-    return wheels[0]
 
 
 def _commit_and_pr(

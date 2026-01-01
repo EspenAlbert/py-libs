@@ -58,17 +58,6 @@ class HeaderConfig(BaseModel):
     )
 
 
-class ToolsUpdate(BaseModel):
-    justfile: bool = True
-    path_sync_wheel: bool = True
-    github_workflows: bool = True
-
-
-class SrcToolsUpdate(BaseModel):
-    justfile: bool = True
-    github_workflows: bool = True
-
-
 DEFAULT_BODY_TEMPLATE = """\
 Synced from [{src_repo_name}]({src_repo_url}) @ `{src_sha_short}`
 
@@ -119,7 +108,6 @@ class Destination(BaseModel):
     copy_branch: str = "sync/path-sync"
     default_branch: str = "main"
     skip_sections: dict[str, list[str]] = Field(default_factory=dict)
-    tools_update: ToolsUpdate = Field(default_factory=ToolsUpdate)
 
 
 class SrcConfig(BaseModel):
@@ -130,7 +118,6 @@ class SrcConfig(BaseModel):
     src_repo_url: str = ""
     schedule: str = "0 6 * * *"
     header_config: HeaderConfig = Field(default_factory=HeaderConfig)
-    src_tools_update: SrcToolsUpdate = Field(default_factory=SrcToolsUpdate)
     pr_defaults: PRDefaults = Field(default_factory=PRDefaults)
     paths: list[PathMapping] = Field(default_factory=list)
     destinations: list[Destination] = Field(default_factory=list)

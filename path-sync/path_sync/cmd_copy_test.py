@@ -7,7 +7,7 @@ CONFIG_NAME = "test-config"
 
 def _make_dest(**kwargs) -> Destination:
     defaults = {"name": "test", "dest_path_relative": "."}
-    return Destination(**(defaults | kwargs))
+    return Destination(**(defaults | kwargs))  # pyright: ignore[reportArgumentType]
 
 
 def test_sync_single_file(tmp_path):
@@ -52,13 +52,15 @@ def test_cleanup_orphans(tmp_path):
     dest_root = tmp_path / "dest"
     dest_root.mkdir()
 
+    # File with matching config header - will be orphaned
     orphan = dest_root / "orphan.py"
     orphan.write_text(add_header("orphan content", ".py", CONFIG_NAME))
 
+    # File with different config - should not be deleted
     other = dest_root / "other.py"
     other.write_text(add_header("other content", ".py", "other-config"))
 
-    synced: set = set()
+    synced: set = set()  # No files synced
     deleted = _cleanup_orphans(dest_root, CONFIG_NAME, synced, dry_run=False)
 
     assert deleted == 1

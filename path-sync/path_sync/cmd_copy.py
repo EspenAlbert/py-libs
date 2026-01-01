@@ -10,7 +10,7 @@ from pathlib import Path
 
 import typer
 
-from path_sync import git_ops, header, workflow_gen
+from path_sync import git_ops, header, sections, workflow_gen
 from path_sync.file_utils import ensure_parents_write_text
 from path_sync.models import (
     LOG_FORMAT,
@@ -222,6 +222,7 @@ def _sync_paths(
             mapping,
             src_root,
             dest_root,
+            dest,
             config.name,
             opts.dry_run,
             opts.force_overwrite,
@@ -240,6 +241,7 @@ def _sync_path(
     mapping: PathMapping,
     src_root: Path,
     dest_root: Path,
+    dest: Destination,
     config_name: str,
     dry_run: bool,
     force_overwrite: bool,
@@ -259,8 +261,15 @@ def _sync_path(
             if src_path.is_file():
                 rel = src_path.relative_to(src_root / glob_prefix)
                 dest_path = dest_root / dest_base / rel
+                dest_key = str(Path(dest_base) / rel)
                 changes += _copy_with_header(
-                    src_path, dest_path, config_name, dry_run, force_overwrite
+                    src_path,
+                    dest_path,
+                    dest,
+                    dest_key,
+                    config_name,
+                    dry_run,
+                    force_overwrite,
                 )
                 synced.add(dest_path)
     elif src_pattern.is_dir():
@@ -269,15 +278,28 @@ def _sync_path(
             if src_file.is_file():
                 rel = src_file.relative_to(src_pattern)
                 dest_path = dest_root / dest_base / rel
+                dest_key = str(Path(dest_base) / rel)
                 changes += _copy_with_header(
-                    src_file, dest_path, config_name, dry_run, force_overwrite
+                    src_file,
+                    dest_path,
+                    dest,
+                    dest_key,
+                    config_name,
+                    dry_run,
+                    force_overwrite,
                 )
                 synced.add(dest_path)
     elif src_pattern.is_file():
         dest_base = mapping.resolved_dest_path()
         dest_path = dest_root / dest_base
         changes += _copy_with_header(
-            src_pattern, dest_path, config_name, dry_run, force_overwrite
+            src_pattern,
+            dest_path,
+            dest,
+            dest_base,
+            config_name,
+            dry_run,
+            force_overwrite,
         )
         synced.add(dest_path)
     else:
@@ -288,30 +310,72 @@ def _sync_path(
 
 def _copy_with_header(
     src: Path,
-    dest: Path,
+    dest_path: Path,
+    dest: Destination,
+    dest_key: str,
     config_name: str,
     dry_run: bool,
     force_overwrite: bool = False,
 ) -> int:
-    content = src.read_text()
+    src_content = src.read_text()
+    skip_list = dest.skip_sections.get(dest_key, [])
 
-    if dest.exists():
-        existing = dest.read_text()
+    if sections.has_sections(src_content):
+        return _copy_with_sections(
+            src_content, dest_path, skip_list, config_name, dry_run, force_overwrite
+        )
+
+    # No sections: full-file replacement
+    if dest_path.exists():
+        existing = dest_path.read_text()
         if not header.has_header(existing) and not force_overwrite:
-            logger.info(f"Skipping {dest} (header removed - opted out)")
+            logger.info(f"Skipping {dest_path} (header removed - opted out)")
             return 0
-        existing_without_header = header.remove_header(existing)
-        if existing_without_header == content:
+        if header.remove_header(existing) == src_content:
             return 0
 
-    new_content = header.add_header(content, dest.suffix, config_name)
-
+    new_content = header.add_header(src_content, dest_path.suffix, config_name)
     if dry_run:
-        logger.info(f"[DRY RUN] Would write: {dest}")
+        logger.info(f"[DRY RUN] Would write: {dest_path}")
         return 1
 
-    ensure_parents_write_text(dest, new_content)
-    logger.info(f"Wrote: {dest}")
+    ensure_parents_write_text(dest_path, new_content)
+    logger.info(f"Wrote: {dest_path}")
+    return 1
+
+
+def _copy_with_sections(
+    src_content: str,
+    dest_path: Path,
+    skip_list: list[str],
+    config_name: str,
+    dry_run: bool,
+    force_overwrite: bool,
+) -> int:
+    src_sections = sections.extract_sections(src_content)
+
+    if dest_path.exists():
+        existing = dest_path.read_text()
+        if not header.has_header(existing) and not force_overwrite:
+            logger.info(f"Skipping {dest_path} (header removed - opted out)")
+            return 0
+        dest_body = header.remove_header(existing)
+        new_body = sections.replace_sections(dest_body, src_sections, skip_list)
+    else:
+        new_body = src_content
+
+    new_content = header.add_header(new_body, dest_path.suffix, config_name)
+
+    if dest_path.exists():
+        if dest_path.read_text() == new_content:
+            return 0
+
+    if dry_run:
+        logger.info(f"[DRY RUN] Would write: {dest_path}")
+        return 1
+
+    ensure_parents_write_text(dest_path, new_content)
+    logger.info(f"Wrote: {dest_path}")
     return 1
 
 
@@ -339,11 +403,7 @@ def _find_files_with_config(dest_root: Path, config_name: str) -> list[Path]:
         for path in dest_root.rglob(f"*{ext}"):
             if ".git" in path.parts:
                 continue
-            try:
-                content = path.read_text()
-            except UnicodeDecodeError:
-                continue
-            if header.get_config_name(content) == config_name:
+            if header.file_get_config_name(path) == config_name:
                 result.append(path)
     return result
 

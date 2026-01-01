@@ -62,15 +62,19 @@ def remove_header(content: str) -> str:
     return lines[1] if len(lines) > 1 else ""
 
 
-def file_has_header(path: Path, config: HeaderConfig | None = None) -> bool:
-    if not path.exists():
-        return False
-    prefixes = config.comment_prefixes if config else DEFAULT_COMMENT_PREFIXES
-    if path.suffix not in prefixes:
-        return False
+def file_get_config_name(path: Path) -> str | None:
+    """Read first line and extract config name if present."""
+    if not path.exists() or path.suffix not in DEFAULT_COMMENT_PREFIXES:
+        return None
     try:
         with path.open() as f:
             first_line = f.readline()
     except (UnicodeDecodeError, OSError):
+        return None
+    return get_config_name(first_line)
+
+
+def file_has_header(path: Path, config: HeaderConfig | None = None) -> bool:
+    if config and path.suffix not in config.comment_prefixes:
         return False
-    return bool(HEADER_PATTERN.search(first_line))
+    return file_get_config_name(path) is not None

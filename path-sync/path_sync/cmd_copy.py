@@ -29,6 +29,16 @@ EXIT_CHANGES = 1
 EXIT_ERROR = 2
 
 
+def _prompt(message: str, no_prompt: bool) -> bool:
+    if no_prompt:
+        return True
+    try:
+        response = input(f"{message} [y/n]: ").strip().lower()
+        return response == "y"
+    except (EOFError, KeyboardInterrupt):
+        return False
+
+
 @dataclass
 class SyncResult:
     content_changes: int = 0
@@ -60,11 +70,10 @@ def capture_sync_log(dest_name: str):
 class CopyOptions:
     dry_run: bool = False
     force_overwrite: bool = False
-    skip_checkout: bool = False
+    no_checkout: bool = False
     checkout_from_default: bool = False
-    force_push: bool = True
-    no_commit: bool = False
-    no_push: bool = False
+    local: bool = False
+    no_prompt: bool = False
     no_pr: bool = False
     pr_title: str = ""
     pr_labels: str = ""
@@ -81,24 +90,60 @@ def copy(
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview without writing"),
     force_overwrite: bool = typer.Option(
         False,
-        "--force-no-header-updates",
-        help="Overwrite files even if header removed",
+        "--force-overwrite",
+        help="Overwrite files even if header removed (opted out)",
     ),
-    detailed_exit_code: bool = typer.Option(False, "--detailed-exit-code"),
-    skip_dest_checkout: bool = typer.Option(False, "--skip-dest-checkout"),
+    detailed_exit_code: bool = typer.Option(
+        False,
+        "--detailed-exit-code",
+        help="Exit 0=no changes, 1=changes, 2=error",
+    ),
+    no_checkout: bool = typer.Option(
+        False,
+        "--no-checkout",
+        help="Skip branch switching before sync",
+    ),
     checkout_from_default: bool = typer.Option(
         False,
         "--checkout-from-default",
         help="Reset to origin/default before sync (for CI)",
     ),
-    force_push: bool = typer.Option(True, "--force-push/--no-force-push"),
-    no_commit: bool = typer.Option(False, "--no-commit"),
-    no_push: bool = typer.Option(False, "--no-push"),
-    no_pr: bool = typer.Option(False, "--no-pr"),
-    pr_title: str = typer.Option("", "--pr-title"),
-    pr_labels: str = typer.Option("", "--pr-labels"),
-    pr_reviewers: str = typer.Option("", "--pr-reviewers"),
-    pr_assignees: str = typer.Option("", "--pr-assignees"),
+    local: bool = typer.Option(
+        False,
+        "--local",
+        help="No git operations after sync (no commit/push/PR)",
+    ),
+    no_prompt: bool = typer.Option(
+        False,
+        "-y",
+        "--no-prompt",
+        help="Skip confirmations (for CI)",
+    ),
+    no_pr: bool = typer.Option(
+        False,
+        "--no-pr",
+        help="Push but skip PR creation",
+    ),
+    pr_title: str = typer.Option(
+        "",
+        "--pr-title",
+        help="Override PR title (supports {name}, {dest_name})",
+    ),
+    pr_labels: str = typer.Option(
+        "",
+        "--pr-labels",
+        help="Comma-separated PR labels",
+    ),
+    pr_reviewers: str = typer.Option(
+        "",
+        "--pr-reviewers",
+        help="Comma-separated PR reviewers",
+    ),
+    pr_assignees: str = typer.Option(
+        "",
+        "--pr-assignees",
+        help="Comma-separated PR assignees",
+    ),
 ) -> None:
     """Copy files from SRC to DEST repositories."""
     src_root = find_repo_root(Path.cwd())
@@ -116,11 +161,10 @@ def copy(
     opts = CopyOptions(
         dry_run=dry_run,
         force_overwrite=force_overwrite,
-        skip_checkout=skip_dest_checkout,
+        no_checkout=no_checkout,
         checkout_from_default=checkout_from_default,
-        force_push=force_push,
-        no_commit=no_commit,
-        no_push=no_push,
+        local=local,
+        no_prompt=no_prompt,
         no_pr=no_pr,
         pr_title=pr_title or config.pr_defaults.title,
         pr_labels=pr_labels or ",".join(config.pr_defaults.labels),
@@ -161,9 +205,21 @@ def _sync_destination(
     log_path: Path,
 ) -> int:
     dest_root = (src_root / dest.dest_path_relative).resolve()
-    dest_repo = _ensure_dest_repo(dest, dest_root)
 
-    if not opts.skip_checkout and not opts.dry_run:
+    if opts.dry_run and not dest_root.exists():
+        raise ValueError(
+            f"Destination repo not found: {dest_root}. "
+            "Clone it first or run without --dry-run."
+        )
+
+    dest_repo = _ensure_dest_repo(dest, dest_root, opts.dry_run)
+
+    should_checkout = (
+        not opts.no_checkout
+        and not opts.dry_run
+        and _prompt(f"Switch to {dest.copy_branch}?", opts.no_prompt)
+    )
+    if should_checkout:
         git_ops.prepare_copy_branch(
             repo=dest_repo,
             default_branch=dest.default_branch,
@@ -172,14 +228,13 @@ def _sync_destination(
         )
 
     result = _sync_paths(config, dest, src_root, dest_root, opts)
+    _print_sync_summary(dest, result)
 
     if result.total == 0:
         logger.info(f"{dest.name}: No changes")
         return 0
-    logger.info(f"{dest.name}: Found {result.total} changes")
 
     if opts.dry_run:
-        logger.info(f"{dest.name}: Would make {result.total} changes")
         return result.total
 
     return _commit_and_pr(
@@ -187,8 +242,23 @@ def _sync_destination(
     )
 
 
-def _ensure_dest_repo(dest: Destination, dest_root: Path):
+def _print_sync_summary(dest: Destination, result: SyncResult) -> None:
+    typer.echo(f"\nSyncing to {dest.name}...", err=True)
+    if result.content_changes > 0:
+        typer.echo(f"  [{result.content_changes} files synced]", err=True)
+    if result.orphans_deleted > 0:
+        typer.echo(f"  [-] {result.orphans_deleted} orphans deleted", err=True)
+    if result.total > 0:
+        typer.echo(f"\n{result.total} changes ready.", err=True)
+
+
+def _ensure_dest_repo(dest: Destination, dest_root: Path, dry_run: bool):
     if not dest_root.exists():
+        if dry_run:
+            raise ValueError(
+                f"Destination repo not found: {dest_root}. "
+                "Clone it first or run without --dry-run."
+            )
         if not dest.repo_url:
             raise ValueError(f"Dest {dest.name} not found and no repo_url configured")
         git_ops.clone_repo(dest.repo_url, dest_root)
@@ -401,17 +471,27 @@ def _commit_and_pr(
     opts: CopyOptions,
     log_path: Path,
 ) -> int:
-    if opts.no_commit:
+    if opts.local:
+        logger.info("Local mode: skipping commit/push/PR")
         return 1
 
-    git_ops.commit_changes(repo, f"chore: sync {config.name} from {sha[:8]}")
-
-    if opts.no_push:
+    if not _prompt("Commit changes?", opts.no_prompt):
         return 1
 
-    git_ops.push_branch(repo, dest.copy_branch, force=opts.force_push)
+    commit_msg = f"chore: sync {config.name} from {sha[:8]}"
+    git_ops.commit_changes(repo, commit_msg)
+    typer.echo(f"  Committed: {commit_msg}", err=True)
+
+    if not _prompt("Push to origin?", opts.no_prompt):
+        return 1
+
+    git_ops.push_branch(repo, dest.copy_branch, force=True)
+    typer.echo(f"  Pushed: {dest.copy_branch} (force)", err=True)
 
     if opts.no_pr:
+        return 1
+
+    if not _prompt("Create PR?", opts.no_prompt):
         return 1
 
     sync_log = log_path.read_text() if log_path.exists() else ""
@@ -423,7 +503,7 @@ def _commit_and_pr(
     )
 
     title = opts.pr_title.format(name=config.name, dest_name=dest.name)
-    git_ops.create_or_update_pr(
+    pr_url = git_ops.create_or_update_pr(
         dest_root,
         dest.copy_branch,
         title,
@@ -432,4 +512,6 @@ def _commit_and_pr(
         opts.pr_reviewers.split(",") if opts.pr_reviewers else None,
         opts.pr_assignees.split(",") if opts.pr_assignees else None,
     )
+    if pr_url:
+        typer.echo(f"  Created PR: {pr_url}", err=True)
     return 1

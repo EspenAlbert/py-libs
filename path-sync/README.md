@@ -5,7 +5,11 @@ Sync files from a source repo to multiple destination repos.
 ## Installation
 
 ```bash
-uv pip install -e path-sync/
+# From PyPI
+uvx path-sync --help
+
+# Or install in project
+uv pip install path-sync
 ```
 
 ## Quick Start
@@ -13,14 +17,10 @@ uv pip install -e path-sync/
 ### 1. Bootstrap a source config
 
 ```bash
-# From your source repo root
 path-sync boot -n myconfig -d ../dest-repo1 -d ../dest-repo2 -p '.cursor/**/*.mdc'
 ```
 
-Creates `.github/myconfig.src.yaml` with:
-- Auto-detected `src_repo_url` from git remote
-- Destinations with names extracted from paths
-- Always paths from `-p` patterns
+Creates `.github/myconfig.src.yaml` with auto-detected git remote and destinations.
 
 ### 2. Copy files to destinations
 
@@ -28,158 +28,206 @@ Creates `.github/myconfig.src.yaml` with:
 path-sync copy -n myconfig
 ```
 
+By default, prompts before each git operation. See [Usage Scenarios](#usage-scenarios) for common patterns.
+
+| Flag | Description |
+|------|-------------|
+| `-d dest1,dest2` | Filter specific destinations |
+| `--dry-run` | Preview without writing (requires existing repos) |
+| `-y, --no-prompt` | Skip confirmations (for CI) |
+| `--local` | No git ops after sync (no commit/push/PR) |
+| `--no-checkout` | Skip branch switching before sync |
+| `--checkout-from-default` | Reset to origin/default before sync |
+| `--no-pr` | Push but skip PR creation |
+| `--force-overwrite` | Overwrite files even if header removed (opted out) |
+| `--detailed-exit-code` | Exit 0=no changes, 1=changes, 2=error |
+| `--pr-title` | Override PR title (supports `{name}`, `{dest_name}`) |
+| `--pr-labels` | Comma-separated PR labels |
+| `--pr-reviewers` | Comma-separated PR reviewers |
+| `--pr-assignees` | Comma-separated PR assignees |
+
+### 3. Validate (run in dest repo)
+
+```bash
+uvx path-sync validate-no-changes -b main
+```
+
 Options:
-- `-d lz,help` - filter specific destinations
-- `--dry-run` - preview without changes
-- `--validate-first` - run validation before copying
-- `--skip-dest-checkout` - use current branch in dest
-- `--force-ignore-sha-match` - re-copy even if SHA unchanged
-- `--force-no-header-updates` - overwrite files even if header removed (opted out)
-- `--no-pr` - skip PR creation
+- `-b, --branch` - Default branch to compare against (default: main)
+- `--skip-sections` - Comma-separated `path:section_id` pairs to skip (e.g., `justfile:coverage`)
 
-### 3. Validate no unauthorized changes (run in dest repo)
+## Usage Scenarios
 
-```bash
-# If path-sync is installed
-path-sync validate-no-changes -n myconfig
+| Scenario | Command |
+|----------|---------|
+| Interactive sync | `copy -n cfg` |
+| CI fresh sync | `copy -n cfg --checkout-from-default -y` |
+| Local preview | `copy -n cfg --dry-run` |
+| Local test files | `copy -n cfg --local` |
+| Already on branch | `copy -n cfg --no-checkout --local` |
+| Push, manual PR | `copy -n cfg --no-pr -y` |
+| Force opted-out | `copy -n cfg --force-overwrite` |
 
-# Or using the copied wheel (no installation needed)
-uv run --with .github/path_sync-*.whl path-sync validate-no-changes -n myconfig
+## Section Markers
+
+For partial file syncing (e.g., `justfile`, `pyproject.toml`), wrap sections with markers:
+
+```makefile
+# === DO_NOT_EDIT: path-sync default ===
+lint:
+    ruff check .
+# === OK_EDIT ===
 ```
 
-### 4. Clean orphaned synced files (run in dest repo)
+- **`DO_NOT_EDIT: path-sync {id}`** - Start of managed section with identifier
+- **`OK_EDIT`** - End marker (content below is editable)
 
-```bash
-path-sync clean
+During sync, only content within markers is replaced. Destination can have extra sections.
+
+Use `skip_sections` in destination config to exclude specific sections from sync:
+
+```yaml
+destinations:
+  - name: dest1
+    dest_path_relative: ../dest1
+    skip_sections:
+      justfile: [coverage]  # keep local coverage recipe
 ```
 
-## Config Structure
+## Design Principles
+
+1. **One-way sync**: SRC owns synced files/sections, DEST never edits them
+2. **Opt-out via header removal**: Delete the header comment to stop syncing a file
+3. **Section-level control**: Sync parts of files while preserving local additions
+4. **Interactive by default**: Prompts before git operations (use `-y` for CI)
+5. **Orphan cleanup built-in**: Synced files no longer in SRC are deleted automatically
+
+## Config Reference
 
 **Source config** (`.github/{name}.src.yaml`):
+
 ```yaml
-type: SRC
 name: cursor
 src_repo_url: https://github.com/user/src-repo
 schedule: "0 6 * * *"
-always_paths:
+paths:
   - src_path: .cursor/**/*.mdc
-scaffold_paths:
-  - src_path: templates/README.md
+  - src_path: templates/justfile
+    dest_path: justfile
 destinations:
   - name: dest1
     repo_url: https://github.com/user/dest1
     dest_path_relative: ../dest1
     copy_branch: sync/path-sync
     default_branch: main
-    tools_update:
-      justfile: true           # Add validate recipe to justfile
-      path_sync_wheel: true    # Copy path-sync wheel to .github/
-      github_workflows: true   # Generate validation workflow
+    skip_sections:
+      justfile: [coverage]
 ```
 
-## Opt-out Mechanism
+| Field | Description |
+|-------|-------------|
+| `name` | Config identifier |
+| `src_repo_url` | Source repo URL (auto-detected from git remote) |
+| `schedule` | Cron for scheduled sync workflow |
+| `paths` | Files/globs to sync (`src_path` required, `dest_path` optional) |
+| `destinations` | Target repos with sync settings |
+| `header_config` | Comment style per extension (has defaults) |
+| `pr_defaults` | PR title, labels, reviewers, assignees |
 
-Synced files have a header comment (e.g., `<!-- DO NOT EDIT: path-sync destination file -->`).
+## Header Format
+
+Synced files have a header comment identifying the source config:
+
+```python
+# path-sync copy -n myconfig
+```
+
+Comment style is extension-aware:
+
+| Extension | Format |
+|-----------|--------|
+| `.py`, `.sh`, `.yaml` | `# path-sync copy -n {name}` |
+| `.go`, `.js`, `.ts` | `// path-sync copy -n {name}` |
+| `.md`, `.mdc`, `.html` | `<!-- path-sync copy -n {name} -->` |
+
 Remove this header to opt-out of future syncs for that file.
-
-## Header Configuration
-
-The header text and comment styles are configurable in `header_config`:
-
-```yaml
-header_config:
-  header_text: "DO NOT EDIT: path-sync destination file"  # customize message
-  comment_prefixes:    # extension -> prefix mapping
-    .py: "#"
-    .md: "<!--"
-  comment_suffixes:    # optional closing (for HTML-style comments)
-    .md: " -->"
-```
-
-**Behavior:**
-- **Defaults included**: Running `boot` generates config with all supported extensions pre-configured
-- **Inherited by DEST**: The `header_config` from SRC is copied to DEST config during `copy`
-- **Only configured extensions synced**: Files with extensions not in `comment_prefixes` are skipped
-- **Validation uses DEST config**: The `validate-no-changes` and `clean` commands read header config from the dest config
-
-**Supported extensions (defaults):**
-
-| Extension | Prefix | Suffix |
-|-----------|--------|--------|
-| `.py`, `.sh`, `.yaml`, `.yml` | `#` | |
-| `.go`, `.js`, `.ts` | `//` | |
-| `.md`, `.mdc`, `.html` | `<!--` | `-->` |
 
 ## GitHub Actions
 
-**Source repo**: Set `src_tools_update.github_workflows: true` and run `boot --regen` to generate:
-- `.github/workflows/path_sync_{name}_copy.yaml` - scheduled sync workflow
+### Source repo workflow
 
-**Destination repos**: Set `tools_update.github_workflows: true` per destination to auto-generate:
-- `.github/workflows/path_sync_{name}_validate.yaml` - validation on push (uses the copied wheel)
+Create `.github/workflows/path_sync_copy.yaml`:
+
+```yaml
+name: path-sync copy
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uvx path-sync copy -n myconfig --checkout-from-default -y
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+```
+
+### Destination repo validation
+
+Create `.github/workflows/path_sync_validate.yaml`:
+
+```yaml
+name: path-sync validate
+on: [push, pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v5
+      - run: uvx path-sync validate-no-changes -b main
+```
 
 ### PAT Requirements
 
-Create a **Fine-grained Personal Access Token** at <https://github.com/settings/tokens?type=beta>
+Create a **Fine-grained PAT** at <https://github.com/settings/tokens?type=beta>
 
-**Repository access**: Select each destination repository
+| Permission | Scope |
+|------------|-------|
+| Contents | Read/write (push branches) |
+| Pull requests | Read/write (create PRs) |
+| Workflows | Read/write (if syncing `.github/workflows/`) |
+| Metadata | Read (always required) |
 
-**Permissions required per destination repo**:
-- **Contents**: Read and write (push branches)
-- **Pull requests**: Read and write (create PRs)
-- **Workflows**: Read and write (required if syncing workflow files to `.github/workflows/`)
-- **Metadata**: Read (always required)
-
-**Classic PAT alternative**: Use `repo` + `workflow` scopes
-
-### Setup
-
-1. Create the PAT with permissions above
-2. Add as repository secret: Settings > Secrets > Actions > `GH_PAT`
-3. The workflow uses `GH_TOKEN: ${{ secrets.GH_PAT }}` for `gh` CLI auth
-
-### Verify Access
-
-```bash
-# Test from any machine with gh CLI
-export GH_TOKEN=your_pat
-gh api repos/owner/dest-repo
-gh pr list --repo owner/dest-repo
-```
-
-### Branch Protection
-
-The `copy_branch` (default: `sync/path-sync`) is where path-sync pushes changes. This branch typically doesn't need protection rules.
-
-**Potential issues**:
-- If wildcard branch protection (e.g., `*`) blocks pushes, exclude `sync/*` pattern
-- Required status checks on the PR target branch may delay merge
-
-**Workarounds**:
-- Add `sync/path-sync` to branch protection bypass list
-- Or use a bot/machine user account with bypass permissions
-- The `--no-pr` flag skips PR creation if you prefer manual work
+Add as repository secret: `GH_PAT`
 
 ### Common Errors
 
-| Error | Cause | Fix |
-|-------|-------|-----|
-| `HTTP 404: Not Found` | PAT lacks repo access | Add repo to PAT's repository access |
-| `HTTP 403: Resource not accessible` | Missing permission | Add Contents + Pull requests permissions |
-| `GraphQL: Resource not accessible by integration` | Using GITHUB_TOKEN | Use GH_PAT secret instead |
-| `HTTP 422: Required status check` | Branch protection rules | Bypass or exclude `sync/*` branches |
+| Error | Fix |
+|-------|-----|
+| `HTTP 404: Not Found` | Add repo to PAT's repository access |
+| `HTTP 403: Resource not accessible` | Add Contents + Pull requests permissions |
+| `GraphQL: Resource not accessible` | Use GH_PAT, not GITHUB_TOKEN |
+| `HTTP 422: Required status check` | Exclude `sync/*` from branch protection |
 
 ## Alternatives Considered
 
-| Tool | Description | Why Not |
-|------|-------------|---------|
-| [repo-file-sync-action](https://github.com/BetaHuhn/repo-file-sync-action) | GitHub Action for file sync | No local CLI, no validation workflow, no justfile support |
-| [Copier](https://copier.readthedocs.io/) | Template-based project generation | Merge-based (both SRC and DEST can edit), no multi-dest, no validation |
-| [Cruft](https://cruft.github.io/cruft/) | Cookiecutter with updates | Patch-based merging, single dest, no CI validation |
+| Tool | Why Not |
+|------|---------|
+| [repo-file-sync-action](https://github.com/BetaHuhn/repo-file-sync-action) | No local CLI, no validation |
+| [Copier](https://copier.readthedocs.io/) | Merge-based (conflicts), no multi-dest |
+| [Cruft](https://cruft.github.io/cruft/) | Patch-based, single dest |
 
 **Why path-sync:**
-- One SRC to multiple DEST repos (not 1:1)
-- Local CLI support (not GitHub Action only)
-- Justfile integration for dev workflow
-- Validation checks enforced across many repos
-- Clear ownership: SRC or DEST, never both (no merge conflicts)
+- One SRC to many DEST repos
+- Local CLI + CI support
+- Section-level sync for shared files
+- Validation enforced across repos
+- Clear ownership (no merge conflicts)

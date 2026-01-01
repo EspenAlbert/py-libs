@@ -55,6 +55,27 @@ def test_sync_skips_opted_out_file(tmp_path):
     assert (dest_root / "file.py").read_text() == "local content without header"
 
 
+def test_force_overwrite_adds_header_when_content_matches(tmp_path):
+    src_root = tmp_path / "src"
+    dest_root = tmp_path / "dest"
+    src_root.mkdir()
+    dest_root.mkdir()
+
+    content = "same content"
+    (src_root / "file.py").write_text(content)
+    (dest_root / "file.py").write_text(content)  # No header, same content
+
+    mapping = PathMapping(src_path="file.py")
+    changes, _ = _sync_path(
+        mapping, src_root, dest_root, _make_dest(), CONFIG_NAME, False, True
+    )
+
+    assert changes == 1
+    result = (dest_root / "file.py").read_text()
+    assert has_header(result)
+    assert content in result
+
+
 def test_cleanup_orphans(tmp_path):
     dest_root = tmp_path / "dest"
     dest_root.mkdir()

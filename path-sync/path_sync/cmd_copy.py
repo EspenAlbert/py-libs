@@ -391,10 +391,11 @@ def _copy_with_header(
 
     if dest_path.exists():
         existing = dest_path.read_text()
-        if not header.has_header(existing) and not force_overwrite:
+        has_header = header.has_header(existing)
+        if not has_header and not force_overwrite:
             logger.info(f"Skipping {dest_path} (header removed - opted out)")
             return 0
-        if header.remove_header(existing) == src_content:
+        if header.remove_header(existing) == src_content and has_header:
             return 0
 
     new_content = header.add_header(src_content, dest_path.suffix, config_name)

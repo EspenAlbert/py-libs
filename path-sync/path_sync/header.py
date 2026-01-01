@@ -10,7 +10,9 @@ from path_sync.models import (
     HeaderConfig,
 )
 
-HEADER_PATTERN = re.compile(r"path-sync copy -n (?P<config_name>\w+)")
+COMMENT_PREFIXES = DEFAULT_COMMENT_PREFIXES
+
+HEADER_PATTERN = re.compile(r"path-sync copy -n (?P<config_name>[\w-]+)")
 
 
 def get_header_line(
@@ -34,6 +36,13 @@ def get_header_line(
 def has_header(content: str) -> bool:
     first_line = content.split("\n", 1)[0] if content else ""
     return bool(HEADER_PATTERN.search(first_line))
+
+
+def get_config_name(content: str) -> str | None:
+    first_line = content.split("\n", 1)[0] if content else ""
+    if match := HEADER_PATTERN.search(first_line):
+        return match.group("config_name")
+    return None
 
 
 def add_header(
@@ -60,7 +69,8 @@ def file_has_header(path: Path, config: HeaderConfig | None = None) -> bool:
     if path.suffix not in prefixes:
         return False
     try:
-        content = path.read_text()
-    except UnicodeDecodeError:
+        with path.open() as f:
+            first_line = f.readline()
+    except (UnicodeDecodeError, OSError):
         return False
-    return has_header(content)
+    return bool(HEADER_PATTERN.search(first_line))

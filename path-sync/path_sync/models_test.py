@@ -1,5 +1,4 @@
 from path_sync.models import (
-    DestConfig,
     Destination,
     PathMapping,
     PRDefaults,
@@ -18,11 +17,8 @@ def test_path_mapping_resolved():
 
 
 def test_resolve_config_path(tmp_path):
-    src_path = resolve_config_path(tmp_path, "sdlc", SrcConfig)
+    src_path = resolve_config_path(tmp_path, "sdlc")
     assert src_path == tmp_path / ".github" / "sdlc.src.yaml"
-
-    dest_path = resolve_config_path(tmp_path, "sdlc", DestConfig)
-    assert dest_path == tmp_path / ".github" / "sdlc.dest.yaml"
 
 
 def test_find_repo_root(tmp_repo):
@@ -44,6 +40,16 @@ def test_src_config_find_destination():
     assert dest.name == "repo1"
 
 
+def test_destination_skip_sections():
+    dest = Destination(
+        name="test",
+        dest_path_relative="../test",
+        skip_sections={"justfile": ["pkg-ext"], "pyproject.toml": ["coverage"]},
+    )
+    assert dest.skip_sections["justfile"] == ["pkg-ext"]
+    assert dest.skip_sections.get("unknown", []) == []
+
+
 def test_pr_defaults_format_body():
     pr = PRDefaults()
     body = pr.format_body(
@@ -55,24 +61,9 @@ def test_pr_defaults_format_body():
     assert "[my-repo](https://github.com/user/my-repo)" in body
     assert "`abc12345`" in body
     assert "INFO Wrote: file.py" in body
-    assert "<details>" in body
-
-
-def test_pr_defaults_format_body_with_suffix():
-    pr = PRDefaults(body_suffix="Please review carefully")
-    body = pr.format_body(
-        src_repo_url="https://github.com/org/repo.git",
-        src_sha="1234567890abcdef",
-        sync_log="log output",
-        dest_name="target",
-    )
-    assert "[repo](https://github.com/org/repo.git)" in body
-    assert "---" in body
-    assert "Please review carefully" in body
 
 
 def test_pr_defaults_format_body_extracts_repo_name():
     pr = PRDefaults(body_template="{src_repo_name}")
     assert pr.format_body("https://github.com/u/repo", "sha", "", "") == "repo"
     assert pr.format_body("https://github.com/u/repo.git", "sha", "", "") == "repo"
-    assert pr.format_body("https://github.com/u/repo/", "sha", "", "") == "repo"

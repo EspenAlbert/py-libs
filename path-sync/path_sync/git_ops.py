@@ -171,3 +171,11 @@ def file_has_git_changes(repo: Repo, file_path: Path, base_ref: str = "HEAD") ->
     rel_path = str(file_path.relative_to(repo.working_dir))
     diff = repo.git.diff("--name-only", base_ref, "--", rel_path)
     return bool(diff.strip())
+
+
+def get_changed_files(repo: Repo, base_ref: str = "HEAD") -> list[Path]:
+    diff = repo.git.diff("--name-only", base_ref)
+    if not diff.strip():
+        return []
+    repo_root = Path(repo.working_dir)
+    return [repo_root / p for p in diff.strip().split("\n")]

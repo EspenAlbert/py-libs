@@ -1,19 +1,12 @@
 from __future__ import annotations
 
 import glob as glob_mod
-from datetime import UTC, datetime
-from enum import StrEnum
 from pathlib import Path
 from typing import ClassVar
 
 from pydantic import BaseModel, Field
 
 LOG_FORMAT = "%(asctime)s %(levelname)s %(message)s"
-
-
-class ConfigType(StrEnum):
-    SRC = "SRC"
-    DEST = "DEST"
 
 
 class PathMapping(BaseModel):
@@ -125,14 +118,13 @@ class Destination(BaseModel):
     dest_path_relative: str
     copy_branch: str = "sync/path-sync"
     default_branch: str = "main"
-    template_vars: dict[str, str] = Field(default_factory=dict)
+    skip_sections: dict[str, list[str]] = Field(default_factory=dict)
     tools_update: ToolsUpdate = Field(default_factory=ToolsUpdate)
 
 
 class SrcConfig(BaseModel):
     CONFIG_EXT: ClassVar[str] = ".src.yaml"
 
-    type: ConfigType = ConfigType.SRC
     name: str
     git_remote: str = "origin"
     src_repo_url: str = ""
@@ -140,8 +132,7 @@ class SrcConfig(BaseModel):
     header_config: HeaderConfig = Field(default_factory=HeaderConfig)
     src_tools_update: SrcToolsUpdate = Field(default_factory=SrcToolsUpdate)
     pr_defaults: PRDefaults = Field(default_factory=PRDefaults)
-    always_paths: list[PathMapping] = Field(default_factory=list)
-    scaffold_paths: list[PathMapping] = Field(default_factory=list)
+    paths: list[PathMapping] = Field(default_factory=list)
     destinations: list[Destination] = Field(default_factory=list)
 
     def find_destination(self, name: str) -> Destination:
@@ -151,26 +142,8 @@ class SrcConfig(BaseModel):
         raise ValueError(f"Destination not found: {name}")
 
 
-class DestConfig(BaseModel):
-    CONFIG_EXT: ClassVar[str] = ".dest.yaml"
-
-    type: ConfigType = ConfigType.DEST
-    src_name: str
-    dest_name: str
-    default_branch: str = "main"
-    header_config: HeaderConfig = Field(default_factory=HeaderConfig)
-    always_paths: list[PathMapping] = Field(default_factory=list)
-    scaffold_paths: list[PathMapping] = Field(default_factory=list)
-    src_sha: str = ""
-    src_repo_url: str = ""
-    ts: datetime = Field(default_factory=lambda: datetime.now(UTC))
-
-
-def resolve_config_path(
-    repo_root: Path, name: str, config_type: type[SrcConfig] | type[DestConfig]
-) -> Path:
-    ext = config_type.CONFIG_EXT
-    return repo_root / ".github" / f"{name}{ext}"
+def resolve_config_path(repo_root: Path, name: str) -> Path:
+    return repo_root / ".github" / f"{name}{SrcConfig.CONFIG_EXT}"
 
 
 def find_repo_root(start_path: Path) -> Path:

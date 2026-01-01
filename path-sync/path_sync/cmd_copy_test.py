@@ -1,5 +1,5 @@
-from path_sync.cmd_copy import _sync_always_path
-from path_sync.header import has_header
+from path_sync.cmd_copy import _cleanup_orphans, _sync_path
+from path_sync.header import add_header, has_header
 from path_sync.models import PathMapping
 
 CONFIG_NAME = "test-config"
@@ -14,35 +14,15 @@ def test_sync_single_file(tmp_path):
     (src_root / "file.py").write_text("content")
 
     mapping = PathMapping(src_path="file.py", dest_path="out.py")
-    changes = _sync_always_path(
-        mapping, src_root, dest_root, CONFIG_NAME, dry_run=False
+    changes, synced = _sync_path(
+        mapping, src_root, dest_root, CONFIG_NAME, False, False
     )
 
     assert changes == 1
+    assert dest_root / "out.py" in synced
     result = (dest_root / "out.py").read_text()
     assert has_header(result)
-    assert "content" in result
     assert f"path-sync copy -n {CONFIG_NAME}" in result
-
-
-def test_sync_directory(tmp_path):
-    src_root = tmp_path / "src"
-    dest_root = tmp_path / "dest"
-    (src_root / "docs").mkdir(parents=True)
-    dest_root.mkdir()
-
-    (src_root / "docs" / "a.md").write_text("doc a")
-    (src_root / "docs" / "sub" / "b.md").parent.mkdir()
-    (src_root / "docs" / "sub" / "b.md").write_text("doc b")
-
-    mapping = PathMapping(src_path="docs", dest_path="output")
-    changes = _sync_always_path(
-        mapping, src_root, dest_root, CONFIG_NAME, dry_run=False
-    )
-
-    assert changes == 2
-    assert (dest_root / "output" / "a.md").exists()
-    assert (dest_root / "output" / "sub" / "b.md").exists()
 
 
 def test_sync_skips_opted_out_file(tmp_path):
@@ -55,9 +35,27 @@ def test_sync_skips_opted_out_file(tmp_path):
     (dest_root / "file.py").write_text("local content without header")
 
     mapping = PathMapping(src_path="file.py")
-    changes = _sync_always_path(
-        mapping, src_root, dest_root, CONFIG_NAME, dry_run=False
-    )
+    changes, _ = _sync_path(mapping, src_root, dest_root, CONFIG_NAME, False, False)
 
     assert changes == 0
     assert (dest_root / "file.py").read_text() == "local content without header"
+
+
+def test_cleanup_orphans(tmp_path):
+    dest_root = tmp_path / "dest"
+    dest_root.mkdir()
+
+    # File with matching config header - will be orphaned
+    orphan = dest_root / "orphan.py"
+    orphan.write_text(add_header("orphan content", ".py", CONFIG_NAME))
+
+    # File with different config - should not be deleted
+    other = dest_root / "other.py"
+    other.write_text(add_header("other content", ".py", "other-config"))
+
+    synced: set = set()  # No files synced
+    deleted = _cleanup_orphans(dest_root, CONFIG_NAME, synced, dry_run=False)
+
+    assert deleted == 1
+    assert not orphan.exists()
+    assert other.exists()

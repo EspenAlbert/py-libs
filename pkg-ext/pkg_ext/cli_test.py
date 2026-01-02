@@ -265,7 +265,6 @@ def test_04_git_fix(e2e_dirs, file_regression_e2e, monkeypatch):
 
 def test_05_flat(e2e_dirs, file_regression_e2e, monkeypatch):
     """Test flat package: auto-expose all refs, VERSION-only __init__.py."""
-    # No question patcher needed - flat packages don't prompt
     settings = run_e2e(e2e_dirs, file_regression_e2e, monkeypatch, groups=[])
     init_text = settings.init_path.read_text()
     assert 'VERSION = "' in init_text

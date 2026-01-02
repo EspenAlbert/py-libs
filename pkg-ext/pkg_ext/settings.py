@@ -49,6 +49,7 @@ class PkgSettings(BaseSettings):
     repo_root: DirectoryPath
     skip_open_in_editor: bool = False
     tag_prefix: str = ""
+    is_flat: bool = False
 
     def _with_dev_suffix(self, path: Path) -> Path:
         if self.dev_mode:
@@ -98,13 +99,6 @@ class PkgSettings(BaseSettings):
     def pyproject_toml(self) -> Path:
         return self.state_dir / "pyproject.toml"
 
-    @property
-    def is_flat(self) -> bool:
-        """Package is flat if no _internal directory or _internal*.py files exist."""
-        if (self.pkg_directory / "_internal").is_dir():
-            return False
-        return not any(self.pkg_directory.glob("_internal*.py"))
-
     def force_bot(self) -> None:
         self.is_bot = True
         self.skip_open_in_editor = True
@@ -138,6 +132,7 @@ def pkg_settings(
     commit_fix_prefixes: tuple[str, ...] | None = None,
     commit_fix_diff_suffixes: tuple[str, ...] | None = None,
     after_file_write_hooks: tuple[str, ...] | None = None,
+    is_flat: bool | None = None,
 ) -> PkgSettings:
     # Resolve global settings with proper precedence: CLI arg → Env var → Config file(user or proejct) → Default
     user_config = load_user_config()
@@ -161,4 +156,5 @@ def pkg_settings(
         tag_prefix=tag_prefix if tag_prefix is not None else project_config.tag_prefix,
         changelog_cleanup_count=project_config.changelog_cleanup_count,
         changelog_keep_count=project_config.changelog_keep_count,
+        is_flat=is_flat if is_flat is not None else project_config.flat_package,
     )

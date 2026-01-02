@@ -1,0 +1,19 @@
+name: format_name
+type: expose
+details: auto-exposed from helpers.py
+ts: 2025-10-18 21:13:06.12345+00:00
+---
+name: parse_version
+type: expose
+details: auto-exposed from helpers.py
+ts: 2025-10-18 21:13:06.12345+00:00
+---
+name: read_file
+type: expose
+details: auto-exposed from utils.py
+ts: 2025-10-18 21:13:06.12345+00:00
+---
+name: write_file
+type: expose
+details: auto-exposed from utils.py
+ts: 2025-10-18 21:13:06.12345+00:00

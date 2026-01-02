@@ -98,6 +98,13 @@ class PkgSettings(BaseSettings):
     def pyproject_toml(self) -> Path:
         return self.state_dir / "pyproject.toml"
 
+    @property
+    def is_flat(self) -> bool:
+        """Package is flat if no _internal directory or _internal*.py files exist."""
+        if (self.pkg_directory / "_internal").is_dir():
+            return False
+        return not any(self.pkg_directory.glob("_internal*.py"))
+
     def force_bot(self) -> None:
         self.is_bot = True
         self.skip_open_in_editor = True

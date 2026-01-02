@@ -1,5 +1,11 @@
 # Changelog
 
-## 0.1.0 2025-01-02 10:00:00.00000+00:00
+## 0.1.0 2025-10-18 21:13:06.12345+00:00
 
-- Initial release of flat package
+### Helpers
+- New function format_name
+- New function parse_version
+
+### Utils
+- New function read_file
+- New function write_file

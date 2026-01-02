@@ -36,7 +36,12 @@ from pkg_ext.git_usage import (
 )
 from pkg_ext.interactive import on_new_ref
 from pkg_ext.models import PkgCodeState, pkg_ctx
-from pkg_ext.reference_handling import handle_added_refs, handle_removed_refs
+from pkg_ext.reference_handling import (
+    handle_added_refs,
+    handle_added_refs_flat,
+    handle_removed_refs,
+    handle_removed_refs_flat,
+)
 from pkg_ext.settings import PkgSettings
 from pkg_ext.version_bump import bump_version, read_current_version
 
@@ -129,8 +134,12 @@ def update_changelog_entries(api_input: GenerateApiInput) -> pkg_ctx | None:
         ctx = create_ctx(api_input)
         try:
             with ctx:
-                handle_removed_refs(ctx)
-                handle_added_refs(ctx)
+                if ctx.settings.is_flat:
+                    handle_removed_refs_flat(ctx)
+                    handle_added_refs_flat(ctx)
+                else:
+                    handle_removed_refs(ctx)
+                    handle_added_refs(ctx)
                 add_git_changes(ctx)
         except KeyboardInterrupt:
             logger.warning(

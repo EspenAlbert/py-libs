@@ -9,13 +9,23 @@ from pkg_ext.interactive import (
     select_multiple_ref_state,
     select_ref,
 )
-from pkg_ext.models import (
-    RefState,
-    RefStateWithSymbol,
-    pkg_ctx,
-)
+from pkg_ext.models import RefState, RefStateWithSymbol, pkg_ctx
 
 logger = logging.getLogger(__name__)
+
+
+def handle_removed_refs_flat(ctx: pkg_ctx) -> None:
+    """Auto-delete all removed refs for flat packages (no rename prompts)."""
+    tool_state = ctx.tool_state
+    code_state = ctx.code_state
+    removed_refs = tool_state.removed_refs(code_state)
+    if not removed_refs:
+        logger.info("No removed references found in the package")
+        return
+
+    for ref in removed_refs:
+        ctx.add_action(ref.name, ChangelogActionType.DELETE)
+    logger.info(f"Auto-deleted {len(removed_refs)} refs in flat package")
 
 
 def process_reference_renames(

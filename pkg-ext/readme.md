@@ -10,6 +10,7 @@ A CLI tool for managing Python package public API, versioning, and changelog gen
 - Maintains a structured changelog directory (`.changelog/`) per PR
 - Bumps version based on changelog action types (expose=minor, fix=patch, breaking=major)
 - Writes a human-readable `CHANGELOG.md`
+- Supports flat packages (all modules public) with automatic changelog tracking
 
 ## Installation
 
@@ -55,6 +56,45 @@ groups:
 ```
 
 When a new symbol is exposed, the tool prompts you to select which group it belongs to. All symbols from the same module go to the same group.
+
+### Flat Packages
+
+Packages without an `_internal/` directory or `_internal*.py` files are detected as "flat packages". In flat packages, all public modules are considered part of the public API.
+
+**Flat package behavior:**
+
+| Aspect | Standard Package | Flat Package |
+|--------|------------------|--------------|
+| Added refs | Prompt: expose/hide + group | Auto-expose, module = group |
+| Removed refs | Prompt: rename/delete | Auto-delete |
+| `__init__.py` | Imports + VERSION + `__all__` | VERSION only |
+| Group modules | Generated (`my_group.py`) | Not generated |
+| Fix commits | Prompt for group | Auto-infer from changed file |
+
+**Example flat package structure:**
+
+```
+zero_3rdparty/
+  __init__.py       # VERSION only, no imports
+  file_utils.py     # group: file_utils
+  iter_utils.py     # group: iter_utils
+  datetime_utils.py # group: datetime_utils
+```
+
+**Generated `.groups.yaml`:**
+
+```yaml
+groups:
+  - name: __ROOT__
+  - name: file_utils
+    owned_modules: [file_utils]
+    owned_refs: [file_utils.read_file, file_utils.write_file]
+  - name: iter_utils
+    owned_modules: [iter_utils]
+    owned_refs: [iter_utils.flat_map, iter_utils.first]
+```
+
+Users import directly from modules: `from zero_3rdparty.file_utils import read_file`.
 
 ## CLI Commands
 
@@ -137,6 +177,14 @@ changelog_cleanup_count = 30  # Archive when count exceeds this
 changelog_keep_count = 10     # Keep this many after cleanup
 after_file_write_hooks = ["ruff format {pkg_path}"]
 ```
+
+### Dev Mode
+
+The `pre-push` and `pre-merge` commands automatically enable dev mode, which creates `-dev` suffixed files:
+- `.groups-dev.yaml` instead of `.groups.yaml`
+- `CHANGELOG-dev.md` instead of `CHANGELOG.md`
+
+This allows iterating on changelog entries during development without modifying the production files. The real files are only updated by `post-merge` after PR is merged.
 
 ## Generated Files
 
@@ -275,9 +323,8 @@ When exposing a function, its type hint arguments are auto-exposed if they refer
 - **Pre-release suffixes** - Supports `rc`, `a` (alpha), `b` (beta)
 
 ### Interactive Mode
-- **Removed reference handling incomplete** - `select_ref` and `select_multiple_ref_state` raise `NotImplementedError`
+- **Removed reference handling incomplete** - `select_ref` and `select_multiple_ref_state` raise `NotImplementedError`. This breaks rename workflows when symbols are removed.
 - **Alias creation not implemented** - `confirm_create_alias` always returns `False`
-- **Author always "UNSET"** - `current_user()` returns hardcoded value
 
 ## File Structure
 
@@ -301,4 +348,3 @@ my-repo/
 - **[ask-shell](https://github.com/EspenAlbert/py-libs)** - Interactive prompts and shell execution
 - **[model-lib](https://github.com/EspenAlbert/py-libs)** - YAML/TOML parsing and Pydantic models
 - **[GitPython](https://gitpython.readthedocs.io/)** - Git repository access
-- **[pycobertura](https://github.com/aconrad/pycobertura)** - Coverage XML parsing

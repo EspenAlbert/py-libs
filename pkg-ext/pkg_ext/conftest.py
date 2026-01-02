@@ -161,7 +161,8 @@ def _e2e_dir(request) -> Path:
 @pytest.fixture()
 def _e2e_pkg_path(_e2e_dir) -> Path:  # type: ignore
     yield _e2e_dir / TEST_PKG_NAME  # type: ignore
-    del sys.modules[TEST_PKG_NAME]  # support re-importing in the next test
+    with suppress(KeyError):
+        del sys.modules[TEST_PKG_NAME]  # support re-importing in the next test
     with suppress(KeyError):
         del sys.modules[f"{TEST_PKG_NAME}._internal"]
 

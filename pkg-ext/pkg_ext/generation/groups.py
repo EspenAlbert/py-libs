@@ -45,6 +45,8 @@ def write_group(group: PublicGroup, settings: PkgSettings, code: PkgCodeState) -
 
 
 def write_groups(ctx: pkg_ctx) -> list[Path]:
+    if ctx.settings.is_flat:
+        return []
     return [
         write_group(group, ctx.settings, ctx.code_state)
         for group in ctx.tool_state.groups.groups_no_root

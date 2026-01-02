@@ -4,17 +4,11 @@ from typing import get_type_hints
 
 from ask_shell._internal._run import run_and_wait
 from ask_shell._internal.rich_progress import new_task
-from zero_3rdparty.iter_utils import (
-    group_by_once,
-)
+from zero_3rdparty.iter_utils import group_by_once
 
-from pkg_ext.changelog import (
-    ChangelogActionType,
-)
+from pkg_ext.changelog import ChangelogActionType
 from pkg_ext.cli.options import get_default_editor
-from pkg_ext.interactive import (
-    select_multiple_refs,
-)
+from pkg_ext.interactive import select_multiple_refs
 from pkg_ext.models import (
     PkgCodeState,
     PkgExtState,
@@ -26,6 +20,28 @@ from pkg_ext.models import (
 from pkg_ext.settings import PkgSettings
 
 logger = logging.getLogger(__name__)
+
+
+def handle_added_refs_flat(ctx: pkg_ctx) -> None:
+    """Auto-expose all added refs, using module name as group."""
+    tool_state = ctx.tool_state
+    code_state = ctx.code_state
+    added_refs = tool_state.added_refs(code_state.named_refs)
+    if not added_refs:
+        logger.info("No new references found in the package")
+        return
+
+    groups = tool_state.groups
+    for ref_name, ref_with_symbol in added_refs.items():
+        ref = ref_with_symbol.symbol
+        group_name = ref.module_path
+        groups.add_ref(ref, group_name)
+        ctx.add_action(
+            ref_name,
+            ChangelogActionType.EXPOSE,
+            details=f"auto-exposed from {ref.rel_path}",
+        )
+    logger.info(f"Auto-exposed {len(added_refs)} refs in flat package")
 
 
 def ensure_function_args_exposed(

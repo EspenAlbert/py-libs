@@ -32,6 +32,10 @@ class SymbolParser(ast.NodeTransformer):
         """Check if the name is imported from the package."""
         return any(ref.endswith(f":{name}") for ref in self.local_imports)
 
+    def _is_internal_symbol(self, name: str) -> bool:
+        """Skip short symbols that are typically internal (TypeVars, single chars)."""
+        return len(name) <= 2 and name.isupper()
+
     def visit_Name(self, node: ast.Name) -> ast.AST:
         """TODO: revisit this logic
         For type aliases: Check for TypeAlias annotations or assignments to typing constructs
@@ -41,7 +45,7 @@ class SymbolParser(ast.NodeTransformer):
         node_name = node.id
         if self.name_is_imported(node_name):
             return node
-        if len(node_name) == 1:
+        if len(node_name) == 1 or self._is_internal_symbol(node_name):
             return node
         if node_name.isupper():
             self.global_vars.append(node.id)
@@ -72,10 +76,13 @@ class SymbolParser(ast.NodeTransformer):
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AnnAssign:
         if isinstance(node.target, ast.Name):
-            if node.target.id.isupper():
-                self.global_vars.append(node.target.id)
-            elif node.target.id.endswith("T"):
-                self.type_aliases.append(node.target.id)
+            name = node.target.id
+            if self._is_internal_symbol(name):
+                return node
+            if name.isupper():
+                self.global_vars.append(name)
+            elif name.endswith("T"):
+                self.type_aliases.append(name)
         return node
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom:

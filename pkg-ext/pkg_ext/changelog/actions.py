@@ -5,6 +5,7 @@ from functools import total_ordering
 from pathlib import Path
 from typing import ClassVar, Generic, Iterable, Literal, TypeVar, Union
 
+from ask_shell import shell
 from model_lib import utc_datetime
 from model_lib.model_base import Entity
 from model_lib.serialize import dump
@@ -59,10 +60,19 @@ class BumpType(StrEnum):
         return sorted(actions, key=as_index)
 
 
+def _run_cmd(script: str) -> str | None:
+    result = shell.run_and_wait(
+        script, allow_non_zero_exit=True, skip_progress_output=True
+    )
+    return result.stdout.strip() or None if result.exit_code == 0 else None
+
+
 def current_user() -> str:
-    return (
-        ChangelogAction.DEFAULT_AUTHOR
-    )  # todo: read from git config or environment variable
+    if username := _run_cmd("gh api user --jq .login"):
+        return username
+    if name := _run_cmd("git config user.name"):
+        return name
+    return ChangelogAction.DEFAULT_AUTHOR
 
 
 class OldNameNewNameChangelog(Entity):

@@ -631,7 +631,6 @@ dependencies = [
     { name = "ask-shell" },
     { name = "gitpython" },
     { name = "model-lib", extra = ["toml"] },
-    { name = "pycobertura" },
 ]
 
 [package.metadata]
@@ -639,7 +638,6 @@ requires-dist = [
     { name = "ask-shell", editable = "ask-shell" },
     { name = "gitpython" },
     { name = "model-lib", extras = ["toml"], editable = "model-lib" },
-    { name = "pycobertura", specifier = "==4.0.0" },
 ]
 
 [[package]]

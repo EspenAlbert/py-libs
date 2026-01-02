@@ -69,9 +69,6 @@ def resolve_pkg_path_str(cwd: Path, repo_root: Path) -> str:
     raise ValueError(f"No package directory found starting from {cwd}")
 
 
-app = Typer(name="pkg-ext", help="Generate public API for a package and more!")
-
-
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,

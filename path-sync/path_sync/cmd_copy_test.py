@@ -180,3 +180,33 @@ def test_copy_options_defaults():
     assert not opts.local
     assert not opts.no_prompt
     assert not opts.no_pr
+
+
+def test_source_with_header_no_duplicate(tmp_path):
+    """Source files with headers should not get double headers in destination."""
+    src_root = tmp_path / "src"
+    dest_root = tmp_path / "dest"
+    src_root.mkdir()
+    dest_root.mkdir()
+
+    # Source file already has a header (e.g., template repo uses path-sync itself)
+    src_file = src_root / "file.py"
+    src_content_with_header = add_header("content", src_file, "original-config")
+    src_file.write_text(src_content_with_header)
+
+    mapping = PathMapping(src_path="file.py")
+    changes, synced = _sync_path(
+        mapping, src_root, dest_root, _make_dest(), CONFIG_NAME, False, False
+    )
+
+    assert changes == 1
+    assert dest_root / "file.py" in synced
+    result = (dest_root / "file.py").read_text()
+
+    # Should have exactly one header line with CONFIG_NAME, not two headers
+    header_count = result.count("path-sync copy -n")
+    assert header_count == 1, (
+        f"Expected 1 header, got {header_count}. Content:\n{result}"
+    )
+    assert f"path-sync copy -n {CONFIG_NAME}" in result
+    assert "original-config" not in result

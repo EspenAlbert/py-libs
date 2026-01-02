@@ -386,7 +386,7 @@ def _copy_with_header(
     dry_run: bool,
     force_overwrite: bool = False,
 ) -> int:
-    src_content = src.read_text()
+    src_content = header.remove_header(src.read_text())
     skip_list = dest.skip_sections.get(dest_key, [])
 
     if sections.has_sections(src_content):

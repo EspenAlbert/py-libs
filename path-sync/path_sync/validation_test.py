@@ -1,9 +1,11 @@
+from pathlib import Path
+
 from git import Repo
 
 from path_sync import validation
 from path_sync.header import get_header_line
 
-HEADER = get_header_line(".py", "test-config")
+HEADER = get_header_line(Path("test.py"), "test-config")
 
 
 def _setup_baseline(repo_path, filename: str, content: str) -> None:

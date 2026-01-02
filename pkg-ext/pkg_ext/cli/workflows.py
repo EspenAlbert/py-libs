@@ -152,7 +152,7 @@ def sync_files(api_input: GenerateApiInput, ctx: pkg_ctx):
     settings = api_input.settings
     if hooks := settings.after_file_write_hooks:
         for hook in hooks:
-            substituted = hook.format(pkg_path=settings.pkg_path)
+            substituted = hook.format(pkg_path=settings.pkg_directory)
             logger.info(f"running hook: {substituted}")
             run_and_wait(substituted, cwd=settings.repo_root)
 

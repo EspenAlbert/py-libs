@@ -38,6 +38,8 @@ class ProjectConfig:
     after_file_write_hooks: tuple[str, ...] | None = None
     flat_package: bool = False
     allowed_duplicate_names: tuple[str, ...] = ()
+    keep_prerelease: bool = False
+    ignored_symbols: tuple[str, ...] = ()
 
 
 def _safe_load_toml(path: Path) -> dict[str, Any]:
@@ -106,5 +108,11 @@ def load_project_config(repo_root: Path) -> ProjectConfig:
             pkg_ext_data.get(
                 "allowed_duplicate_names", ProjectConfig.allowed_duplicate_names
             )
+        ),
+        keep_prerelease=pkg_ext_data.get(
+            "keep_prerelease", ProjectConfig.keep_prerelease
+        ),
+        ignored_symbols=tuple(
+            pkg_ext_data.get("ignored_symbols", ProjectConfig.ignored_symbols)
         ),
     )

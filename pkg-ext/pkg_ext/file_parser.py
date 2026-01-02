@@ -132,11 +132,14 @@ def parse_symbols(
 
 
 def parse_code_symbols(
-    parsed_files: list[PkgSrcFile | PkgTestFile], pkg_import_name: str
+    parsed_files: list[PkgSrcFile | PkgTestFile],
+    pkg_import_name: str,
+    ignored_symbols: frozenset[str] = frozenset(),
 ) -> dict[str, RefSymbol]:
     refs = {
         symbol.full_id(pkg_import_name): symbol
         for symbol in flat_map(file.iterate_ref_symbols() for file in parsed_files)
+        if symbol.name not in ignored_symbols
     }
     globals_added: set[str] = set()
     for symbol in list(refs.values()):

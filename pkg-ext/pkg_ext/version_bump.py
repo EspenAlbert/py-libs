@@ -65,6 +65,17 @@ class PkgVersion:
         return _bumps[bump_type](self)
 
     @property
+    def prerelease_bump_type(self) -> BumpType | None:
+        """Return the BumpType corresponding to current prerelease suffix, or None if stable."""
+        if self.extra.startswith("b"):
+            return BumpType.BETA
+        if self.extra.startswith("a"):
+            return BumpType.ALPHA
+        if self.extra.startswith("rc"):
+            return BumpType.RC
+        return None
+
+    @property
     def is_default(self) -> bool:
         return self == self.parse("0.0.0")
 
@@ -102,10 +113,17 @@ def bump_version(
     ctx: pkg_ctx,
     old_version: PkgVersion,
 ) -> PkgVersion:
-    """Use the .changelog dir to find the bump type"""
+    """Use the .changelog dir to find the bump type.
+
+    When keep_prerelease is enabled and the current version has a prerelease suffix,
+    bump the prerelease number instead of the major/minor/patch version.
+    """
     actions = ctx.pr_changelog_actions()
     bumps = [action.bump_type for action in actions]
     bump = BumpType.max_bump_type(bumps)
+    if prerelease_bump := old_version.prerelease_bump_type:
+        if ctx.settings.keep_prerelease:
+            bump = prerelease_bump
     return old_version.bump(bump)
 
 

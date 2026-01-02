@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, ClassVar, Iterable, Self
 
 from ask_shell._internal._run import run_and_wait
+from ask_shell.shell import ShellError
 from git import Commit, Git, GitCommandError, InvalidGitRepositoryError, Repo
 from model_lib import utc_datetime
 from model_lib.model_base import Entity
@@ -184,12 +185,24 @@ def _merge_base(repo: Repo, base_branch: str):
     return stop_commits[0]
 
 
+def _first_commit(repo: Repo) -> Commit:
+    """Return the first/root commit of the repository."""
+    commits = list(repo.iter_commits(max_count=1, rev="HEAD", reverse=True))
+    return commits[0]
+
+
 def solve_since_sha(repo: Repo, repo_path: Path, since: GitSince, ref: str) -> Commit:
     if since == GitSince.LAST_GIT_TAG or since == GitSince.DEFAULT and not ref:
-        output = run_and_wait(
-            "git describe --tags --abbrev=0", cwd=repo_path
-        ).stdout_one_line
-        return repo.commit(output)
+        try:
+            output = run_and_wait(
+                "git describe --tags --abbrev=0", cwd=repo_path
+            ).stdout_one_line
+            return repo.commit(output)
+        except ShellError as e:
+            if e.exit_code == 128:
+                logger.warning("No git tags found, falling back to first commit")
+                return _first_commit(repo)
+            raise
     elif since in {GitSince.PR_BASE_BRANCH, GitSince.DEFAULT}:
         return _merge_base(repo, ref)
     elif since == GitSince.NO_GIT_CHANGES:
@@ -212,6 +225,8 @@ def find_pr_info_raw(repo_path: Path) -> dict[str, Any]:
 def _parse_changes(
     repo: Repo, start_sha: str, head_sha: str
 ) -> tuple[list[GitCommit], set[str]]:
+    if head_sha.startswith(start_sha) or start_sha.startswith(head_sha):
+        return [], set()
     commits: list[GitCommit] = []
     files_changed: set[str] = set()
     for commit in repo.iter_commits(rev=head_sha):

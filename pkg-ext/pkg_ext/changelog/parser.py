@@ -13,7 +13,7 @@ def parse_changelog(
     changelog_path = settings.changelog_dir
     changelog_path.mkdir(parents=True, exist_ok=True)
     actions = parse_changelog_actions(changelog_path)
-    groups = PublicGroups(storage_path=settings.public_groups_path)
+    groups = settings.parse_computed_public_groups(PublicGroups)
     tool_state = PkgExtState(
         repo_root=settings.repo_root,
         changelog_dir=changelog_path,

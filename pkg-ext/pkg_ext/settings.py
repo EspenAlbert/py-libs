@@ -51,6 +51,8 @@ class PkgSettings(BaseSettings):
     tag_prefix: str = ""
     is_flat: bool = False
     allowed_duplicate_names: frozenset[str] = frozenset()
+    keep_prerelease: bool = False
+    ignored_symbols: frozenset[str] = frozenset()
 
     def _with_dev_suffix(self, path: Path) -> Path:
         if self.dev_mode:
@@ -135,6 +137,8 @@ def pkg_settings(
     after_file_write_hooks: tuple[str, ...] | None = None,
     is_flat: bool | None = None,
     allowed_duplicate_names: frozenset[str] | None = None,
+    keep_prerelease: bool | None = None,
+    ignored_symbols: frozenset[str] | None = None,
 ) -> PkgSettings:
     # Resolve global settings with proper precedence: CLI arg → Env var → Config file(user or proejct) → Default
     user_config = load_user_config()
@@ -162,4 +166,10 @@ def pkg_settings(
         allowed_duplicate_names=allowed_duplicate_names
         if allowed_duplicate_names is not None
         else frozenset(project_config.allowed_duplicate_names),
+        keep_prerelease=keep_prerelease
+        if keep_prerelease is not None
+        else project_config.keep_prerelease,
+        ignored_symbols=ignored_symbols
+        if ignored_symbols is not None
+        else frozenset(project_config.ignored_symbols),
     )

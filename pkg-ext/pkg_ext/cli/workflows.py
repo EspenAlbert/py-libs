@@ -93,7 +93,9 @@ def parse_pkg_code_state(settings: PkgSettings) -> PkgCodeState:
         )
     )
 
-    import_id_symbols = parse_code_symbols(files, pkg_import_name)
+    import_id_symbols = parse_code_symbols(
+        files, pkg_import_name, ignored_symbols=settings.ignored_symbols
+    )
     return PkgCodeState(
         pkg_import_name=pkg_import_name,
         import_id_refs=import_id_symbols,

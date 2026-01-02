@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from functools import total_ordering
+from functools import cache, total_ordering
 from pathlib import Path
 from typing import ClassVar, Generic, Iterable, Literal, TypeVar, Union
 
@@ -67,6 +67,7 @@ def _run_cmd(script: str) -> str | None:
     return result.stdout.strip() or None if result.exit_code == 0 else None
 
 
+@cache
 def current_user() -> str:
     if username := _run_cmd("gh api user --jq .login"):
         return username

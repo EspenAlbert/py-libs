@@ -220,19 +220,24 @@ def _sync_destination(
         )
 
     dest_repo = _ensure_dest_repo(dest, dest_root, opts.dry_run)
+    copy_branch = dest.resolved_copy_branch(config.name)
 
-    should_checkout = (
-        not opts.no_checkout
-        and not opts.dry_run
-        and _prompt(f"Switch to {dest.copy_branch}?", opts.no_prompt)
-    )
-    if should_checkout:
+    # --no-checkout means "I'm already on the right branch"
+    # Prompt decline means "skip git operations for this run"
+    if opts.no_checkout:
+        skip_git_ops = False
+    elif opts.dry_run:
+        skip_git_ops = True
+    elif _prompt(f"Switch {dest.name} to {copy_branch}?", opts.no_prompt):
         git_ops.prepare_copy_branch(
             repo=dest_repo,
             default_branch=dest.default_branch,
-            copy_branch=dest.copy_branch,
+            copy_branch=copy_branch,
             from_default=opts.checkout_from_default,
         )
+        skip_git_ops = False
+    else:
+        skip_git_ops = True
 
     result = _sync_paths(config, dest, src_root, dest_root, opts)
     _print_sync_summary(dest, result)
@@ -241,7 +246,7 @@ def _sync_destination(
         logger.info(f"{dest.name}: No changes")
         return 0
 
-    if opts.dry_run:
+    if skip_git_ops:
         return result.total
 
     _commit_and_pr(
@@ -398,7 +403,7 @@ def _copy_with_header(
         if header.remove_header(existing) == src_content and has_header:
             return 0
 
-    new_content = header.add_header(src_content, dest_path.suffix, config_name)
+    new_content = header.add_header(src_content, dest_path, config_name)
     if dry_run:
         logger.info(f"[DRY RUN] Would write: {dest_path}")
         return 1
@@ -428,7 +433,7 @@ def _copy_with_sections(
     else:
         new_body = src_content
 
-    new_content = header.add_header(new_body, dest_path.suffix, config_name)
+    new_content = header.add_header(new_body, dest_path, config_name)
 
     if dest_path.exists() and dest_path.read_text() == new_content:
         return 0
@@ -485,20 +490,22 @@ def _commit_and_pr(
         logger.info("Local mode: skipping commit/push/PR")
         return
 
-    if not _prompt("Commit changes?", opts.no_prompt):
+    copy_branch = dest.resolved_copy_branch(config.name)
+
+    if not _prompt(f"Commit changes to {dest.name}?", opts.no_prompt):
         return
 
     commit_msg = f"chore: sync {config.name} from {sha[:8]}"
     git_ops.commit_changes(repo, commit_msg)
     typer.echo(f"  Committed: {commit_msg}", err=True)
 
-    if not _prompt("Push to origin?", opts.no_prompt):
+    if not _prompt(f"Push {dest.name} to origin?", opts.no_prompt):
         return
 
-    git_ops.push_branch(repo, dest.copy_branch, force=True)
-    typer.echo(f"  Pushed: {dest.copy_branch} (force)", err=True)
+    git_ops.push_branch(repo, copy_branch, force=True)
+    typer.echo(f"  Pushed: {copy_branch} (force)", err=True)
 
-    if opts.no_pr or not _prompt("Create PR?", opts.no_prompt):
+    if opts.no_pr or not _prompt(f"Create PR for {dest.name}?", opts.no_prompt):
         return
 
     sync_log = log_path.read_text() if log_path.exists() else ""
@@ -512,7 +519,7 @@ def _commit_and_pr(
     title = opts.pr_title.format(name=config.name, dest_name=dest.name)
     pr_url = git_ops.create_or_update_pr(
         dest_root,
-        dest.copy_branch,
+        copy_branch,
         title,
         pr_body,
         opts.pr_labels.split(",") if opts.pr_labels else None,

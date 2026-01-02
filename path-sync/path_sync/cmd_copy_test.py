@@ -82,11 +82,11 @@ def test_cleanup_orphans(tmp_path):
 
     # File with matching config header - will be orphaned
     orphan = dest_root / "orphan.py"
-    orphan.write_text(add_header("orphan content", ".py", CONFIG_NAME))
+    orphan.write_text(add_header("orphan content", orphan, CONFIG_NAME))
 
     # File with different config - should not be deleted
     other = dest_root / "other.py"
-    other.write_text(add_header("other content", ".py", "other-config"))
+    other.write_text(add_header("other content", other, "other-config"))
 
     synced: set = set()  # No files synced
     deleted = _cleanup_orphans(dest_root, CONFIG_NAME, synced, dry_run=False)
@@ -108,16 +108,17 @@ new recipe
 # === OK_EDIT ==="""
     (src_root / "file.sh").write_text(src_content)
 
+    dest_file = dest_root / "file.sh"
     dest_content = add_header(
         """\
 # === DO_NOT_EDIT: path-sync standard ===
 old recipe
 # === OK_EDIT ===
 # my custom stuff""",
-        ".sh",
+        dest_file,
         CONFIG_NAME,
     )
-    (dest_root / "file.sh").write_text(dest_content)
+    dest_file.write_text(dest_content)
 
     mapping = PathMapping(src_path="file.sh")
     changes, _ = _sync_path(
@@ -143,15 +144,16 @@ source
 # === OK_EDIT ==="""
     (src_root / "file.sh").write_text(src_content)
 
+    dest_file = dest_root / "file.sh"
     dest_content = add_header(
         """\
 # === DO_NOT_EDIT: path-sync standard ===
 keep this
 # === OK_EDIT ===""",
-        ".sh",
+        dest_file,
         CONFIG_NAME,
     )
-    (dest_root / "file.sh").write_text(dest_content)
+    dest_file.write_text(dest_content)
 
     dest = _make_dest(skip_sections={"file.sh": ["standard"]})
     mapping = PathMapping(src_path="file.sh")

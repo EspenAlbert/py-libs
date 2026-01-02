@@ -55,7 +55,7 @@ By default, prompts before each git operation. See [Usage Scenarios](#usage-scen
 | `--dry-run` | Preview without writing (requires existing repos) |
 | `-y, --no-prompt` | Skip confirmations (for CI) |
 | `--local` | No git ops after sync (no commit/push/PR) |
-| `--no-checkout` | Skip branch switching before sync |
+| `--no-checkout` | Skip branch switching (assumes already on correct branch) |
 | `--checkout-from-default` | Reset to origin/default before sync |
 | `--no-pr` | Push but skip PR creation |
 | `--force-overwrite` | Overwrite files even if header removed (opted out) |
@@ -84,9 +84,11 @@ Options:
 | CI fresh sync | `copy -n cfg --checkout-from-default -y` |
 | Local preview | `copy -n cfg --dry-run` |
 | Local test files | `copy -n cfg --local` |
-| Already on branch | `copy -n cfg --no-checkout --local` |
+| Already on branch | `copy -n cfg --no-checkout` |
 | Push, manual PR | `copy -n cfg --no-pr -y` |
 | Force opted-out | `copy -n cfg --force-overwrite` |
+
+**Interactive prompt behavior**: Declining the checkout prompt syncs files but skips commit/push/PR (same as `--local`). Use `--no-checkout` when you're already on the correct branch and want to proceed with git operations.
 
 ## Section Markers
 
@@ -129,7 +131,7 @@ destinations:
   - name: dest1
     repo_url: https://github.com/user/dest1
     dest_path_relative: ../dest1
-    copy_branch: sync/path-sync
+    # copy_branch: sync/cursor  # defaults to sync/{config_name}
     default_branch: main
     skip_sections:
       justfile: [coverage]
@@ -214,7 +216,7 @@ jobs:
 ```
 
 **Validation skips automatically when:**
-- On a `sync/*` branch (path-sync uses `sync/path-sync` by default)
+- On a `sync/*` branch (path-sync uses `sync/{config_name}` by default)
 - On the default branch (comparing against itself)
 
 The workflow triggers exclude these branches too, reducing unnecessary CI runs.

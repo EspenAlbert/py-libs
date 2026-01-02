@@ -35,12 +35,21 @@ DEFAULT_COMMENT_PREFIXES: dict[str, str] = {
     ".sh": "#",
     ".yaml": "#",
     ".yml": "#",
+    ".toml": "#",
+    ".gitignore": "#",
     ".go": "//",
     ".js": "//",
     ".ts": "//",
     ".md": "<!--",
     ".mdc": "<!--",
     ".html": "<!--",
+}
+# Extensionless files matched by filename
+DEFAULT_FILENAME_PREFIXES: dict[str, str] = {
+    "justfile": "#",
+    "Makefile": "#",
+    "Dockerfile": "#",
+    ".gitignore": "#",
 }
 DEFAULT_COMMENT_SUFFIXES: dict[str, str] = {
     ".md": " -->",
@@ -105,9 +114,13 @@ class Destination(BaseModel):
     name: str
     repo_url: str = ""
     dest_path_relative: str
-    copy_branch: str = "sync/path-sync"
+    copy_branch: str = ""
     default_branch: str = "main"
     skip_sections: dict[str, list[str]] = Field(default_factory=dict)
+
+    def resolved_copy_branch(self, config_name: str) -> str:
+        """Returns branch name, defaulting to sync/{config_name} if not set."""
+        return self.copy_branch or f"sync/{config_name}"
 
 
 class SrcConfig(BaseModel):

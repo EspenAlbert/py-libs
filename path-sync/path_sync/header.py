@@ -6,29 +6,45 @@ from pathlib import Path
 from path_sync.models import (
     DEFAULT_COMMENT_PREFIXES,
     DEFAULT_COMMENT_SUFFIXES,
+    DEFAULT_FILENAME_PREFIXES,
     HEADER_TEMPLATE,
     HeaderConfig,
 )
 
 COMMENT_PREFIXES = DEFAULT_COMMENT_PREFIXES
+FILENAME_PREFIXES = DEFAULT_FILENAME_PREFIXES
 
 HEADER_PATTERN = re.compile(r"path-sync copy -n (?P<config_name>[\w-]+)")
 
 
-def get_header_line(
-    extension: str,
-    config_name: str,
-    config: HeaderConfig | None = None,
-) -> str:
-    if config:
-        prefix = config.comment_prefixes.get(extension, "")
-        suffix = config.comment_suffixes.get(extension, "")
-    else:
-        prefix = DEFAULT_COMMENT_PREFIXES.get(extension, "")
-        suffix = DEFAULT_COMMENT_SUFFIXES.get(extension, "")
+def get_comment_prefix(path: Path, config: HeaderConfig | None = None) -> str:
+    extension = path.suffix
+    filename = path.name
 
-    if not prefix:
-        raise ValueError(f"No comment prefix found for extension: {extension}")
+    if config:
+        if prefix := config.comment_prefixes.get(extension):
+            return prefix
+    elif prefix := DEFAULT_COMMENT_PREFIXES.get(extension):
+        return prefix
+
+    if prefix := DEFAULT_FILENAME_PREFIXES.get(filename):
+        return prefix
+
+    raise ValueError(f"No comment prefix for: {path.name} (extension={extension!r})")
+
+
+def get_comment_suffix(path: Path, config: HeaderConfig | None = None) -> str:
+    extension = path.suffix
+    if config:
+        return config.comment_suffixes.get(extension, "")
+    return DEFAULT_COMMENT_SUFFIXES.get(extension, "")
+
+
+def get_header_line(
+    path: Path, config_name: str, config: HeaderConfig | None = None
+) -> str:
+    prefix = get_comment_prefix(path, config)
+    suffix = get_comment_suffix(path, config)
     header_text = HEADER_TEMPLATE.format(config_name=config_name)
     return f"{prefix} {header_text}{suffix}"
 
@@ -46,12 +62,9 @@ def get_config_name(content: str) -> str | None:
 
 
 def add_header(
-    content: str,
-    extension: str,
-    config_name: str,
-    config: HeaderConfig | None = None,
+    content: str, path: Path, config_name: str, config: HeaderConfig | None = None
 ) -> str:
-    header = get_header_line(extension, config_name, config)
+    header = get_header_line(path, config_name, config)
     return f"{header}\n{content}"
 
 
@@ -62,9 +75,15 @@ def remove_header(content: str) -> str:
     return lines[1] if len(lines) > 1 else ""
 
 
+def has_known_comment_prefix(path: Path) -> bool:
+    extension = path.suffix
+    filename = path.name
+    return extension in COMMENT_PREFIXES or filename in FILENAME_PREFIXES
+
+
 def file_get_config_name(path: Path) -> str | None:
     """Read first line and extract config name if present."""
-    if not path.exists() or path.suffix not in DEFAULT_COMMENT_PREFIXES:
+    if not path.exists() or not has_known_comment_prefix(path):
         return None
     try:
         with path.open() as f:

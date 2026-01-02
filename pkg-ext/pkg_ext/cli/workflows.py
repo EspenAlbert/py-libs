@@ -98,6 +98,7 @@ def parse_pkg_code_state(settings: PkgSettings) -> PkgCodeState:
         pkg_import_name=pkg_import_name,
         import_id_refs=import_id_symbols,
         files=files,
+        allowed_duplicate_names=settings.allowed_duplicate_names,
     )
 
 

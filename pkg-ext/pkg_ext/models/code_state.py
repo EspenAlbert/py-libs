@@ -22,6 +22,7 @@ class PkgCodeState(Entity):
     pkg_import_name: str
     import_id_refs: dict[str, RefSymbol]
     files: list[PkgSrcFile | PkgTestFile]
+    allowed_duplicate_names: frozenset[str] = frozenset()
 
     def _add_transitive_dependencies(self) -> None:
         """Add dependencies based on local imports."""
@@ -46,7 +47,7 @@ class PkgCodeState(Entity):
             f"duplicated refs for {name}: "
             + ", ".join(str(ref) for ref in duplicated_refs)
             for name, duplicated_refs in active_refs.items()
-            if len(duplicated_refs) > 1
+            if len(duplicated_refs) > 1 and name not in self.allowed_duplicate_names
         ]
         duplicated_refs_lines = "\n".join(duplicated_refs)
         assert not duplicated_refs, (

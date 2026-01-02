@@ -23,7 +23,8 @@ def parse_changelog(
     for action in actions:
         tool_state.update_state(action)
     extra_actions = []
-    if code_state:
+    # Skip group selection for flat packages - they don't use the public API workflow
+    if code_state and not settings.is_flat:
         for name in tool_state.refs:
             if ref_symbol := tool_state.code_ref(code_state, name):
                 if new_action := on_new_ref(groups)(ref_symbol):

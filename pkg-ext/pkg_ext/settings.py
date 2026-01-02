@@ -50,6 +50,7 @@ class PkgSettings(BaseSettings):
     skip_open_in_editor: bool = False
     tag_prefix: str = ""
     is_flat: bool = False
+    allowed_duplicate_names: frozenset[str] = frozenset()
 
     def _with_dev_suffix(self, path: Path) -> Path:
         if self.dev_mode:
@@ -133,6 +134,7 @@ def pkg_settings(
     commit_fix_diff_suffixes: tuple[str, ...] | None = None,
     after_file_write_hooks: tuple[str, ...] | None = None,
     is_flat: bool | None = None,
+    allowed_duplicate_names: frozenset[str] | None = None,
 ) -> PkgSettings:
     # Resolve global settings with proper precedence: CLI arg → Env var → Config file(user or proejct) → Default
     user_config = load_user_config()
@@ -157,4 +159,7 @@ def pkg_settings(
         changelog_cleanup_count=project_config.changelog_cleanup_count,
         changelog_keep_count=project_config.changelog_keep_count,
         is_flat=is_flat if is_flat is not None else project_config.flat_package,
+        allowed_duplicate_names=allowed_duplicate_names
+        if allowed_duplicate_names is not None
+        else frozenset(project_config.allowed_duplicate_names),
     )

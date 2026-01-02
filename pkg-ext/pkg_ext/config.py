@@ -37,6 +37,7 @@ class ProjectConfig:
     changelog_keep_count: int = DEFAULT_CHANGELOG_KEEP_COUNT
     after_file_write_hooks: tuple[str, ...] | None = None
     flat_package: bool = False
+    allowed_duplicate_names: tuple[str, ...] = ()
 
 
 def _safe_load_toml(path: Path) -> dict[str, Any]:
@@ -101,4 +102,9 @@ def load_project_config(repo_root: Path) -> ProjectConfig:
             "changelog_keep_count", ProjectConfig.DEFAULT_CHANGELOG_KEEP_COUNT
         ),
         flat_package=pkg_ext_data.get("flat_package", ProjectConfig.flat_package),
+        allowed_duplicate_names=tuple(
+            pkg_ext_data.get(
+                "allowed_duplicate_names", ProjectConfig.allowed_duplicate_names
+            )
+        ),
     )

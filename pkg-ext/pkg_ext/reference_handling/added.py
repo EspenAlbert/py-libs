@@ -8,15 +8,15 @@ from zero_3rdparty.iter_utils import group_by_once
 
 from pkg_ext.changelog import ChangelogActionType
 from pkg_ext.cli.options import get_default_editor
+from pkg_ext.context import pkg_ctx
 from pkg_ext.interactive import select_multiple_refs
 from pkg_ext.models import (
     PkgCodeState,
-    PkgExtState,
     RefStateWithSymbol,
     RefSymbol,
     SymbolType,
-    pkg_ctx,
 )
+from pkg_ext.pkg_state import PkgExtState
 from pkg_ext.settings import PkgSettings
 
 logger = logging.getLogger(__name__)

@@ -1,10 +1,10 @@
 from pathlib import Path
 
+from pkg_ext.context import pkg_ctx
 from pkg_ext.models import (
     PkgCodeState,
     PublicGroup,
     SymbolRefId,
-    pkg_ctx,
     ref_id_module,
     ref_id_name,
 )

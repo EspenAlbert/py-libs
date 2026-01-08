@@ -1,6 +1,5 @@
 import pytest
 
-from pkg_ext.changelog.actions import ChangelogAction  # noqa: F401 - fix import order
 from pkg_ext.config import (
     GroupConfig,
     ProjectConfig,

@@ -24,6 +24,7 @@ from pkg_ext.changelog import (
     write_changelog_md,
 )
 from pkg_ext.changelog.actions import ReleaseChangelog, archive_old_actions
+from pkg_ext.context import pkg_ctx
 from pkg_ext.errors import NoHumanRequiredError
 from pkg_ext.file_parser import parse_code_symbols, parse_symbols
 from pkg_ext.generation import update_pyproject_toml, write_groups, write_init
@@ -35,7 +36,7 @@ from pkg_ext.git_usage import (
     git_commit,
 )
 from pkg_ext.interactive import on_new_ref
-from pkg_ext.models import PkgCodeState, pkg_ctx
+from pkg_ext.models import PkgCodeState
 from pkg_ext.reference_handling import (
     handle_added_refs,
     handle_added_refs_flat,

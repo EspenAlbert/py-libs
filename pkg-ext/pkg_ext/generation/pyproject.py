@@ -1,7 +1,7 @@
 from model_lib.serialize import dump
 from model_lib.serialize.parse import parse_dict
 
-from pkg_ext.models import pkg_ctx
+from pkg_ext.context import pkg_ctx
 
 
 def update_pyproject_toml(ctx: pkg_ctx, new_version: str):

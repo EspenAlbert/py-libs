@@ -3,7 +3,8 @@ from pkg_ext.changelog.actions import (
     parse_changelog_actions,
 )
 from pkg_ext.interactive import on_new_ref
-from pkg_ext.models import PkgCodeState, PkgExtState, PublicGroups
+from pkg_ext.models import PkgCodeState, PublicGroups
+from pkg_ext.pkg_state import PkgExtState
 from pkg_ext.settings import PkgSettings
 
 

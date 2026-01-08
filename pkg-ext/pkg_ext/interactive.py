@@ -15,11 +15,11 @@ from pkg_ext.changelog import (
     ChangelogActionType,
     GroupModulePathChangelog,
 )
+from pkg_ext.context import RefAddCallback
 from pkg_ext.errors import NoPublicGroupMatch
 from pkg_ext.models import (
     PublicGroup,
     PublicGroups,
-    RefAddCallback,
     RefState,
     RefStateWithSymbol,
     RefSymbol,

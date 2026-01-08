@@ -15,12 +15,11 @@ from pkg_ext.changelog import (
 )
 from pkg_ext.errors import NoPublicGroupMatch
 from pkg_ext.git_usage import GitChanges
+from pkg_ext.models.code_state import PkgCodeState
+from pkg_ext.models.groups import PublicGroup
+from pkg_ext.models.py_symbols import RefSymbol
+from pkg_ext.pkg_state import PkgExtState
 from pkg_ext.settings import PkgSettings
-
-from .code_state import PkgCodeState
-from .groups import PublicGroup
-from .pkg_state import PkgExtState
-from .py_symbols import RefSymbol
 
 RefAddCallback: TypeAlias = Callable[[RefSymbol], ChangelogAction | None]
 
@@ -53,18 +52,16 @@ class pkg_ctx:
         return changelog_filepath(self.settings.changelog_dir, pr)
 
     def __post_init__(self):
-        # read existing actions for this pr
         changelog_dir = self.settings.changelog_dir
         path = self.changelog_path
         default_path = default_changelog_path(changelog_dir)
         dump_to_disk = False
         if default_path.exists() and path != default_path:
             self._actions.extend(parse_changelog_file_path(default_path))
-            default_path.unlink()  # avoid storing actions now that we have a new path
+            default_path.unlink()
             dump_to_disk = True
         if path.exists():
             self._actions.extend(parse_changelog_file_path(path))
-        # ensure we update the file in case a crash to avoid accidental loss of default_path actions
         if dump_to_disk:
             dump_changelog_actions(path, self._actions)
 
@@ -109,7 +106,6 @@ class pkg_ctx:
         raise NoPublicGroupMatch()
 
     def __enter__(self) -> pkg_ctx:
-        """Used as a context manager when actions are done by the user so all actions are saved in case of an error"""
         self._actions_dumped = False
         return self
 

@@ -12,8 +12,9 @@ from pkg_ext.changelog.actions import (
     ChangelogActionType,
     CommitFixChangelog,
 )
+from pkg_ext.context import pkg_ctx
 from pkg_ext.errors import NoPublicGroupMatch
-from pkg_ext.models import PublicGroup, pkg_ctx
+from pkg_ext.models import PublicGroup
 
 logger = logging.getLogger(__name__)
 _header_regex = re.compile(r"^(?P<hashes>#{2,5})\s", re.M)

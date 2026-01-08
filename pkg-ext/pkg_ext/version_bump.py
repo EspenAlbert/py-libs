@@ -11,7 +11,7 @@ from model_lib.serialize.parse import parse_dict
 from pkg_ext.changelog import (
     BumpType,
 )
-from pkg_ext.models import pkg_ctx
+from pkg_ext.context import pkg_ctx
 
 
 @dataclass

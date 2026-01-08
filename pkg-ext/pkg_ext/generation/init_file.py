@@ -3,8 +3,9 @@ from pathlib import Path
 
 from zero_3rdparty.iter_utils import flat_map
 
+from pkg_ext.context import pkg_ctx
 from pkg_ext.generation.groups import as_import_line
-from pkg_ext.models import PublicGroup, SymbolRefId, pkg_ctx
+from pkg_ext.models import PublicGroup, SymbolRefId
 
 logger = logging.getLogger(__name__)
 

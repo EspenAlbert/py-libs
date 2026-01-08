@@ -11,6 +11,7 @@ from pkg_ext.changelog.actions import (
     ChangelogActionType,
     CommitFixChangelog,
 )
+from pkg_ext.context import pkg_ctx
 from pkg_ext.errors import NoPublicGroupMatch
 from pkg_ext.git_usage.state import GitCommit
 from pkg_ext.interactive import (
@@ -19,7 +20,7 @@ from pkg_ext.interactive import (
     select_commit_rephrased,
     select_group_name,
 )
-from pkg_ext.models import PublicGroup, PublicGroups, as_module_path, pkg_ctx
+from pkg_ext.models import PublicGroup, PublicGroups, as_module_path
 
 
 def py_diff(old: str, new: str) -> str:

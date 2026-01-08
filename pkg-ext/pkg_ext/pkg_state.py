@@ -14,11 +14,10 @@ from pkg_ext.changelog import (
     OldNameNewNameChangelog,
 )
 from pkg_ext.errors import RefSymbolNotInCodeError
-
-from .code_state import PkgCodeState
-from .groups import PublicGroups
-from .py_symbols import RefSymbol
-from .ref_state import RefState, RefStateType, RefStateWithSymbol
+from pkg_ext.models.code_state import PkgCodeState
+from pkg_ext.models.groups import PublicGroups
+from pkg_ext.models.py_symbols import RefSymbol
+from pkg_ext.models.ref_state import RefState, RefStateType, RefStateWithSymbol
 
 
 class PkgExtState(Entity):
@@ -45,7 +44,6 @@ class PkgExtState(Entity):
     def code_ref(self, code_state: PkgCodeState, name: str) -> RefSymbol | None:
         if state := self.refs.get(name):
             if state.exist_in_code:
-                # can happen if the name from changelog has been removed
                 with suppress(RefSymbolNotInCodeError):
                     return code_state.ref_symbol(name)
         return None
@@ -60,7 +58,6 @@ class PkgExtState(Entity):
         return state
 
     def update_state(self, action: ChangelogAction) -> None:
-        """Update the state of a reference based on a changelog action."""
         match action:
             case ChangelogAction(type=ChangelogActionType.EXPOSE):
                 state = self.current_state(action.name)
@@ -107,7 +104,6 @@ class PkgExtState(Entity):
     def added_refs(
         self, active_refs: dict[str, RefStateWithSymbol]
     ) -> dict[str, RefStateWithSymbol]:
-        """Get references that were added to the package."""
         return {
             ref_name: ref_symbol
             for ref_name, ref_symbol in active_refs.items()

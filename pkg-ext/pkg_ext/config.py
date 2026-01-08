@@ -32,8 +32,7 @@ class UserConfig:
 
 
 class Stability(StrEnum):
-    alpha = "alpha"
-    beta = "beta"
+    experimental = "experimental"
     ga = "ga"
     deprecated = "deprecated"
 

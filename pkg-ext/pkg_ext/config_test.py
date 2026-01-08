@@ -35,7 +35,7 @@ docstring = "Date utilities"
 
 [tool.pkg-ext.groups.filez]
 dependencies = ["datez"]
-stability = "beta"
+stability = "experimental"
 docs_exclude = ["_internal_helper"]
 """
 
@@ -54,7 +54,7 @@ def test_load_project_config_with_groups(tmp_path):
     assert datez.dependencies == []
 
     filez = config.groups["filez"]
-    assert filez.stability == Stability.beta
+    assert filez.stability == Stability.experimental
     assert filez.dependencies == ["datez"]
     assert filez.docs_exclude == ["_internal_helper"]
 
@@ -123,7 +123,9 @@ def test_merge_config_and_write(tmp_path):
     config = ProjectConfig(
         groups={
             "datez": GroupConfig(stability=Stability.ga, docstring="Date utils"),
-            "filez": GroupConfig(dependencies=["datez"], stability=Stability.beta),
+            "filez": GroupConfig(
+                dependencies=["datez"], stability=Stability.experimental
+            ),
         }
     )
     output_path = tmp_path / ".groups.yaml"
@@ -138,7 +140,7 @@ def test_merge_config_and_write(tmp_path):
     assert "datez_module" in datez.owned_modules
 
     filez = groups.name_to_group["filez"]
-    assert filez.stability == Stability.beta
+    assert filez.stability == Stability.experimental
     assert filez.dependencies == ["datez"]
 
     content = output_path.read_text()

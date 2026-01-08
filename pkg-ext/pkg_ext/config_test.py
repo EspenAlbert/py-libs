@@ -1,4 +1,14 @@
-from pkg_ext.config import GroupConfig, Stability, load_project_config
+import pytest
+
+from pkg_ext.changelog.actions import ChangelogAction  # noqa: F401 - fix import order
+from pkg_ext.config import (
+    GroupConfig,
+    ProjectConfig,
+    Stability,
+    load_project_config,
+    validate_group_dependencies,
+)
+from pkg_ext.models import PublicGroup, PublicGroups
 
 example_pyproject_toml = """\
 [tool.pkg-ext]
@@ -56,3 +66,55 @@ def test_group_config_defaults():
     assert cfg.stability == Stability.ga
     assert cfg.docs_exclude == []
     assert cfg.docstring == ""
+
+
+pyproject_valid_deps = """\
+[tool.pkg-ext]
+[tool.pkg-ext.groups.core]
+[tool.pkg-ext.groups.utils]
+dependencies = ["core", "__ROOT__"]
+"""
+
+
+def test_valid_dependencies(tmp_path):
+    (tmp_path / "pyproject.toml").write_text(pyproject_valid_deps)
+    config = load_project_config(tmp_path)
+    assert config.groups["utils"].dependencies == ["core", "__ROOT__"]
+
+
+pyproject_invalid_dep = """\
+[tool.pkg-ext]
+[tool.pkg-ext.groups.utils]
+dependencies = ["nonexistent"]
+"""
+
+
+def test_invalid_dependency_raises(tmp_path):
+    (tmp_path / "pyproject.toml").write_text(pyproject_invalid_dep)
+    with pytest.raises(ValueError, match="invalid dependency 'nonexistent'"):
+        load_project_config(tmp_path)
+
+
+pyproject_circular = """\
+[tool.pkg-ext]
+[tool.pkg-ext.groups.a]
+dependencies = ["b"]
+[tool.pkg-ext.groups.b]
+dependencies = ["a"]
+"""
+
+
+def test_circular_dependency_raises(tmp_path):
+    (tmp_path / "pyproject.toml").write_text(pyproject_circular)
+    with pytest.raises(ValueError, match="Circular dependency"):
+        load_project_config(tmp_path)
+
+
+def test_validate_group_dependencies_against_runtime():
+    # Config deps are valid (core exists in config), but runtime is missing 'core'
+    config = ProjectConfig(
+        groups={"core": GroupConfig(), "utils": GroupConfig(dependencies=["core"])}
+    )
+    runtime = PublicGroups(groups=[PublicGroup(name="__ROOT__")])  # missing 'core'
+    with pytest.raises(ValueError, match="unknown runtime group 'core'"):
+        validate_group_dependencies(config, runtime)

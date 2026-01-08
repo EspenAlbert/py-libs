@@ -11,12 +11,16 @@ import logging
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 from model_lib.model_base import Entity
-from pydantic import Field
+from pydantic import Field, model_validator
+
+if TYPE_CHECKING:
+    from pkg_ext.models.groups import PublicGroups
 
 logger = logging.getLogger(__name__)
+ROOT_GROUP_NAME = "__ROOT__"
 
 
 @dataclass
@@ -41,6 +45,32 @@ class GroupConfig(Entity):
     docstring: str = ""
 
 
+def _detect_cycle(groups: dict[str, GroupConfig]) -> list[str] | None:
+    """DFS cycle detection. Returns cycle path if found."""
+    WHITE, GRAY, BLACK = 0, 1, 2
+    color: dict[str, int] = {name: WHITE for name in groups}
+    path: list[str] = []
+
+    def dfs(node: str) -> list[str] | None:
+        color[node] = GRAY
+        path.append(node)
+        for dep in groups.get(node, GroupConfig()).dependencies:
+            if dep == ROOT_GROUP_NAME or dep not in groups:
+                continue
+            if color[dep] == GRAY:
+                return path[path.index(dep) :] + [dep]
+            if color[dep] == WHITE and (result := dfs(dep)):
+                return result
+        path.pop()
+        color[node] = BLACK
+        return None
+
+    for node in groups:
+        if color[node] == WHITE and (result := dfs(node)):
+            return result
+    return None
+
+
 class ProjectConfig(Entity):
     DEFAULT_CHANGELOG_CLEANUP_COUNT: ClassVar[int] = 30
     DEFAULT_CHANGELOG_KEEP_COUNT: ClassVar[int] = 10
@@ -58,6 +88,21 @@ class ProjectConfig(Entity):
     keep_prerelease: bool = False
     ignored_symbols: tuple[str, ...] = ()
     groups: dict[str, GroupConfig] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_dependencies(self) -> Self:
+        defined = set(self.groups.keys()) | {ROOT_GROUP_NAME}
+        errors = [
+            f"Group '{name}' has invalid dependency '{dep}'"
+            for name, cfg in self.groups.items()
+            for dep in cfg.dependencies
+            if dep not in defined
+        ]
+        if errors:
+            raise ValueError("\n".join(errors))
+        if cycle := _detect_cycle(self.groups):
+            raise ValueError(f"Circular dependency detected: {' -> '.join(cycle)}")
+        return self
 
 
 def _safe_load_toml(path: Path) -> dict[str, Any]:
@@ -124,3 +169,16 @@ def load_project_config(repo_root: Path) -> ProjectConfig:
     pkg_ext_data = _convert_tuple_fields(pkg_ext_data)
     pkg_ext_data["groups"] = groups
     return ProjectConfig(**pkg_ext_data)
+
+
+def validate_group_dependencies(config: ProjectConfig, groups: PublicGroups) -> None:
+    """Validate config dependencies against runtime PublicGroups."""
+    valid_names = set(groups.name_to_group.keys())
+    errors = [
+        f"Group '{name}' depends on unknown runtime group '{dep}'"
+        for name, cfg in config.groups.items()
+        for dep in cfg.dependencies
+        if dep not in valid_names
+    ]
+    if errors:
+        raise ValueError("\n".join(errors))

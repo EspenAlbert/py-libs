@@ -30,41 +30,11 @@ class PathMapping(BaseModel):
 
 
 HEADER_TEMPLATE = "path-sync copy -n {config_name}"
-DEFAULT_COMMENT_PREFIXES: dict[str, str] = {
-    ".py": "#",
-    ".sh": "#",
-    ".yaml": "#",
-    ".yml": "#",
-    ".toml": "#",
-    ".gitignore": "#",
-    ".go": "//",
-    ".js": "//",
-    ".ts": "//",
-    ".md": "<!--",
-    ".mdc": "<!--",
-    ".html": "<!--",
-}
-# Extensionless files matched by filename
-DEFAULT_FILENAME_PREFIXES: dict[str, str] = {
-    "justfile": "#",
-    "Makefile": "#",
-    "Dockerfile": "#",
-    ".gitignore": "#",
-}
-DEFAULT_COMMENT_SUFFIXES: dict[str, str] = {
-    ".md": " -->",
-    ".mdc": " -->",
-    ".html": " -->",
-}
 
 
 class HeaderConfig(BaseModel):
-    comment_prefixes: dict[str, str] = Field(
-        default_factory=DEFAULT_COMMENT_PREFIXES.copy
-    )
-    comment_suffixes: dict[str, str] = Field(
-        default_factory=DEFAULT_COMMENT_SUFFIXES.copy
-    )
+    comment_prefixes: dict[str, str] = Field(default_factory=dict)
+    comment_suffixes: dict[str, str] = Field(default_factory=dict)
 
 
 DEFAULT_BODY_TEMPLATE = """\

@@ -22,25 +22,6 @@ def parse_skip_sections(value: str) -> dict[str, set[str]]:
     return result
 
 
-def compare_sections(
-    baseline_content: str,
-    current_content: str,
-    skip: set[str],
-) -> list[str]:
-    """Return section IDs with unauthorized changes (modified or removed)."""
-    baseline_secs = sections.extract_sections(baseline_content)
-    current_secs = sections.extract_sections(current_content)
-
-    changed: list[str] = []
-    for sec_id, baseline_text in baseline_secs.items():
-        if sec_id in skip:
-            continue
-        current_text = current_secs.get(sec_id, "")
-        if baseline_text != current_text:
-            changed.append(sec_id)
-    return changed
-
-
 def validate_no_unauthorized_changes(
     repo_root: Path,
     default_branch: str = "main",
@@ -68,12 +49,14 @@ def validate_no_unauthorized_changes(
         if baseline_content is None:
             continue
 
-        baseline_has_sections = sections.has_sections(baseline_content)
-        current_has_sections = sections.has_sections(current_content)
+        baseline_has_sections = sections.has_sections(baseline_content, path)
+        current_has_sections = sections.has_sections(current_content, path)
 
         if baseline_has_sections:
             file_skip = skip.get(rel_path, set())
-            changed_ids = compare_sections(baseline_content, current_content, file_skip)
+            changed_ids = sections.compare_sections(
+                baseline_content, current_content, path, file_skip
+            )
             unauthorized.extend(f"{rel_path}:{sid}" for sid in changed_ids)
         elif current_has_sections:
             unauthorized.append(rel_path)

@@ -389,7 +389,7 @@ def _copy_with_header(
     src_content = header.remove_header(src.read_text())
     skip_list = dest.skip_sections.get(dest_key, [])
 
-    if sections.has_sections(src_content):
+    if sections.has_sections(src_content, dest_path):
         return _copy_with_sections(
             src_content, dest_path, skip_list, config_name, dry_run, force_overwrite
         )
@@ -421,7 +421,7 @@ def _copy_with_sections(
     dry_run: bool,
     force_overwrite: bool,
 ) -> int:
-    src_sections = sections.extract_sections(src_content)
+    src_sections = sections.extract_sections(src_content, dest_path)
 
     if dest_path.exists():
         existing = dest_path.read_text()
@@ -429,7 +429,9 @@ def _copy_with_sections(
             logger.info(f"Skipping {dest_path} (header removed - opted out)")
             return 0
         dest_body = header.remove_header(existing)
-        new_body = sections.replace_sections(dest_body, src_sections, skip_list)
+        new_body = sections.replace_sections(
+            dest_body, src_sections, dest_path, skip_list
+        )
     else:
         new_body = src_content
 
@@ -467,12 +469,11 @@ def _cleanup_orphans(
 
 def _find_files_with_config(dest_root: Path, config_name: str) -> list[Path]:
     result = []
-    for ext in header.COMMENT_PREFIXES:
-        for path in dest_root.rglob(f"*{ext}"):
-            if ".git" in path.parts:
-                continue
-            if header.file_get_config_name(path) == config_name:
-                result.append(path)
+    for path in dest_root.rglob("*"):
+        if ".git" in path.parts:
+            continue
+        if header.file_get_config_name(path) == config_name:
+            result.append(path)
     return result
 
 

@@ -220,9 +220,23 @@ def generate_api(
     create_tag: bool = option_create_tag,
     push: bool = option_push,
     explicit_pr: int = option_pr,
+    dump_groups: bool = typer.Option(
+        False, "--dump-groups", help="Regenerate .groups.yaml with merged config data"
+    ),
 ):
     """Generate API documentation and manage package releases."""
     settings: PkgSettings = ctx.obj
+    if dump_groups:
+        from pkg_ext.config import load_project_config
+        from pkg_ext.models import PublicGroups
+        # why local imports?
+
+        groups = settings.parse_computed_public_groups(PublicGroups)
+        config = load_project_config(settings.repo_root)
+        groups.merge_config(config)
+        groups.write()
+        logger.info(f"Wrote groups to {groups.storage_path}")
+        return
     api_input = GenerateApiInput(
         settings=settings,
         git_changes_since=git_changes_since,

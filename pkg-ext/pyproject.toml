@@ -24,3 +24,8 @@ exclude = [
   "conftest.py",
   "test_*.json",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]

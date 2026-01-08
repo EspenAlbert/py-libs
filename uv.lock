@@ -824,12 +824,20 @@ dependencies = [
     { name = "model-lib", extra = ["toml"] },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "ask-shell", editable = "ask-shell" },
     { name = "gitpython" },
     { name = "model-lib", extras = ["toml"], editable = "model-lib" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=9.0.2" }]
 
 [[package]]
 name = "platformdirs"

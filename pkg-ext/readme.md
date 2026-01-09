@@ -11,6 +11,7 @@ A CLI tool for managing Python package public API, versioning, and changelog gen
 - Bumps version based on changelog action types (expose=minor, fix=patch, breaking=major)
 - Writes a human-readable `CHANGELOG.md`
 - Supports flat packages (all modules public) with automatic changelog tracking
+- Provides [stability decorators](docs/stability.md) (`@experimental`, `@deprecated`) with suppressible warnings
 
 ## Installation
 

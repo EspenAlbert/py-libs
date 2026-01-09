@@ -3,14 +3,14 @@ from __future__ import annotations
 import logging
 from functools import cache, total_ordering
 from pathlib import Path
-from typing import ClassVar, Generic, Iterable, Literal, TypeVar, Union
+from typing import ClassVar, Generic, Iterable, Literal, Self, TypeVar, Union
 
 from ask_shell import shell
 from model_lib import utc_datetime
 from model_lib.model_base import Entity
 from model_lib.serialize import dump
 from model_lib.serialize.parse import parse_model
-from pydantic import Field
+from pydantic import Field, model_validator
 from zero_3rdparty.datetime_utils import (
     utc_now,
 )
@@ -23,6 +23,12 @@ logger = logging.getLogger(__name__)
 ACTION_FILE_SPLIT = "---\n"
 
 
+class StabilityTarget(StrEnum):
+    symbol = "symbol"
+    arg = "arg"
+    group = "group"
+
+
 class ChangelogActionType(StrEnum):
     EXPOSE = "expose"
     HIDE = "hide"
@@ -30,10 +36,13 @@ class ChangelogActionType(StrEnum):
     DEPRECATE = "deprecate"
     DELETE = "delete"
     RENAME_AND_DELETE = "rename_and_delete"
-    BREAKING_CHANGE = "breaking_change"  # todo: Possibly support signature changes
-    ADDITIONAL_CHANGE = "additional_change"  # todo: Possibly support signature changes
-    GROUP_MODULE = "group_module"  # a module_path has been selected for a group
+    BREAKING_CHANGE = "breaking_change"
+    ADDITIONAL_CHANGE = "additional_change"
+    GROUP_MODULE = "group_module"
     RELEASE = "release"
+    EXPERIMENTAL = "experimental"
+    GA = "ga"
+    DEPRECATED = "deprecated"
 
 
 class BumpType(StrEnum):
@@ -101,16 +110,35 @@ class ReleaseChangelog(Entity):
     type: Literal["release"] = "release"
 
 
+class StabilityChangelog(Entity):
+    target: StabilityTarget
+    parent: str | None = Field(
+        default=None,
+        description="Parent symbol in format {group}.{symbol_name} when target=arg",
+    )
+    type: Literal["stability"] = "stability"
+
+
 ChangelogDetailsT = Union[
     CommitFixChangelog,
     GroupModulePathChangelog,
     OldNameNewNameChangelog,
     ReleaseChangelog,
+    StabilityChangelog,
     str,
     None,
 ]
 
 T = TypeVar("T", bound=ChangelogDetailsT)
+
+
+STABILITY_ACTION_TYPES = frozenset(
+    {
+        ChangelogActionType.EXPERIMENTAL,
+        ChangelogActionType.GA,
+        ChangelogActionType.DEPRECATED,
+    }
+)
 
 
 @total_ordering
@@ -139,6 +167,18 @@ class ChangelogAction(Entity, Generic[T]):
         description="Pull request number, set from default branch before releasing after merge.",
     )
 
+    @model_validator(mode="after")
+    def validate_stability_fields(self) -> Self:
+        if self.type in STABILITY_ACTION_TYPES:
+            if not isinstance(self.details, StabilityChangelog):
+                raise ValueError(f"details must be StabilityChangelog for {self.type}")
+            if self.details.target == StabilityTarget.arg:
+                if not self.details.parent:
+                    raise ValueError("parent required when target=arg")
+                if "." not in self.details.parent:
+                    raise ValueError("parent must be {group}.{symbol_name} format")
+        return self
+
     @property
     def file_content(self) -> str:
         ignored_falsy = self.model_dump(
@@ -160,9 +200,14 @@ class ChangelogAction(Entity, Generic[T]):
 
 
 def as_bump_type(action: ChangelogAction) -> BumpType:
-    """Might want ot use fields on the action in the future to determine BumpType therefore we pass action instead of type"""
     match action.type:
-        case ChangelogActionType.FIX | ChangelogActionType.ADDITIONAL_CHANGE:
+        case (
+            ChangelogActionType.FIX
+            | ChangelogActionType.ADDITIONAL_CHANGE
+            | ChangelogActionType.EXPERIMENTAL
+            | ChangelogActionType.GA
+            | ChangelogActionType.DEPRECATED
+        ):
             return BumpType.PATCH
         case ChangelogActionType.EXPOSE:
             return BumpType.MINOR

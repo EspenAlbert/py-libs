@@ -1,8 +1,14 @@
-"""Tests for changelog actions module."""
-
 from pathlib import Path
 
+import pytest
+from model_lib.serialize.parse import parse_model
+
 from pkg_ext.changelog.actions import (
+    BumpType,
+    ChangelogAction,
+    ChangelogActionType,
+    StabilityChangelog,
+    StabilityTarget,
     archive_old_actions,
     changelog_filename,
     changelog_filepath,
@@ -190,3 +196,74 @@ def test_archive_old_actions_only_subdirectories_ignored(tmp_path: Path):
     # The pre-existing archived file should still be there
     assert (subdir / "archived.yaml").exists()
     assert (subdir / "archived.yaml").read_text() == "archived content"
+
+
+@pytest.mark.parametrize(
+    "action_type",
+    [
+        ChangelogActionType.EXPERIMENTAL,
+        ChangelogActionType.GA,
+        ChangelogActionType.DEPRECATED,
+    ],
+)
+def test_stability_actions_return_patch_bump(action_type: ChangelogActionType):
+    action = ChangelogAction(
+        name="some_function",
+        type=action_type,
+        details=StabilityChangelog(target=StabilityTarget.symbol),
+        author="test",
+    )
+    assert action.bump_type == BumpType.PATCH
+
+
+def test_stability_action_requires_details():
+    with pytest.raises(ValueError, match="details must be StabilityChangelog"):
+        ChangelogAction(
+            name="func", type=ChangelogActionType.EXPERIMENTAL, author="test"
+        )
+
+
+def test_stability_arg_requires_parent():
+    with pytest.raises(ValueError, match="parent required"):
+        ChangelogAction(
+            name="arg_name",
+            type=ChangelogActionType.DEPRECATED,
+            details=StabilityChangelog(target=StabilityTarget.arg),
+            author="test",
+        )
+
+
+def test_stability_arg_parent_format():
+    with pytest.raises(ValueError, match="group.*symbol_name"):
+        ChangelogAction(
+            name="arg_name",
+            type=ChangelogActionType.DEPRECATED,
+            details=StabilityChangelog(
+                target=StabilityTarget.arg, parent="missing_dot"
+            ),
+            author="test",
+        )
+    action = ChangelogAction(
+        name="format",
+        type=ChangelogActionType.DEPRECATED,
+        details=StabilityChangelog(
+            target=StabilityTarget.arg, parent="my_group.some_function"
+        ),
+        author="test",
+    )
+    assert action.details.parent == "my_group.some_function"
+
+
+def test_stability_action_yaml_roundtrip():
+    yaml_content = """
+name: my_group
+type: experimental
+details:
+  target: group
+ts: 2025-01-08T12:00:00Z
+author: espen
+"""
+    action = parse_model(yaml_content, t=ChangelogAction, format="yaml")
+    assert action.name == "my_group"
+    assert action.type == ChangelogActionType.EXPERIMENTAL
+    assert action.details.target == StabilityTarget.group

@@ -42,6 +42,7 @@ class PublicGroup(Entity):
     owned_modules: set[str] = Field(default_factory=set)
     # Config fields (populated from GroupConfig when merging)
     stability: Stability | None = None
+    deprecation_reason: str = ""
     dependencies: list[str] = Field(default_factory=list)
     docs_exclude: list[str] = Field(default_factory=list)
     docstring: str = ""
@@ -148,6 +149,7 @@ class PublicGroups(Entity):
         for name, group_cfg in config.groups.items():
             group = self.get_or_create_group(name)
             group.stability = group_cfg.stability
+            group.deprecation_reason = group_cfg.deprecation_reason
             group.dependencies = list(group_cfg.dependencies)
             group.docs_exclude = list(group_cfg.docs_exclude)
             group.docstring = group_cfg.docstring
@@ -164,6 +166,7 @@ class PublicGroups(Entity):
                     "owned_refs",
                     "owned_modules",
                     "stability",
+                    "deprecation_reason",
                     "dependencies",
                     "docs_exclude",
                     "docstring",
@@ -175,6 +178,8 @@ class PublicGroups(Entity):
                 group_dict["owned_refs"] = owned_refs
             if group.stability:
                 group_dict["stability"] = str(group.stability)
+            if group.deprecation_reason:
+                group_dict["deprecation_reason"] = group.deprecation_reason
             if group.dependencies:
                 group_dict["dependencies"] = group.dependencies
             if group.docs_exclude:

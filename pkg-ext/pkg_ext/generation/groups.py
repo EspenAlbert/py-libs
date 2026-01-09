@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pkg_ext.config import Stability
 from pkg_ext.context import pkg_ctx
 from pkg_ext.models import (
     PkgCodeState,
@@ -24,23 +25,40 @@ def write_imports(code: PkgCodeState, refs: list[SymbolRefId]) -> list[str]:
     return [as_import_line(code.pkg_import_name, ref) for ref in code.sort_refs(refs)]
 
 
+def _stability_decorator_info(group: PublicGroup) -> tuple[str, str]:
+    """Returns (import_line, decorator_call) for stability wrapping."""
+    match group.stability:
+        case Stability.experimental:
+            return "from pkg_ext.warnings import experimental", "experimental"
+        case Stability.deprecated:
+            reason = group.deprecation_reason.replace('"', '\\"')
+            return "from warnings import deprecated", f'deprecated("{reason}")'
+        case _:
+            return "", ""
+
+
 def write_group(group: PublicGroup, settings: PkgSettings, code: PkgCodeState) -> Path:
     path = settings.pkg_directory / f"{group.name}.py"
     pkg_name = code.pkg_import_name
     imports = [as_import_line(pkg_name, ref) for ref in group.sorted_refs]
-    exposed_vars = [
-        f"{ref_id_name(ref)} = _{ref_id_name(ref)}" for ref in group.sorted_refs
-    ]
-    file_content = "\n".join(
-        [
-            settings.file_header,
-            *imports,
-            "",
-            *exposed_vars,
-            "",
+    decorator_import, decorator_call = _stability_decorator_info(group)
+
+    if decorator_call:
+        exposed_vars = [
+            f"{ref_id_name(ref)} = {decorator_call}(_{ref_id_name(ref)})"
+            for ref in group.sorted_refs
         ]
-    )
-    path.write_text(file_content)
+    else:
+        exposed_vars = [
+            f"{ref_id_name(ref)} = _{ref_id_name(ref)}" for ref in group.sorted_refs
+        ]
+
+    lines = [settings.file_header, *imports]
+    if decorator_import:
+        lines.append(decorator_import)
+    lines.extend(["", *exposed_vars, ""])
+
+    path.write_text("\n".join(lines))
     return path
 
 

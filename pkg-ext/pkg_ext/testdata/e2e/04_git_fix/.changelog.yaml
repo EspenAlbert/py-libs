@@ -1,19 +1,17 @@
 name: chosen
-type: hide
 ts: 2025-10-18 21:13:06.12345+00:00
-details: created in chosen.py
+type: keep_private
+full_path: ''
 ---
 name: __ROOT__
-type: fix
 ts: 2025-10-18 21:13:06.12345+00:00
+type: fix
 author: github-actions[bot]
-details:
-  short_sha: GIT_SHA
-  message: 'fix: adds chosen file'
-  changelog_message: 'fix: adds chosen file'
+short_sha: GIT_SHA
+message: 'fix: adds chosen file'
+changelog_message: 'fix: adds chosen file'
 ---
 name: 0.1.1
-type: release
-details:
-  old_version: 0.1.0
 ts: 2025-10-18 21:13:06.12345+00:00
+type: release
+old_version: 0.1.0

@@ -5,9 +5,8 @@ import pytest
 from model_lib.serialize.parse import parse_model
 
 from pkg_ext.changelog.actions import (
-    ChangelogAction,
-    ChangelogActionType,
-    GroupModulePathChangelog,
+    GroupModuleAction,
+    MakePublicAction,
     changelog_filepath,
     dump_changelog_actions,
 )
@@ -59,18 +58,14 @@ def test_public_groups_add_to_existing_group(_public_groups, _public_group_check
 
 def test_tool_state_update_state(settings):
     actions = [
-        ChangelogAction(
+        GroupModuleAction(
             name="git_inferred",
-            type=ChangelogActionType.GROUP_MODULE,
             ts=datetime(2025, 8, 25, 17, 37, 2, tzinfo=timezone.utc),
             author="UNSET",
-            details=GroupModulePathChangelog(
-                module_path="inferred", type="group_module_path"
-            ),
+            module_path="inferred",
         ),
-        ChangelogAction(
+        MakePublicAction(
             name="inferred",
-            type=ChangelogActionType.EXPOSE,
             ts=datetime(2025, 8, 25, 17, 37, 2, tzinfo=timezone.utc),
             author="UNSET",
             details="created in inferred.py",

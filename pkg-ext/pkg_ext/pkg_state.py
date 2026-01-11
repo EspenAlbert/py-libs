@@ -8,10 +8,12 @@ from pydantic import DirectoryPath, Field
 
 from pkg_ext.changelog import (
     ChangelogAction,
-    ChangelogActionType,
-    CommitFixChangelog,
-    GroupModulePathChangelog,
-    OldNameNewNameChangelog,
+    DeleteAction,
+    FixAction,
+    GroupModuleAction,
+    KeepPrivateAction,
+    MakePublicAction,
+    RenameAction,
 )
 from pkg_ext.errors import RefSymbolNotInCodeError
 from pkg_ext.models.code_state import PkgCodeState
@@ -59,36 +61,23 @@ class PkgExtState(Entity):
 
     def update_state(self, action: ChangelogAction) -> None:
         match action:
-            case ChangelogAction(type=ChangelogActionType.EXPOSE):
-                state = self.current_state(action.name)
+            case MakePublicAction(name=name):
+                state = self.current_state(name)
                 state.type = RefStateType.EXPOSED
-            case ChangelogAction(type=ChangelogActionType.HIDE):
-                state = self.current_state(action.name)
+            case KeepPrivateAction(name=name):
+                state = self.current_state(name)
                 state.type = RefStateType.HIDDEN
-            case ChangelogAction(type=ChangelogActionType.DEPRECATE):
-                state = self.current_state(action.name)
-                state.type = RefStateType.DEPRECATED
-            case ChangelogAction(type=ChangelogActionType.DELETE):
-                state = self.current_state(action.name)
+            case DeleteAction(name=name):
+                state = self.current_state(name)
                 state.type = RefStateType.DELETED
-            case ChangelogAction(
-                type=ChangelogActionType.RENAME_AND_DELETE,
-                details=OldNameNewNameChangelog(old_name=old_name),
-            ):
-                state = self.current_state(action.name)
+            case RenameAction(name=name, old_name=old_name):
+                state = self.current_state(name)
                 old_state = self.current_state(old_name)
                 old_state.type = RefStateType.DELETED
                 state.type = RefStateType.EXPOSED
-            case ChangelogAction(
-                name=group_name,
-                type=ChangelogActionType.GROUP_MODULE,
-                details=GroupModulePathChangelog(module_path=module_path),
-            ):
+            case GroupModuleAction(name=group_name, module_path=module_path):
                 self.groups.add_module(group_name, module_path)
-            case ChangelogAction(
-                type=ChangelogActionType.FIX,
-                details=CommitFixChangelog(short_sha=sha, ignored=ignored),
-            ):
+            case FixAction(short_sha=sha, ignored=ignored):
                 shas = self.ignored_shas if ignored else self.included_shas
                 shas.add(sha)
 

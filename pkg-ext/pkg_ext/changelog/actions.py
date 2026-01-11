@@ -3,17 +3,15 @@ from __future__ import annotations
 import logging
 from functools import cache, total_ordering
 from pathlib import Path
-from typing import ClassVar, Generic, Iterable, Literal, Self, TypeVar, Union
+from typing import Annotated, ClassVar, Iterable, Literal, Self, Union
 
 from ask_shell import shell
 from model_lib import utc_datetime
 from model_lib.model_base import Entity
 from model_lib.serialize import dump
-from model_lib.serialize.parse import parse_model
-from pydantic import Field, model_validator
-from zero_3rdparty.datetime_utils import (
-    utc_now,
-)
+from model_lib.serialize.yaml_serialize import parse_yaml_str
+from pydantic import Field, TypeAdapter, model_validator
+from zero_3rdparty.datetime_utils import utc_now
 from zero_3rdparty.enum_utils import StrEnum
 from zero_3rdparty.file_utils import ensure_parents_write_text
 
@@ -27,22 +25,6 @@ class StabilityTarget(StrEnum):
     symbol = "symbol"
     arg = "arg"
     group = "group"
-
-
-class ChangelogActionType(StrEnum):
-    EXPOSE = "expose"
-    HIDE = "hide"
-    FIX = "fix"
-    DEPRECATE = "deprecate"
-    DELETE = "delete"
-    RENAME_AND_DELETE = "rename_and_delete"
-    BREAKING_CHANGE = "breaking_change"
-    ADDITIONAL_CHANGE = "additional_change"
-    GROUP_MODULE = "group_module"
-    RELEASE = "release"
-    EXPERIMENTAL = "experimental"
-    GA = "ga"
-    DEPRECATED = "deprecated"
 
 
 class BumpType(StrEnum):
@@ -82,140 +64,175 @@ def current_user() -> str:
         return username
     if name := _run_cmd("git config user.name"):
         return name
-    return ChangelogAction.DEFAULT_AUTHOR
+    return ChangelogActionBase.DEFAULT_AUTHOR
 
 
-class OldNameNewNameChangelog(Entity):
-    old_name: str
-    new_name: str
-    type: Literal["old_name_new_name"] = "old_name_new_name"
+@total_ordering
+class ChangelogActionBase(Entity):
+    DEFAULT_AUTHOR: ClassVar[str] = "UNSET"
+
+    name: str = Field("", description="Symbol name or Group name or Release Version")
+    ts: utc_datetime = Field(default_factory=utc_now)
+    author: str = Field(default_factory=current_user)
+    pr: int | None = Field(default=0)
+
+    @property
+    def bump_type(self) -> BumpType:
+        return BumpType.UNDEFINED
+
+    @property
+    def file_content(self) -> str:
+        data = self.model_dump(exclude_unset=True, exclude_none=True, exclude={"pr"})
+        data.setdefault("ts", self.ts)
+        data["type"] = (
+            self.type
+        )  # ensure type is always included for discriminated union
+        return dump(data, format="yaml")
+
+    def __lt__(self, other) -> bool:
+        if not isinstance(other, ChangelogActionBase):
+            raise TypeError
+        return (self.ts, self.name) < (other.ts, other.name)
 
 
-class GroupModulePathChangelog(Entity):
-    module_path: str
-    type: Literal["group_module_path"] = "group_module_path"
+class MakePublicAction(ChangelogActionBase):
+    type: Literal["make_public"] = "make_public"
+    details: str = ""
+
+    @property
+    def bump_type(self) -> BumpType:
+        return BumpType.MINOR
 
 
-class CommitFixChangelog(Entity):
+class KeepPrivateAction(ChangelogActionBase):
+    type: Literal["keep_private"] = "keep_private"
+    full_path: str = ""
+
+    @property
+    def bump_type(self) -> BumpType:
+        return BumpType.UNDEFINED
+
+
+class FixAction(ChangelogActionBase):
+    type: Literal["fix"] = "fix"
     short_sha: str
     message: str
     changelog_message: str = ""
     rephrased: bool = False
     ignored: bool = False
-    type: Literal["commit_fix"] = "commit_fix"
+
+    @property
+    def bump_type(self) -> BumpType:
+        return BumpType.PATCH
 
 
-class ReleaseChangelog(Entity):
-    old_version: str
+class DeleteAction(ChangelogActionBase):
+    type: Literal["delete"] = "delete"
+
+    @property
+    def bump_type(self) -> BumpType:
+        return BumpType.MAJOR
+
+
+class RenameAction(ChangelogActionBase):
+    type: Literal["rename"] = "rename"
+    old_name: str
+    new_name: str
+
+    @property
+    def bump_type(self) -> BumpType:
+        return BumpType.MAJOR
+
+
+class BreakingChangeAction(ChangelogActionBase):
+    type: Literal["breaking_change"] = "breaking_change"
+    details: str
+
+    @property
+    def bump_type(self) -> BumpType:
+        return BumpType.MAJOR
+
+
+class AdditionalChangeAction(ChangelogActionBase):
+    type: Literal["additional_change"] = "additional_change"
+    details: str
+
+    @property
+    def bump_type(self) -> BumpType:
+        return BumpType.PATCH
+
+
+class GroupModuleAction(ChangelogActionBase):
+    type: Literal["group_module"] = "group_module"
+    module_path: str
+
+
+class ReleaseAction(ChangelogActionBase):
     type: Literal["release"] = "release"
+    old_version: str
 
 
-class StabilityChangelog(Entity):
+class StabilityActionMixin(Entity):
     target: StabilityTarget
     parent: str | None = Field(
         default=None,
         description="Parent symbol in format {group}.{symbol_name} when target=arg",
     )
-    type: Literal["stability"] = "stability"
-
-
-ChangelogDetailsT = Union[
-    CommitFixChangelog,
-    GroupModulePathChangelog,
-    OldNameNewNameChangelog,
-    ReleaseChangelog,
-    StabilityChangelog,
-    str,
-    None,
-]
-
-T = TypeVar("T", bound=ChangelogDetailsT)
-
-
-STABILITY_ACTION_TYPES = frozenset(
-    {
-        ChangelogActionType.EXPERIMENTAL,
-        ChangelogActionType.GA,
-        ChangelogActionType.DEPRECATED,
-    }
-)
-
-
-@total_ordering
-class ChangelogAction(Entity, Generic[T]):
-    DEFAULT_AUTHOR: ClassVar[str] = "UNSET"
-
-    name: str = Field("", description="Symbol name or Group name or Release Version")
-    type: ChangelogActionType = Field(
-        ...,
-        description=f"Action to take with the public reference, one of {list(ChangelogActionType)}",
-    )
-    ts: utc_datetime = Field(
-        default_factory=utc_now, description="Timestamp of the action"
-    )
-
-    author: str = Field(
-        default_factory=current_user,
-        description="Author of the public reference action",
-    )
-    details: ChangelogDetailsT = Field(
-        default=None,
-        description="Details of the action, for example details on changes",
-    )
-    pr: int | None = Field(
-        default=0,
-        description="Pull request number, set from default branch before releasing after merge.",
-    )
 
     @model_validator(mode="after")
-    def validate_stability_fields(self) -> Self:
-        if self.type in STABILITY_ACTION_TYPES:
-            if not isinstance(self.details, StabilityChangelog):
-                raise ValueError(f"details must be StabilityChangelog for {self.type}")
-            if self.details.target == StabilityTarget.arg:
-                if not self.details.parent:
-                    raise ValueError("parent required when target=arg")
-                if "." not in self.details.parent:
-                    raise ValueError("parent must be {group}.{symbol_name} format")
+    def validate_parent(self) -> Self:
+        if self.target == StabilityTarget.arg:
+            if not self.parent:
+                raise ValueError("parent required when target=arg")
+            if "." not in self.parent:
+                raise ValueError("parent must be {group}.{symbol_name} format")
         return self
 
-    @property
-    def file_content(self) -> str:
-        ignored_falsy = self.model_dump(
-            exclude_unset=True,
-            exclude_none=True,
-            exclude={"pr"},
-        )
-        ignored_falsy.setdefault("ts", self.ts)
-        return dump(ignored_falsy, format="yaml")
+
+class ExperimentalAction(StabilityActionMixin, ChangelogActionBase):
+    type: Literal["experimental"] = "experimental"
 
     @property
     def bump_type(self) -> BumpType:
-        return as_bump_type(self)
-
-    def __lt__(self, other) -> bool:
-        if not isinstance(other, ChangelogAction):
-            raise TypeError
-        return (self.ts, self.name) < (other.ts, other.name)
+        return BumpType.PATCH
 
 
-def as_bump_type(action: ChangelogAction) -> BumpType:
-    match action.type:
-        case (
-            ChangelogActionType.FIX
-            | ChangelogActionType.ADDITIONAL_CHANGE
-            | ChangelogActionType.EXPERIMENTAL
-            | ChangelogActionType.GA
-            | ChangelogActionType.DEPRECATED
-        ):
-            return BumpType.PATCH
-        case ChangelogActionType.EXPOSE:
-            return BumpType.MINOR
-        case (
-            ChangelogActionType.BREAKING_CHANGE | ChangelogActionType.RENAME_AND_DELETE
-        ):
-            return BumpType.MAJOR
-    return BumpType.UNDEFINED
+class GAAction(StabilityActionMixin, ChangelogActionBase):
+    type: Literal["ga"] = "ga"
+
+    @property
+    def bump_type(self) -> BumpType:
+        return BumpType.PATCH
+
+
+class DeprecatedAction(StabilityActionMixin, ChangelogActionBase):
+    type: Literal["deprecated"] = "deprecated"
+
+    @property
+    def bump_type(self) -> BumpType:
+        return BumpType.PATCH
+
+
+ChangelogAction = Annotated[
+    Union[
+        MakePublicAction,
+        KeepPrivateAction,
+        FixAction,
+        DeleteAction,
+        RenameAction,
+        BreakingChangeAction,
+        AdditionalChangeAction,
+        GroupModuleAction,
+        ReleaseAction,
+        ExperimentalAction,
+        GAAction,
+        DeprecatedAction,
+    ],
+    Field(discriminator="type"),
+]
+
+
+_changelog_action_adapter: TypeAdapter[ChangelogAction] = TypeAdapter(ChangelogAction)
 
 
 def parse_changelog_file_path(path: Path) -> list[ChangelogAction]:
@@ -223,23 +240,20 @@ def parse_changelog_file_path(path: Path) -> list[ChangelogAction]:
         logger.warning(f"no changelog file @ {path}")
         return []
     pr_number = int(path.stem)
-    return [
-        parse_model(
-            action_raw, t=ChangelogAction, format="yaml", extra_kwargs={"pr": pr_number}
-        )
-        for action_raw in path.read_text().split(ACTION_FILE_SPLIT)
-        if action_raw.strip()
-    ]
+    actions = []
+    for action_raw in path.read_text().split(ACTION_FILE_SPLIT):
+        if not action_raw.strip():
+            continue
+        raw_data = parse_yaml_str(action_raw)
+        raw_data["pr"] = pr_number
+        actions.append(_changelog_action_adapter.validate_python(raw_data))
+    return actions
 
 
 def parse_changelog_actions(changelog_dir_path: Path) -> list[ChangelogAction]:
-    assert changelog_dir_path.is_dir(), (
-        f"expected a directory @ {changelog_dir_path} got"
-    )
+    assert changelog_dir_path.is_dir(), f"expected a directory @ {changelog_dir_path}"
     actions: list[ChangelogAction] = []
-    for path in changelog_dir_path.rglob(
-        "*.yaml"
-    ):  # support reading archived changelog actions
+    for path in changelog_dir_path.rglob("*.yaml"):
         actions.extend(parse_changelog_file_path(path))
     return sorted(actions)
 
@@ -279,7 +293,7 @@ def archive_old_actions(
     changelog_dir_path: Path, cleanup_trigger: int, keep_count: int
 ) -> bool:
     """Cleans old entries from the .changelog/ directory returns `true` if cleanup was done."""
-    files = sorted(changelog_dir_path.glob("*.yaml"))  # only top level files
+    files = sorted(changelog_dir_path.glob("*.yaml"))
     file_count = len(files)
     if file_count < cleanup_trigger:
         return False

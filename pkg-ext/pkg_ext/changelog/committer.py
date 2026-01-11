@@ -6,11 +6,7 @@ from pathlib import Path
 from ask_shell._internal.rich_live import print_to_live
 from rich.markdown import Markdown
 
-from pkg_ext.changelog.actions import (
-    ChangelogAction,
-    ChangelogActionType,
-    CommitFixChangelog,
-)
+from pkg_ext.changelog.actions import FixAction
 from pkg_ext.context import pkg_ctx
 from pkg_ext.errors import NoPublicGroupMatch
 from pkg_ext.git_usage.state import GitCommit
@@ -58,7 +54,6 @@ def infer_group(groups: PublicGroups, changes: dict[str, str]) -> str:
 
 
 def infer_group_from_paths(pkg_changes: list[str]) -> str:
-    """Infer group name from changed file paths (module name)."""
     for path in pkg_changes:
         filename = Path(path).stem
         if not filename.startswith("_") and filename != "__init__":
@@ -66,10 +61,9 @@ def infer_group_from_paths(pkg_changes: list[str]) -> str:
     return PublicGroup.ROOT_GROUP_NAME
 
 
-def prompt_for_fix(
-    sha: str, commit_message: str, prompt_text: str
-) -> CommitFixChangelog:
-    fix = CommitFixChangelog(
+def prompt_for_fix(sha: str, commit_message: str, prompt_text: str) -> FixAction:
+    fix = FixAction(
+        name="",  # will be set by caller
         short_sha=sha,
         message=commit_message,
         changelog_message=commit_message,
@@ -83,9 +77,7 @@ def prompt_for_fix(
     return fix
 
 
-def fix_changelog_action(
-    commit: GitCommit, ctx: pkg_ctx
-) -> ChangelogAction[CommitFixChangelog] | None:
+def fix_changelog_action(commit: GitCommit, ctx: pkg_ctx) -> FixAction | None:
     tool_state = ctx.tool_state
     git_changes = ctx.git_changes
     assert git_changes
@@ -118,26 +110,21 @@ def fix_changelog_action(
     print_to_live(prompt_md)
     commit_message = commit.message
     commit_sha = commit.sha
-    prompt_text = f"commit({commit_sha}): {commit_message}"
 
     if ctx.settings.is_flat:
         group = infer_group_from_paths(pkg_changes)
-        details = prompt_for_fix(commit_sha, commit_message, prompt_text)
     else:
         groups = tool_state.groups
         group = infer_group(groups, diffs)
-        public_group = select_group_name(
-            f"select group for {prompt_text}", groups, default=group
-        )
+        prompt_text = f"commit({commit_sha}): {commit_message}"
+        public_group = select_group_name(prompt_text, groups, default=group)
         group = public_group.name
-        details = prompt_for_fix(commit_sha, commit_message, prompt_text)
 
-    return ChangelogAction(
-        name=group,
-        type=ChangelogActionType.FIX,
-        author=commit.author,
-        details=details,
-    )
+    prompt_text = f"commit({commit_sha}): {commit_message}"
+    fix = prompt_for_fix(commit_sha, commit_message, prompt_text)
+    fix.name = group
+    fix.author = commit.author
+    return fix
 
 
 def add_git_changes(ctx: pkg_ctx) -> None:

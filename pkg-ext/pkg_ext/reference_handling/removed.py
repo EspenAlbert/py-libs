@@ -2,7 +2,7 @@ import logging
 
 from ask_shell._internal.rich_progress import new_task
 
-from pkg_ext.changelog import ChangelogActionType, OldNameNewNameChangelog
+from pkg_ext.changelog import DeleteAction, RenameAction
 from pkg_ext.context import pkg_ctx
 from pkg_ext.interactive import (
     confirm_create_alias,
@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 def handle_removed_refs_flat(ctx: pkg_ctx) -> None:
-    """Auto-delete all removed refs for flat packages (no rename prompts)."""
     tool_state = ctx.tool_state
     code_state = ctx.code_state
     removed_refs = tool_state.removed_refs(code_state)
@@ -25,7 +24,7 @@ def handle_removed_refs_flat(ctx: pkg_ctx) -> None:
         return
 
     for ref in removed_refs:
-        ctx.add_action(ref.name, ChangelogActionType.DELETE)
+        ctx.add_changelog_action(DeleteAction(name=ref.name))
     logger.info(f"Auto-deleted {len(removed_refs)} refs in flat package")
 
 
@@ -49,11 +48,8 @@ def process_reference_renames(
         used_active.add(new_name)
         if confirm_create_alias(ref, new_ref):
             raise NotImplementedError("Alias creation is not implemented yet")
-            # Any DELETE is a breaking change? Or also add that entry?
-        ctx.add_action(
-            new_name,
-            ChangelogActionType.RENAME_AND_DELETE,
-            OldNameNewNameChangelog(old_name=ref.name, new_name=new_name),
+        ctx.add_changelog_action(
+            RenameAction(name=new_name, old_name=ref.name, new_name=new_name)
         )
         renamed_refs.add(ref)
         task.update(advance=1)
@@ -81,6 +77,6 @@ def handle_removed_refs(ctx: pkg_ctx) -> None:
     delete_names = ", ".join(ref.name for ref in removed_refs)
     if confirm_delete(removed_refs):
         for ref in removed_refs:
-            ctx.add_action(ref.name, ChangelogActionType.DELETE)
+            ctx.add_changelog_action(DeleteAction(name=ref.name))
     else:
         assert False, f"Old references {delete_names} were not confirmed for deletion"

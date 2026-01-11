@@ -1,15 +1,14 @@
 name: a
-type: expose
-details: created in _internal/a.py
 ts: 2025-10-18 21:13:06.12345+00:00
+type: make_public
+details: created in _internal/a.py
 ---
 name: n1
-type: group_module
-details:
-  module_path: _internal.a
 ts: 2025-10-18 21:13:06.12345+00:00
+type: group_module
+module_path: _internal.a
 ---
 name: b
-type: expose
-details: created in _internal/a.py
 ts: 2025-10-18 21:13:06.12345+00:00
+type: make_public
+details: created in _internal/a.py

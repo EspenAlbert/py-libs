@@ -7,12 +7,7 @@ import typer
 from typer import Typer
 from zero_3rdparty.file_utils import ensure_parents_write_text
 
-from pkg_ext.changelog.actions import (
-    ChangelogAction,
-    ChangelogActionType,
-    ReleaseChangelog,
-    parse_changelog_actions,
-)
+from pkg_ext.changelog import ReleaseAction, parse_changelog_actions
 from pkg_ext.changelog.write_changelog_md import read_changelog_section
 from pkg_ext.cli.options import (
     option_bump_version,
@@ -37,7 +32,6 @@ app = Typer(name="pkg-ext", help="Generate public API for a package and more!")
 
 
 def resolve_repo_root(cwd: Path) -> Path:
-    """Find the repository root by looking for .git folder in cwd or parent directories."""
     for path in [cwd] + list(cwd.parents):
         if (path / ".git").exists():
             return path
@@ -49,17 +43,13 @@ def is_package_dir(path: Path) -> bool:
 
 
 def resolve_pkg_path_str(cwd: Path, repo_root: Path) -> str:
-    """Find the package path by looking for __init__.py in cwd or checking if cwd is within a package."""
-    # First, check if cwd itself is a package directory
     if is_package_dir(cwd):
         return str(cwd.relative_to(repo_root))
 
-    # If not, look for any subdirectory with __init__.py
     for item in cwd.iterdir():
         if is_package_dir(item):
             return str(item.relative_to(repo_root))
 
-    # If cwd is within a package, find the package root
     current = cwd
     for parent in cwd.parents:
         if parent == repo_root:
@@ -102,12 +92,9 @@ def main(
         help="{tag_prefix}{version} used in the git tag. Uses project config or env var if not set.",
     ),
 ):  # sourcery skip: raise-from-previous-error
-    """pkg-ext: Generate public API for a package and more!"""
     if ctx.invoked_subcommand is None:
-        # If no subcommand, show help
         typer.echo(ctx.get_help())
         raise typer.Exit()
-    # Resolve repo_root with auto-detection
     if repo_root is None:
         try:
             resolved_repo_root = resolve_repo_root(Path.cwd())
@@ -117,7 +104,6 @@ def main(
     else:
         resolved_repo_root = repo_root
 
-    # Auto-detect pkg_path if not provided
     if pkg_path_str is not None:
         candidate = resolved_repo_root / pkg_path_str
         if not is_package_dir(candidate):
@@ -140,7 +126,6 @@ def pre_push(
     ctx: typer.Context,
     git_changes_since: GitSince = option_git_changes_since,
 ):
-    """Use this to run before a push. Will ask questions about your changes to ensure the changelog and release can be updated later"""
     settings: PkgSettings = ctx.obj
     settings.dev_mode = True
 
@@ -159,7 +144,6 @@ def pre_merge(
     ctx: typer.Context,
     git_changes_since: GitSince = option_git_changes_since,
 ):
-    """Use this as a CI check. No merge until this passes. Ensures no manual changes are missing."""
     settings: PkgSettings = ctx.obj
     settings.force_bot()
     settings.dev_mode = True
@@ -184,14 +168,13 @@ def post_merge(
         "--skip-clean",
     ),
 ):
-    """Use this after a merge to bump version, creates the automated release files"""
     settings: PkgSettings = ctx.obj
     settings.force_bot()
     pr = explicit_pr or head_merge_pr(Path(settings.repo_root))
     logger.info(f"pr found: {pr}")
     api_input = GenerateApiInput(
         settings=settings,
-        git_changes_since=GitSince.NO_GIT_CHANGES,  # will not add new entries
+        git_changes_since=GitSince.NO_GIT_CHANGES,
         bump_version=True,
         create_tag=True,
         push=push,
@@ -224,12 +207,10 @@ def generate_api(
         False, "--dump-groups", help="Regenerate .groups.yaml with merged config data"
     ),
 ):
-    """Generate API documentation and manage package releases."""
     settings: PkgSettings = ctx.obj
     if dump_groups:
         from pkg_ext.config import load_project_config
         from pkg_ext.models import PublicGroups
-        # why local imports?
 
         groups = settings.parse_computed_public_groups(PublicGroups)
         config = load_project_config(settings.repo_root)
@@ -258,12 +239,10 @@ def generate_api(
             )
 
 
-def find_release_action(
-    changelog_dir: Path, version: str
-) -> ChangelogAction[ReleaseChangelog]:
+def find_release_action(changelog_dir: Path, version: str) -> ReleaseAction:
     for changelog_action in parse_changelog_actions(changelog_dir):
         if (
-            changelog_action.type == ChangelogActionType.RELEASE
+            isinstance(changelog_action, ReleaseAction)
             and changelog_action.name == version
         ):
             pr = changelog_action.pr
@@ -282,7 +261,7 @@ def release_notes(
     action = find_release_action(settings.changelog_dir, version)
     content = read_changelog_section(
         settings.changelog_md.read_text(),
-        old_version=action.details.old_version,  # type: ignore
+        old_version=action.old_version,
         new_version=action.name,
     )
     output_file = settings.repo_root / f"dist/{tag_name}.changelog.md"

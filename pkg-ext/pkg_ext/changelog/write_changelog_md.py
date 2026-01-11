@@ -9,8 +9,8 @@ from zero_3rdparty.file_utils import ensure_parents_write_text
 from pkg_ext.changelog.actions import (
     BumpType,
     ChangelogAction,
-    ChangelogActionType,
-    CommitFixChangelog,
+    FixAction,
+    MakePublicAction,
 )
 from pkg_ext.context import pkg_ctx
 from pkg_ext.errors import NoPublicGroupMatch
@@ -54,7 +54,6 @@ def _add_changelog_section(old_content: str, new_section: str, version: str) -> 
             end_index = end_match.end()
             break
         else:
-            # no end match, this is the last header section
             return old_content[:start_index] + new_section
         return old_content[:start_index] + new_section + old_content[end_index:]
     if insert_point := next(
@@ -68,7 +67,7 @@ def _add_changelog_section(old_content: str, new_section: str, version: str) -> 
             + old_content[insert_point:]
         )
     else:
-        return old_content + new_section  # no existing headers, appending to the end
+        return old_content + new_section
 
 
 def _commit_url(remote_url: str, sha: str) -> str:
@@ -80,17 +79,14 @@ def _commit_url(remote_url: str, sha: str) -> str:
 
 def as_changelog_line(action: ChangelogAction, remote_url: str, ctx: pkg_ctx) -> str:
     match action:
-        case ChangelogAction(
-            type=ChangelogActionType.FIX,
-            details=CommitFixChangelog(
-                ignored=False,
-                message=message,
-                changelog_message=changelog_message,
-                short_sha=sha,
-            ),
+        case FixAction(
+            ignored=False,
+            message=message,
+            changelog_message=changelog_message,
+            short_sha=sha,
         ):
             return f"{changelog_message or message} {_commit_url(remote_url, sha)}"
-        case ChangelogAction(type=ChangelogActionType.EXPOSE, name=name):
+        case MakePublicAction(name=name):
             ref_symbol = ctx.code_state.ref_symbol(name)
             return f"New {ref_symbol.type} {name}"
     return ""
@@ -133,7 +129,7 @@ def _create_changelog_content(
     def add_section(header: str, lines: list[str], *, header_level=1) -> None:
         header_prefix = root_prefix + header_level * "#"
         changelog_md.append(f"{header_prefix} {header}")
-        lines.append("")  # Include an extra line after a group
+        lines.append("")
         changelog_md.extend(lines)
 
     if pr_url := git_changes.pr_url:

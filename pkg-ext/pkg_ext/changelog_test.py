@@ -1,13 +1,9 @@
-from pkg_ext.changelog.actions import (
-    ChangelogAction,
-    ChangelogActionType,
-    dump_changelog_actions,
-)
+from pkg_ext.changelog.actions import MakePublicAction, dump_changelog_actions
 from pkg_ext.changelog.write_changelog_md import read_changelog_section
 
 
 def test_dump_changelog_actions(text_normalizer_regression, tmp_path):
-    actions = [ChangelogAction(name="test", type=ChangelogActionType.EXPOSE)]
+    actions = [MakePublicAction(name="test")]
     out_path = tmp_path / "test.yaml"
     dump_changelog_actions(out_path, actions)
     text_normalizer_regression(out_path)

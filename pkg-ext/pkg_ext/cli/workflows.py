@@ -14,8 +14,7 @@ from pydantic import model_validator
 from zero_3rdparty.file_utils import iter_paths_and_relative
 
 from pkg_ext.changelog import (
-    ChangelogAction,
-    ChangelogActionType,
+    ReleaseAction,
     add_git_changes,
     changelog_filepath,
     dump_changelog_actions,
@@ -23,7 +22,7 @@ from pkg_ext.changelog import (
     parse_changelog_file_path,
     write_changelog_md,
 )
-from pkg_ext.changelog.actions import ReleaseChangelog, archive_old_actions
+from pkg_ext.changelog.actions import archive_old_actions
 from pkg_ext.context import pkg_ctx
 from pkg_ext.errors import NoHumanRequiredError
 from pkg_ext.file_parser import parse_code_symbols, parse_symbols
@@ -54,7 +53,7 @@ class GenerateApiInput(Entity):
     git_changes_since: GitSince
 
     bump_version: bool
-    create_tag: bool  # can we say always to create the tag when we bump_version?
+    create_tag: bool
     push: bool
     explicit_pr: int = 0
 
@@ -75,7 +74,6 @@ class GenerateApiInput(Entity):
 
 
 def parse_pkg_code_state(settings: PkgSettings) -> PkgCodeState:
-    """PkgDiskState is based only on the current python files in the package"""
     pkg_py_files = list(
         iter_paths_and_relative(settings.pkg_directory, "*.py", only_files=True)
     )
@@ -130,7 +128,6 @@ def create_ctx(api_input: GenerateApiInput) -> pkg_ctx:
 
 
 def update_changelog_entries(api_input: GenerateApiInput) -> pkg_ctx | None:
-    """Should also read the changelog entries from the default file if it is existing."""
     exit_stack = ExitStack()
     if api_input.is_bot:
         exit_stack.enter_context(raise_on_question(raise_error=NoHumanRequiredError))
@@ -149,7 +146,7 @@ def update_changelog_entries(api_input: GenerateApiInput) -> pkg_ctx | None:
             logger.warning(
                 f"Interrupted while handling added references, only {ctx.settings.changelog_dir} updated"
             )
-            return
+            return None
     return ctx
 
 
@@ -184,19 +181,11 @@ def post_merge_commit_workflow(
     old_actions = parse_changelog_file_path(changelog_pr_path)
     assert old_actions, f"no changes to commit for {pr_number}"
     if release_action := next(
-        (
-            action
-            for action in old_actions
-            if action.type == ChangelogActionType.RELEASE
-        ),
+        (action for action in old_actions if isinstance(action, ReleaseAction)),
         None,
     ):
         raise ValueError(f"pr has already been released: {release_action!r}")
-    release_action = ChangelogAction(
-        name=new_version,
-        type=ChangelogActionType.RELEASE,
-        details=ReleaseChangelog(old_version=old_version),
-    )
+    release_action = ReleaseAction(name=new_version, old_version=old_version)
     changelog_pr_path = dump_changelog_actions(
         changelog_pr_path,
         old_actions + [release_action],
@@ -211,7 +200,6 @@ def post_merge_commit_workflow(
 
 
 def generate_api_workflow(api_input: GenerateApiInput) -> pkg_ctx | None:
-    """Main API generation workflow"""
     if ctx := update_changelog_entries(api_input):
         sync_files(api_input, ctx)
         return ctx

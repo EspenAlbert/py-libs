@@ -10,11 +10,7 @@ from ask_shell._internal.interactive import (
 )
 from zero_3rdparty.enum_utils import StrEnum
 
-from pkg_ext.changelog import (
-    ChangelogAction,
-    ChangelogActionType,
-    GroupModulePathChangelog,
-)
+from pkg_ext.changelog import GroupModuleAction
 from pkg_ext.context import RefAddCallback
 from pkg_ext.errors import NoPublicGroupMatch
 from pkg_ext.models import (
@@ -139,17 +135,17 @@ def confirm_delete(refs: list[RefState]) -> bool:
 
 
 def on_new_ref(groups: PublicGroups) -> RefAddCallback:
-    def on_ref(ref: RefSymbol) -> ChangelogAction | None:
+    def on_ref(ref: RefSymbol) -> GroupModuleAction | None:
         try:
             found_group = groups.matching_group(ref)
             groups.add_ref(ref, found_group.name)
         except NoPublicGroupMatch:
             new_group = select_group(groups, ref)
-            return ChangelogAction(
+            return GroupModuleAction(
                 name=new_group.name,
-                type=ChangelogActionType.GROUP_MODULE,
-                details=GroupModulePathChangelog(module_path=ref.module_path),
+                module_path=ref.module_path,
             )
+        return None
 
     return on_ref
 

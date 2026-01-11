@@ -2,7 +2,12 @@ import pytest
 from zero_3rdparty.file_utils import ensure_parents_write_text
 
 from pkg_ext.changelog import BumpType
-from pkg_ext.changelog.actions import ChangelogAction, ChangelogActionType
+from pkg_ext.changelog.actions import (
+    BreakingChangeAction,
+    FixAction,
+    KeepPrivateAction,
+    MakePublicAction,
+)
 from pkg_ext.changelog.parser import parse_changelog
 from pkg_ext.conftest import TEST_PKG_NAME
 from pkg_ext.context import pkg_ctx
@@ -36,25 +41,22 @@ def test_read_version_default_from_toml(settings, pkg_ctx_instance):
 
 
 _actions = [
-    (
-        ChangelogAction(name="func_name", type=ChangelogActionType.BREAKING_CHANGE),
-        "1.0.0",
-    ),
-    (ChangelogAction(name="func_name", type=ChangelogActionType.EXPOSE), "0.1.0"),
-    (ChangelogAction(name="func_name", type=ChangelogActionType.FIX), "0.0.2"),
-    (ChangelogAction(name="func_name", type=ChangelogActionType.HIDE), "0.0.1"),
+    (BreakingChangeAction(name="func_name", details=""), "1.0.0"),
+    (MakePublicAction(name="func_name"), "0.1.0"),
+    (FixAction(name="func_name", short_sha="abc", message="fix"), "0.0.2"),
+    (KeepPrivateAction(name="func_name"), "0.0.1"),
 ]
 
 
 @pytest.mark.parametrize(
-    "action,new_version", _actions, ids=[action.type for action, _ in _actions]
+    "action,new_version",
+    _actions,
+    ids=[type(action).__name__ for action, _ in _actions],
 )
 def test_bump_major(pkg_ctx_instance, action, new_version):
     actions = [action]
     pkg_ctx_instance._actions = actions
-    with (
-        pkg_ctx_instance
-    ):  # use context manager to read the actions from instance rather than disk
+    with pkg_ctx_instance:
         assert (
             str(bump_version(pkg_ctx_instance, PkgVersion.parse("0.0.1")))
             == new_version
@@ -99,32 +101,11 @@ def pkg_ctx_keep_prerelease(static_env_vars, tmp_path) -> pkg_ctx:
 
 
 _keep_prerelease_cases = [
-    (
-        ChangelogAction(name="func_name", type=ChangelogActionType.EXPOSE),
-        "1.0.0b7",
-        "1.0.0b8",
-    ),
-    (
-        ChangelogAction(name="func_name", type=ChangelogActionType.BREAKING_CHANGE),
-        "1.0.0b7",
-        "1.0.0b8",
-    ),
-    (
-        ChangelogAction(name="func_name", type=ChangelogActionType.FIX),
-        "2.0.0a5",
-        "2.0.0a6",
-    ),
-    (
-        ChangelogAction(name="func_name", type=ChangelogActionType.EXPOSE),
-        "1.0.0rc1",
-        "1.0.0rc2",
-    ),
-    # Stable versions still bump normally
-    (
-        ChangelogAction(name="func_name", type=ChangelogActionType.EXPOSE),
-        "1.0.0",
-        "1.1.0",
-    ),
+    (MakePublicAction(name="func_name"), "1.0.0b7", "1.0.0b8"),
+    (BreakingChangeAction(name="func_name", details=""), "1.0.0b7", "1.0.0b8"),
+    (FixAction(name="func_name", short_sha="abc", message="fix"), "2.0.0a5", "2.0.0a6"),
+    (MakePublicAction(name="func_name"), "1.0.0rc1", "1.0.0rc2"),
+    (MakePublicAction(name="func_name"), "1.0.0", "1.1.0"),
 ]
 
 

@@ -6,7 +6,7 @@ from ask_shell._internal._run import run_and_wait
 from ask_shell._internal.rich_progress import new_task
 from zero_3rdparty.iter_utils import group_by_once
 
-from pkg_ext.changelog import ChangelogActionType
+from pkg_ext.changelog import KeepPrivateAction, MakePublicAction
 from pkg_ext.cli.options import get_default_editor
 from pkg_ext.context import pkg_ctx
 from pkg_ext.interactive import select_multiple_refs
@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 
 
 def handle_added_refs_flat(ctx: pkg_ctx) -> None:
-    """Auto-expose all added refs, using module name as group."""
     tool_state = ctx.tool_state
     code_state = ctx.code_state
     added_refs = tool_state.added_refs(code_state.named_refs)
@@ -36,10 +35,8 @@ def handle_added_refs_flat(ctx: pkg_ctx) -> None:
         ref = ref_with_symbol.symbol
         group_name = ref.module_path
         groups.add_ref(ref, group_name)
-        ctx.add_action(
-            ref_name,
-            ChangelogActionType.EXPOSE,
-            details=f"auto-exposed from {ref.rel_path}",
+        ctx.add_changelog_action(
+            MakePublicAction(name=ref_name, details=f"auto-exposed from {ref.rel_path}")
         )
     logger.info(f"Auto-exposed {len(added_refs)} refs in flat package")
 
@@ -75,49 +72,31 @@ def make_expose_decisions(
             file_states,
         )
         for ref in exposed:
-            ctx.add_action(
-                ref.name, ChangelogActionType.EXPOSE, details=f"created in {rel_path}"
+            ctx.add_changelog_action(
+                MakePublicAction(name=ref.name, details=f"created in {rel_path}")
             )
         hidden = [state for state in file_states if state not in exposed]
         for ref in hidden:
-            ctx.add_action(
-                ref.name, ChangelogActionType.HIDE, details=f"created in {rel_path}"
+            ctx.add_changelog_action(
+                KeepPrivateAction(name=ref.name, full_path=ref.symbol.local_id)
             )
         if exposed and symbol_type == SymbolType.FUNCTION:
             args_exposed = ensure_function_args_exposed(code_state, exposed)
             for func_ref, arg_refs in args_exposed.items():
-                decided_refs.extend(arg_refs)  # avoid asking again
+                decided_refs.extend(arg_refs)
                 for ref in arg_refs:
                     if tool_state.current_state(ref.name).exist_in_code:
-                        # already exposed
                         continue
-                    ctx.add_action(
-                        ref.name,
-                        ChangelogActionType.EXPOSE,
-                        details=f"exposed in the function {func_ref.symbol.local_id}",
+                    ctx.add_changelog_action(
+                        MakePublicAction(
+                            name=ref.name,
+                            details=f"exposed in the function {func_ref.symbol.local_id}",
+                        )
                     )
     return decided_refs
 
 
 def handle_added_refs(ctx: pkg_ctx) -> None:
-    """
-    # Processing Order
-    1. functions
-    - arg classes
-    - exceptions
-    2. classes
-    - arg classes
-    - exceptions
-    - type aliases?
-    3. errors (ideally, found from functions/errors)
-    4. constants?
-    5. other types?
-
-    # Rules
-    1. Any argument in a function must have all its type hints exposed too, unless the argument name starts with "_"
-    2. Any errors raised by the function must also be exposed
-
-    """
     tool_state = ctx.tool_state
     code_state = ctx.code_state
     added_refs = tool_state.added_refs(code_state.named_refs)

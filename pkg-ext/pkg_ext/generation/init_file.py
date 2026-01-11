@@ -6,6 +6,7 @@ from zero_3rdparty.iter_utils import flat_map
 from pkg_ext.context import pkg_ctx
 from pkg_ext.generation.groups import as_import_line
 from pkg_ext.models import PublicGroup, SymbolRefId
+from pkg_ext.warnings_gen import get_warning_class_names
 
 logger = logging.getLogger(__name__)
 
@@ -69,14 +70,25 @@ def write_init(ctx: pkg_ctx, version: str):
         import_lines.append(f"from {pkg_name} import {group_name}")
         groups_imported.add(group_name)
     all_symbols = [line.split(" ")[-1] for line in import_lines]
+
+    warning_imports: list[str] = []
+    warning_classes: list[str] = []
+    if settings.warnings_file_path.exists():
+        warning_classes = get_warning_class_names(pkg_name)
+        warning_imports = [
+            f"from {pkg_name}._warnings import {', '.join(warning_classes)}"
+        ]
+
     init_lines = [
         settings.file_header,
         "# flake8: noqa",
         *import_lines,
+        *warning_imports,
         "",
         f'VERSION = "{version}"',
         "__all__ = [",
         *[f'    "{name}",' for name in all_symbols],
+        *[f'    "{name}",' for name in warning_classes],
         "]",
     ]
     settings.init_path.write_text("\n".join(init_lines) + "\n")

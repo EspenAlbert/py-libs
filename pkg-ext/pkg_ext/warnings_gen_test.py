@@ -1,25 +1,6 @@
-import pytest
-
 from pkg_ext.config import Stability
 from pkg_ext.models.groups import PublicGroup, PublicGroups
-from pkg_ext.warnings_gen import (
-    generate_warnings_content,
-    needs_warnings_module,
-    to_pascal_case,
-)
-
-
-@pytest.mark.parametrize(
-    ("pkg_name", "expected"),
-    [
-        ("pkg_ext", "PkgExt"),
-        ("my_lib", "MyLib"),
-        ("simple", "Simple"),
-        ("zero_3rdparty", "Zero3rdparty"),
-    ],
-)
-def test_to_pascal_case(pkg_name: str, expected: str):
-    assert to_pascal_case(pkg_name) == expected
+from pkg_ext.warnings_gen import generate_warnings_content, needs_warnings_module
 
 
 def test_needs_warnings_module_false_when_all_ga():

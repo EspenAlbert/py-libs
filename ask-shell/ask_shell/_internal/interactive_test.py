@@ -242,7 +242,7 @@ def test_prompt_match_once_only():
     assert not match("this will match once")
 
 
-def test_prompt_match_twiche():
+def test_prompt_match_twice():
     match = PromptMatch(substring="once", max_matches=2, responses=["1", "2"])
     assert match("this will match once")
     match.next_response()

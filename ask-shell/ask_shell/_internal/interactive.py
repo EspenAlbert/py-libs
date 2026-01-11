@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import io
 import logging
 import os
 from dataclasses import dataclass, field
@@ -11,6 +12,7 @@ from typing import Callable, Generic, Self, TypeVar
 
 from prompt_toolkit.input.defaults import create_pipe_input
 from prompt_toolkit.output import DummyOutput
+from prompt_toolkit.output.plain_text import PlainTextOutput
 from pydantic import BaseModel, model_validator
 from questionary import Choice, Question, checkbox
 from questionary import confirm as _confirm
@@ -422,11 +424,18 @@ class force_interactive:
 
 @dataclass(kw_only=True)
 class question_patcher(force_interactive):
-    """Context manager to patch the questionary.ask_question, useful for testing."""
+    """Context manager to patch the questionary.ask_question, useful for testing.
+
+    Uses PlainTextOutput with a controlled buffer and direct unsafe_ask() calls
+    to avoid I/O conflicts with Click's CliRunner. The CliRunner replaces
+    sys.stdout/stderr with its own wrappers, and if we use DummyOutput or
+    thread pools, prompt_toolkit may still write to closed streams.
+    """
 
     responses: list[str] = field(default_factory=list)
     next_response: int = 0
     dynamic_responses: list[PromptMatch] = field(default_factory=list)
+    _output_buffer: io.StringIO = field(default_factory=io.StringIO, init=False)
 
     def _dynamic_match(self, prompt_text: str) -> str | None:
         return next(
@@ -456,15 +465,61 @@ class question_patcher(force_interactive):
             return self._next_index_response(prompt_text)
         return self._next_index_response("")
 
+    def _has_running_event_loop(self) -> bool:
+        try:
+            asyncio.get_running_loop()
+            return True
+        except RuntimeError:
+            return False
+
+    def _run_in_thread_with_isolated_io(self, q: Question) -> T:
+        """Run unsafe_ask in thread pool with isolated stdout/stderr.
+
+        When running in a thread, prompt_toolkit's flush_stdout may still
+        reference the original sys.stdout (e.g., CliRunner's wrapper).
+        We patch sys.stdout/stderr in the worker thread to prevent writes
+        to external streams that may be closed.
+        """
+        import sys
+
+        def worker():
+            old_stdout, old_stderr = sys.stdout, sys.stderr
+            try:
+                sys.stdout = self._output_buffer
+                sys.stderr = io.StringIO()
+                return q.unsafe_ask()
+            finally:
+                sys.stdout = old_stdout
+                sys.stderr = old_stderr
+
+        return get_pool().submit(worker).result()
+
+    def _set_application_output(self, q: Question, output) -> None:
+        """Set output on both the application and its renderer.
+
+        The Renderer is created with the initial output in Application.__init__,
+        so we must update both to fully redirect prompt_toolkit's output.
+        """
+        q.application.output = output
+        q.application.renderer.output = output
+
     def ask_question(self, q: Question, response_type: type[T]) -> T:
         with create_pipe_input() as inp:
-            # Set both input and output BEFORE sending any text or calling unsafe_ask
-            # This prevents cursor position queries from being sent to the real terminal
             q.application.input = inp
-            q.application.output = DummyOutput()
             input_response = self._next_response(q)
             inp.send_text(input_response + KeyInput.ENTER + "\r")
-            return _default_asker(q, response_type)
+            # When called from an async context, unsafe_ask() fails because it
+            # internally calls asyncio.run() which can't nest. Use thread pool
+            # in that case, with fully isolated I/O to prevent writes to
+            # external streams (like CliRunner's) that may be closed.
+            if self._has_running_event_loop():
+                # Use DummyOutput for thread pool path - it discards all output
+                # and avoids any I/O conflicts with CliRunner's streams
+                self._set_application_output(q, DummyOutput())
+                return self._run_in_thread_with_isolated_io(q)
+            # For direct sync path, use PlainTextOutput with our buffer
+            self._set_application_output(q, PlainTextOutput(self._output_buffer))
+            return q.unsafe_ask()
 
     def __enter__(self) -> Self:
         global _question_asker

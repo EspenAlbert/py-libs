@@ -25,22 +25,23 @@ def write_imports(code: PkgCodeState, refs: list[SymbolRefId]) -> list[str]:
     return [as_import_line(code.pkg_import_name, ref) for ref in code.sort_refs(refs)]
 
 
-def _stability_decorator_info(group: PublicGroup) -> tuple[str, str]:
+def _stability_decorator_info(group: PublicGroup, pkg_name: str) -> tuple[str, str]:
     """Returns (import_line, decorator_call) for stability wrapping."""
     match group.stability:
         case Stability.experimental:
-            return "from pkg_ext.warnings import experimental", "experimental"
+            return f"from {pkg_name}._warnings import _experimental", "_experimental"
         case Stability.deprecated:
             reason = group.deprecation_reason.replace('"', '\\"')
             return "from warnings import deprecated", f'deprecated("{reason}")'
-    return "", ""
+        case _:
+            return "", ""
 
 
 def write_group(group: PublicGroup, settings: PkgSettings, code: PkgCodeState) -> Path:
     path = settings.pkg_directory / f"{group.name}.py"
     pkg_name = code.pkg_import_name
     imports = [as_import_line(pkg_name, ref) for ref in group.sorted_refs]
-    decorator_import, decorator_call = _stability_decorator_info(group)
+    decorator_import, decorator_call = _stability_decorator_info(group, pkg_name)
 
     if decorator_call:
         exposed_vars = [

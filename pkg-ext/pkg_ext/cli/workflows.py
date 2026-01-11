@@ -43,6 +43,7 @@ from pkg_ext.reference_handling import (
 )
 from pkg_ext.settings import PkgSettings
 from pkg_ext.version_bump import bump_version, read_current_version
+from pkg_ext.warnings_gen import write_warnings_module
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +153,7 @@ def sync_files(api_input: GenerateApiInput, ctx: pkg_ctx):
     version_new = bump_version(ctx, version_old)
     ctx.add_versions(str(version_old), str(version_new))
     version_str = str(version_new) if api_input.bump_version else str(version_old)
+    write_warnings_module(ctx.settings, ctx.tool_state.groups)
     write_groups(ctx)
     write_init(ctx, version_str)
     update_pyproject_toml(ctx, version_str)

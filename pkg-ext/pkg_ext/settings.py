@@ -101,6 +101,10 @@ class PkgSettings(BaseSettings):
     def pyproject_toml(self) -> Path:
         return self.state_dir / "pyproject.toml"
 
+    @property
+    def warnings_file_path(self) -> Path:
+        return self.pkg_directory / "_warnings.py"
+
     def force_bot(self) -> None:
         self.is_bot = True
         self.skip_open_in_editor = True

@@ -49,9 +49,19 @@ def test_archive_old_actions_cleanup_when_above_trigger(tmp_path: Path):
 )
 def test_stability_actions_return_patch_bump(action_class):
     action = action_class(
-        name="some_function", target=StabilityTarget.symbol, author="test"
+        name="some_function",
+        target=StabilityTarget.symbol,
+        group="my_group",
+        author="test",
     )
     assert action.bump_type == BumpType.PATCH
+
+
+def test_stability_symbol_requires_group():
+    with pytest.raises(ValueError, match="group required"):
+        DeprecatedAction(
+            name="symbol_name", target=StabilityTarget.symbol, author="test"
+        )
 
 
 def test_stability_arg_requires_parent():

@@ -50,7 +50,6 @@ class PkgSettings(BaseSettings):
     skip_open_in_editor: bool = False
     tag_prefix: str = ""
     is_flat: bool = False
-    allowed_duplicate_names: frozenset[str] = frozenset()
     keep_prerelease: bool = False
     ignored_symbols: frozenset[str] = frozenset()
 
@@ -136,7 +135,6 @@ def pkg_settings(
     commit_fix_diff_suffixes: tuple[str, ...] | None = None,
     after_file_write_hooks: tuple[str, ...] | None = None,
     is_flat: bool | None = None,
-    allowed_duplicate_names: frozenset[str] | None = None,
     keep_prerelease: bool | None = None,
     ignored_symbols: frozenset[str] | None = None,
 ) -> PkgSettings:
@@ -163,9 +161,6 @@ def pkg_settings(
         changelog_cleanup_count=project_config.changelog_cleanup_count,
         changelog_keep_count=project_config.changelog_keep_count,
         is_flat=is_flat if is_flat is not None else project_config.flat_package,
-        allowed_duplicate_names=allowed_duplicate_names
-        if allowed_duplicate_names is not None
-        else frozenset(project_config.allowed_duplicate_names),
         keep_prerelease=keep_prerelease
         if keep_prerelease is not None
         else project_config.keep_prerelease,

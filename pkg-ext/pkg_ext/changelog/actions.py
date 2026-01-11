@@ -97,6 +97,7 @@ class ChangelogActionBase(Entity):
 
 class MakePublicAction(ChangelogActionBase):
     type: Literal["make_public"] = "make_public"
+    group: str
     details: str = ""
 
     @property
@@ -128,6 +129,7 @@ class FixAction(ChangelogActionBase):
 
 class DeleteAction(ChangelogActionBase):
     type: Literal["delete"] = "delete"
+    group: str
 
     @property
     def bump_type(self) -> BumpType:
@@ -136,8 +138,8 @@ class DeleteAction(ChangelogActionBase):
 
 class RenameAction(ChangelogActionBase):
     type: Literal["rename"] = "rename"
+    group: str
     old_name: str
-    new_name: str
 
     @property
     def bump_type(self) -> BumpType:
@@ -146,6 +148,7 @@ class RenameAction(ChangelogActionBase):
 
 class BreakingChangeAction(ChangelogActionBase):
     type: Literal["breaking_change"] = "breaking_change"
+    group: str
     details: str
 
     @property
@@ -155,6 +158,7 @@ class BreakingChangeAction(ChangelogActionBase):
 
 class AdditionalChangeAction(ChangelogActionBase):
     type: Literal["additional_change"] = "additional_change"
+    group: str
     details: str
 
     @property
@@ -174,13 +178,16 @@ class ReleaseAction(ChangelogActionBase):
 
 class StabilityActionMixin(Entity):
     target: StabilityTarget
+    group: str | None = Field(default=None, description="Required when target=symbol")
     parent: str | None = Field(
         default=None,
         description="Parent symbol in format {group}.{symbol_name} when target=arg",
     )
 
     @model_validator(mode="after")
-    def validate_parent(self) -> Self:
+    def validate_stability_fields(self) -> Self:
+        if self.target == StabilityTarget.symbol and not self.group:
+            raise ValueError("group required when target=symbol")
         if self.target == StabilityTarget.arg:
             if not self.parent:
                 raise ValueError("parent required when target=arg")

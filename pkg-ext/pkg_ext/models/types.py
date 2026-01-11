@@ -53,3 +53,8 @@ def ref_id_name(ref_id: SymbolRefId) -> str:
 def ref_id(rel_path: str, symbol_name: str) -> SymbolRefId:
     """Generate a pydoc.locate(ref_id) compatible id."""
     return f"{as_module_path(rel_path)}.{symbol_name}"
+
+
+def qualified_name(group: str, name: str) -> str:
+    """Create {group}.{name} key for refs dict."""
+    return f"{group}.{name}"

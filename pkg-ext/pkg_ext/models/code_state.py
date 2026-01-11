@@ -5,7 +5,6 @@ from typing import Any, Iterable
 
 from model_lib.model_base import Entity
 from pydantic import model_validator
-from zero_3rdparty.iter_utils import group_by_once
 from zero_3rdparty.object_name import as_name
 
 from pkg_ext.errors import LocateError, RefSymbolNotInCodeError
@@ -17,15 +16,11 @@ from .types import SymbolRefId, ref_id_module, ref_id_name
 
 
 class PkgCodeState(Entity):
-    """Currently, we don't allow any shared names. E.g., mod1.Name1, mod2.Name2, Name1 != Name2"""
-
     pkg_import_name: str
     import_id_refs: dict[str, RefSymbol]
     files: list[PkgSrcFile | PkgTestFile]
-    allowed_duplicate_names: frozenset[str] = frozenset()
 
     def _add_transitive_dependencies(self) -> None:
-        """Add dependencies based on local imports."""
         while True:
             new_dependencies = False
             for file in self.files:
@@ -39,20 +34,7 @@ class PkgCodeState(Entity):
                 break
 
     @model_validator(mode="after")
-    def ensure_no_duplicate_names(self):
-        active_refs = group_by_once(
-            self.import_id_refs.values(), key=lambda ref: ref.name
-        )
-        duplicated_refs = [
-            f"duplicated refs for {name}: "
-            + ", ".join(str(ref) for ref in duplicated_refs)
-            for name, duplicated_refs in active_refs.items()
-            if len(duplicated_refs) > 1 and name not in self.allowed_duplicate_names
-        ]
-        duplicated_refs_lines = "\n".join(duplicated_refs)
-        assert not duplicated_refs, (
-            f"Found duplicated references: {duplicated_refs_lines}"
-        )
+    def validate_and_prepare(self):
         if not self.import_id_refs:
             raise ValueError("No code state found")
         self._add_transitive_dependencies()

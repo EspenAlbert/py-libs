@@ -90,7 +90,6 @@ class ProjectConfig(Entity):
     changelog_keep_count: int = DEFAULT_CHANGELOG_KEEP_COUNT
     after_file_write_hooks: tuple[str, ...] | None = None
     flat_package: bool = False
-    allowed_duplicate_names: tuple[str, ...] = ()
     keep_prerelease: bool = False
     ignored_symbols: tuple[str, ...] = ()
     groups: dict[str, GroupConfig] = Field(default_factory=dict)
@@ -154,7 +153,6 @@ def _convert_tuple_fields(data: dict[str, Any]) -> dict[str, Any]:
         "commit_fix_prefixes",
         "commit_diff_suffixes",
         "after_file_write_hooks",
-        "allowed_duplicate_names",
         "ignored_symbols",
     )
     for field in tuple_fields:

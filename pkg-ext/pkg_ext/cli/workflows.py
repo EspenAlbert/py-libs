@@ -34,7 +34,6 @@ from pkg_ext.git_usage import (
     find_pr_info_raw,
     git_commit,
 )
-from pkg_ext.interactive import on_new_ref
 from pkg_ext.models import PkgCodeState
 from pkg_ext.reference_handling import (
     handle_added_refs,
@@ -99,7 +98,6 @@ def parse_pkg_code_state(settings: PkgSettings) -> PkgCodeState:
         pkg_import_name=pkg_import_name,
         import_id_refs=import_id_symbols,
         files=files,
-        allowed_duplicate_names=settings.allowed_duplicate_names,
     )
 
 
@@ -120,7 +118,6 @@ def create_ctx(api_input: GenerateApiInput) -> pkg_ctx:
             settings=settings,
             tool_state=tool_state,
             code_state=code_state,
-            ref_add_callback=[on_new_ref(tool_state.groups)],
             git_changes=git_changes,
             _actions=extra_actions,
             explicit_pr=api_input.explicit_pr,

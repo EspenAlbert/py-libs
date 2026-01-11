@@ -41,8 +41,8 @@ def test_read_version_default_from_toml(settings, pkg_ctx_instance):
 
 
 _actions = [
-    (BreakingChangeAction(name="func_name", details=""), "1.0.0"),
-    (MakePublicAction(name="func_name"), "0.1.0"),
+    (BreakingChangeAction(name="func_name", group="test_group", details=""), "1.0.0"),
+    (MakePublicAction(name="func_name", group="test_group"), "0.1.0"),
     (FixAction(name="func_name", short_sha="abc", message="fix"), "0.0.2"),
     (KeepPrivateAction(name="func_name"), "0.0.1"),
 ]
@@ -101,11 +101,15 @@ def pkg_ctx_keep_prerelease(static_env_vars, tmp_path) -> pkg_ctx:
 
 
 _keep_prerelease_cases = [
-    (MakePublicAction(name="func_name"), "1.0.0b7", "1.0.0b8"),
-    (BreakingChangeAction(name="func_name", details=""), "1.0.0b7", "1.0.0b8"),
+    (MakePublicAction(name="func_name", group="test_group"), "1.0.0b7", "1.0.0b8"),
+    (
+        BreakingChangeAction(name="func_name", group="test_group", details=""),
+        "1.0.0b7",
+        "1.0.0b8",
+    ),
     (FixAction(name="func_name", short_sha="abc", message="fix"), "2.0.0a5", "2.0.0a6"),
-    (MakePublicAction(name="func_name"), "1.0.0rc1", "1.0.0rc2"),
-    (MakePublicAction(name="func_name"), "1.0.0", "1.1.0"),
+    (MakePublicAction(name="func_name", group="test_group"), "1.0.0rc1", "1.0.0rc2"),
+    (MakePublicAction(name="func_name", group="test_group"), "1.0.0", "1.1.0"),
 ]
 
 

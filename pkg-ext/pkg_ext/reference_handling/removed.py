@@ -23,20 +23,21 @@ def handle_removed_refs_flat(ctx: pkg_ctx) -> None:
         logger.info("No removed references found in the package")
         return
 
-    for ref in removed_refs:
-        ctx.add_changelog_action(DeleteAction(name=ref.name))
+    for group, ref in removed_refs:
+        ctx.add_changelog_action(DeleteAction(name=ref.name, group=group))
     logger.info(f"Auto-deleted {len(removed_refs)} refs in flat package")
 
 
 def process_reference_renames(
     active_refs: dict[str, RefStateWithSymbol],
-    renames: list[RefState],
+    renames: list[tuple[str, RefState]],
     task: new_task,
     ctx: pkg_ctx,
-) -> set[RefState]:
-    renamed_refs = set()
+) -> set[str]:
+    """Process renames. Returns set of old names that were renamed."""
+    renamed_names: set[str] = set()
     used_active: set[str] = set()
-    for ref in renames:
+    for group, ref in renames:
         rename_choices = [
             state for name, state in active_refs.items() if name not in used_active
         ]
@@ -49,11 +50,11 @@ def process_reference_renames(
         if confirm_create_alias(ref, new_ref):
             raise NotImplementedError("Alias creation is not implemented yet")
         ctx.add_changelog_action(
-            RenameAction(name=new_name, old_name=ref.name, new_name=new_name)
+            RenameAction(name=new_name, group=group, old_name=ref.name)
         )
-        renamed_refs.add(ref)
+        renamed_names.add(ref.name)
         task.update(advance=1)
-    return renamed_refs
+    return renamed_names
 
 
 def handle_removed_refs(ctx: pkg_ctx) -> None:
@@ -63,20 +64,26 @@ def handle_removed_refs(ctx: pkg_ctx) -> None:
     if not removed_refs:
         logger.info("No removed references found in the package")
         return
+    # Extract just RefState for UI selection
+    states_only = [state for _, state in removed_refs]
     if renames := select_multiple_ref_state(
-        "Select references that have been renamed (if any):", removed_refs
+        "Select references that have been renamed (if any):", states_only
     ):
+        # Find the (group, state) pairs for the selected renames
+        rename_pairs = [(g, s) for g, s in removed_refs if s in renames]
         with new_task(
-            "Renaming references", total=len(renames), log_updates=True
+            "Renaming references", total=len(rename_pairs), log_updates=True
         ) as task:
-            renamed_refs = process_reference_renames(
-                code_state.named_refs, renames, task, ctx
+            renamed_names = process_reference_renames(
+                code_state.named_refs, rename_pairs, task, ctx
             )
-            for ref in renamed_refs:
-                removed_refs.remove(ref)
-    delete_names = ", ".join(ref.name for ref in removed_refs)
-    if confirm_delete(removed_refs):
-        for ref in removed_refs:
-            ctx.add_changelog_action(DeleteAction(name=ref.name))
+            removed_refs = [
+                (g, s) for g, s in removed_refs if s.name not in renamed_names
+            ]
+    delete_names = ", ".join(ref.name for _, ref in removed_refs)
+    states_only = [state for _, state in removed_refs]
+    if confirm_delete(states_only):
+        for group, ref in removed_refs:
+            ctx.add_changelog_action(DeleteAction(name=ref.name, group=group))
     else:
         assert False, f"Old references {delete_names} were not confirmed for deletion"

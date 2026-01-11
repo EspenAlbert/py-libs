@@ -3,7 +3,7 @@ from pkg_ext.changelog.write_changelog_md import read_changelog_section
 
 
 def test_dump_changelog_actions(text_normalizer_regression, tmp_path):
-    actions = [MakePublicAction(name="test")]
+    actions = [MakePublicAction(name="test", group="my_group")]
     out_path = tmp_path / "test.yaml"
     dump_changelog_actions(out_path, actions)
     text_normalizer_regression(out_path)

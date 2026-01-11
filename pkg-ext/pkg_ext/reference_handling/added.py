@@ -169,11 +169,11 @@ def handle_added_refs(ctx: pkg_ctx) -> None:
         total=len(added_refs),
         log_updates=True,
     ) as task:
-        for symbol_type in [
+        for symbol_type in (
             SymbolType.FUNCTION,
             SymbolType.CLASS,
             SymbolType.EXCEPTION,
-        ]:
+        ):
             relevant_refs = [
                 ref for ref in added_refs.values() if ref.symbol.type == symbol_type
             ]

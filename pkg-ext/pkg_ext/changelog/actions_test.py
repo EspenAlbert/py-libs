@@ -20,7 +20,7 @@ def test_archive_old_actions_no_cleanup_when_below_trigger(tmp_path: Path):
     for i in range(1, 4):
         changelog_filepath(changelog_dir, i).write_text(f"content {i}")
     result = archive_old_actions(changelog_dir, cleanup_trigger=5, keep_count=2)
-    assert result is False
+    assert not result
     assert len(list(changelog_dir.glob("*.yaml"))) == 3
 
 
@@ -34,7 +34,7 @@ def test_archive_old_actions_cleanup_when_above_trigger(tmp_path: Path):
         (changelog_dir / filename).write_text(content)
         file_contents[filename] = content
     result = archive_old_actions(changelog_dir, cleanup_trigger=5, keep_count=2)
-    assert result is True
+    assert result
     remaining_files = list(changelog_dir.glob("*.yaml"))
     assert len(remaining_files) == 2
     archive_dir = changelog_dir / "000"

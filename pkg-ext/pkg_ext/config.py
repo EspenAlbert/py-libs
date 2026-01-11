@@ -126,7 +126,7 @@ def _safe_load_toml(path: Path) -> dict[str, Any]:
         return {}
 
     try:
-        with open(path, "rb") as f:
+        with path.open("rb") as f:
             return tomllib.load(f)
     except Exception as e:
         logger.warning(f"Failed to load TOML config from {path}: {e}")

@@ -100,11 +100,11 @@ assert not _missing_bumps, f"missing BumpType found for PkgVersion: {_missing_bu
 version_pattern_str = (
     r"^(VERSION|version)\s+:?=\s+\"(?P<version>\d+\.\d+\.\d+\+?[\w\d]*)\"$"
 )
-_version_regex = re.compile(version_pattern_str, re.M)
+_version_regex = re.compile(version_pattern_str, re.MULTILINE)
 
 
 def _extract_version(text: str) -> str:
-    if match := re.search(_version_regex, text):
+    if match := _version_regex.search(text):
         return match["version"]
     return ""
 

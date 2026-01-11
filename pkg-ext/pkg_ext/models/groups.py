@@ -150,8 +150,8 @@ class PublicGroups(Entity):
             group = self.get_or_create_group(name)
             group.stability = group_cfg.stability
             group.deprecation_reason = group_cfg.deprecation_reason
-            group.dependencies = list(group_cfg.dependencies)
-            group.docs_exclude = list(group_cfg.docs_exclude)
+            group.dependencies = group_cfg.dependencies.copy()
+            group.docs_exclude = group_cfg.docs_exclude.copy()
             group.docstring = group_cfg.docstring
 
     def write(self) -> None:

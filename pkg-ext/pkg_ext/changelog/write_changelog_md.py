@@ -17,11 +17,11 @@ from pkg_ext.errors import NoPublicGroupMatch
 from pkg_ext.models import PublicGroup
 
 logger = logging.getLogger(__name__)
-_header_regex = re.compile(r"^(?P<hashes>#{2,5})\s", re.M)
+_header_regex = re.compile(r"^(?P<hashes>#{2,5})\s", re.MULTILINE)
 
 
 def _header_level(changelog_content: str, version: str) -> int | None:
-    version_header_regex = re.compile(_header_regex.pattern + version, re.M)
+    version_header_regex = re.compile(_header_regex.pattern + version, re.MULTILINE)
     if header_match := version_header_regex.search(changelog_content):
         return len(header_match["hashes"])
     return None
@@ -30,8 +30,12 @@ def _header_level(changelog_content: str, version: str) -> int | None:
 def read_changelog_section(
     changelog_content: str, old_version: str, new_version: str
 ) -> str:
-    old_version_header_regex = re.compile(_header_regex.pattern + old_version, re.M)
-    new_version_header_regex = re.compile(_header_regex.pattern + new_version, re.M)
+    old_version_header_regex = re.compile(
+        _header_regex.pattern + old_version, re.MULTILINE
+    )
+    new_version_header_regex = re.compile(
+        _header_regex.pattern + new_version, re.MULTILINE
+    )
     if header_match := new_version_header_regex.search(changelog_content):
         section_end = -1
         if old_version and (
@@ -43,7 +47,7 @@ def read_changelog_section(
 
 
 def _add_changelog_section(old_content: str, new_section: str, version: str) -> str:
-    _header_start_regex = re.compile(_header_regex.pattern + version, re.M)
+    _header_start_regex = re.compile(_header_regex.pattern + version, re.MULTILINE)
     if existing := _header_start_regex.search(old_content):
         dash_count = len(existing["hashes"])
         start_index = existing.start()
@@ -66,8 +70,7 @@ def _add_changelog_section(old_content: str, new_section: str, version: str) -> 
             + "\n\n"
             + old_content[insert_point:]
         )
-    else:
-        return old_content + new_section
+    return old_content + new_section
 
 
 def _commit_url(remote_url: str, sha: str) -> str:
@@ -160,14 +163,12 @@ def write_changelog_md(ctx: pkg_ctx) -> Path:
     new_version = ctx.run_state.new_version
     if old_version == new_version:
         return path
-    changelog_md = _create_changelog_content(
-        ctx, unreleased, str(old_version), str(new_version)
-    )
+    changelog_md = _create_changelog_content(ctx, unreleased, old_version, new_version)
     path = ctx.settings.changelog_md
     if not path.exists():
         ensure_parents_write_text(path, "# Changelog\n\n")
     new_content = _add_changelog_section(
-        path.read_text(), "\n".join(changelog_md), str(new_version)
+        path.read_text(), "\n".join(changelog_md), new_version
     )
     path.write_text(new_content)
     return path

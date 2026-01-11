@@ -38,7 +38,7 @@ class PkgCodeState(Entity):
         if not self.import_id_refs:
             raise ValueError("No code state found")
         self._add_transitive_dependencies()
-        self.files = sorted(self.files)
+        self.files.sort()
         return self
 
     def ref_symbol(self, name: str) -> RefSymbol:

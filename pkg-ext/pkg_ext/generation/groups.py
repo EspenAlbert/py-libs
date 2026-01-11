@@ -33,8 +33,7 @@ def _stability_decorator_info(group: PublicGroup) -> tuple[str, str]:
         case Stability.deprecated:
             reason = group.deprecation_reason.replace('"', '\\"')
             return "from warnings import deprecated", f'deprecated("{reason}")'
-        case _:
-            return "", ""
+    return "", ""
 
 
 def write_group(group: PublicGroup, settings: PkgSettings, code: PkgCodeState) -> Path:

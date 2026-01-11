@@ -219,16 +219,16 @@ def chosen():
 
 def test_04_git_fix(e2e_dirs, file_regression_e2e, monkeypatch):
     """
-    Step 1:
-    - Copy everything except chosen.py
-    - Changelog should be updated.
-    Step 2:
-    - Commit the chosen.py
-    -
+    Tests git-based changelog detection:
+    - Step 1: Initial setup without chosen.py, creates base state with tag 0.0.1
+    - Step 2: Add chosen.py in a "fix:" commit, verify changelog picks it up
     """
     pkg_path = e2e_dirs.execution_e2e_pkg_path
     chosen_filepath = pkg_path / "chosen.py"
     groups = ["git_inferred"]
+    commit_message = "fix: adds chosen file"
+
+    # Step 1: Initial setup without chosen.py
     with _question_patcher({"inferred.py": " "}, groups):
         run_e2e(
             e2e_dirs,
@@ -238,18 +238,29 @@ def test_04_git_fix(e2e_dirs, file_regression_e2e, monkeypatch):
             skip_regressions=True,
             copy_ignore_globs=[chosen_filepath.name],
         )
+
+    # Create git repo with initial tag
     repo_path = e2e_dirs.execution_e2e_dir
     git_init(repo_path)
     git_commit(repo_path, "initial commit", tag="0.0.1")
+
+    # Add chosen.py in a fix commit
     chosen_filepath.write_text(_chosen_content)
-    chosen_file_commit_message = "fix: adds chosen file"
-    git_commit(repo_path, chosen_file_commit_message)
+    git_commit(repo_path, commit_message)
+
+    # Step 2: Run with git-since=last_git_tag to detect the fix commit
+    # Prompts expected:
+    # 1. File expose selection for chosen.py (empty = none)
+    # 2. select_group_name: "commit({sha}): {message}" -> select first group
+    # 3. select_commit_fix: "commit({sha}): {message}" -> select "include"
     with _question_patcher({chosen_filepath.name: ""}, groups=groups) as patcher:
-        patcher.dynamic_responses.extend(
-            [
-                PromptMatch(response=" ", substring="select group for commit"),
-                PromptMatch(response=" ", substring=chosen_file_commit_message),
-            ]
+        # Both prompts contain the commit message, need to match twice
+        patcher.dynamic_responses.append(
+            PromptMatch(
+                responses=[" ", " "],
+                substring=commit_message,
+                max_matches=2,
+            ),
         )
         run_e2e(
             e2e_dirs,

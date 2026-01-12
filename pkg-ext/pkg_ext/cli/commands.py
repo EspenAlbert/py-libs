@@ -4,9 +4,11 @@ import logging
 from pathlib import Path
 
 import typer
+from model_lib.serialize import dump
 from typer import Typer
 from zero_3rdparty.file_utils import ensure_parents_write_text
 
+from pkg_ext import api_dumper
 from pkg_ext.changelog import (
     DeprecatedAction,
     ExperimentalAction,
@@ -43,6 +45,7 @@ from pkg_ext.context import pkg_ctx as PkgCtx
 from pkg_ext.git_usage import GitChanges, GitSince, head_merge_pr
 from pkg_ext.models import PublicGroups
 from pkg_ext.settings import PkgSettings, pkg_settings
+from pkg_ext.version_bump import read_current_version
 
 logger = logging.getLogger(__name__)
 app = Typer(name="pkg-ext", help="Generate public API for a package and more!")
@@ -406,3 +409,30 @@ def dep(
     with pkg_ctx:
         pkg_ctx.add_changelog_action(action)
     logger.info(f"Created deprecated action in {pkg_ctx.changelog_path}")
+
+
+@app.command()
+def dump_api(
+    ctx: typer.Context,
+    output: Path | None = typer.Option(None, "-o", "--output", help="Output file path"),
+    dev: bool = typer.Option(
+        False, "--dev", help="Write to -dev file (gitignored for local comparison)"
+    ),
+):
+    """Dump public API to YAML for diffing and breaking change detection."""
+    settings: PkgSettings = ctx.obj
+    pkg_ctx = _create_stability_ctx(settings)
+    groups = settings.parse_computed_public_groups(PublicGroups)
+    version = str(read_current_version(pkg_ctx))
+    refs = {ref.local_id: ref for ref in pkg_ctx.code_state.all_refs}
+    api_dump = api_dumper.dump_public_api(
+        pkg_ctx.tool_state, groups, refs, settings.pkg_import_name, version
+    )
+    if output is None:
+        stem = f"{settings.pkg_import_name}.api"
+        if dev:
+            stem = f"{stem}-dev"
+        output = settings.state_dir / f"{stem}.yaml"
+    yaml_text = dump(api_dump.model_dump(exclude_none=True), "yaml")
+    ensure_parents_write_text(output, yaml_text)
+    logger.info(f"API dump written to {output}")

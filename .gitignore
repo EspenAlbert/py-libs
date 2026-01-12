@@ -21,3 +21,6 @@ __pycache__/
 site
 .cache
 docs/
+
+# pkg-ext API dumps (dev versions for local comparison)
+*.api-dev.yaml

@@ -1,5 +1,20 @@
 """Re-export all models for backward compatibility."""
 
+from .api_dump import (
+    CallableSignature,
+    ClassDump,
+    ClassFieldInfo,
+    ExceptionDump,
+    FuncParamInfo,
+    FunctionDump,
+    GlobalVarDump,
+    GroupDump,
+    ParamDefault,
+    ParamKind,
+    PublicApiDump,
+    SymbolDump,
+    TypeAliasDump,
+)
 from .code_state import PkgCodeState
 from .groups import PublicGroup, PublicGroups
 from .py_files import PkgFileBase, PkgSrcFile, PkgTestFile
@@ -42,4 +57,18 @@ __all__ = [
     "PublicGroups",
     # States
     "PkgCodeState",
+    # API Dump
+    "ParamKind",
+    "ParamDefault",
+    "FuncParamInfo",
+    "CallableSignature",
+    "ClassFieldInfo",
+    "FunctionDump",
+    "ClassDump",
+    "ExceptionDump",
+    "TypeAliasDump",
+    "GlobalVarDump",
+    "SymbolDump",
+    "GroupDump",
+    "PublicApiDump",
 ]

@@ -7,6 +7,7 @@ import typer
 from model_lib.serialize import dump
 from typer import Typer
 from zero_3rdparty.file_utils import ensure_parents_write_text
+from zero_3rdparty.sections import get_comment_config, parse_sections, replace_sections
 
 from pkg_ext import api_dumper
 from pkg_ext.changelog import (
@@ -42,6 +43,7 @@ from pkg_ext.cli.workflows import (
 )
 from pkg_ext.config import load_project_config
 from pkg_ext.context import pkg_ctx as PkgCtx
+from pkg_ext.generation import example_gen
 from pkg_ext.git_usage import GitChanges, GitSince, head_merge_pr
 from pkg_ext.models import PublicGroups
 from pkg_ext.settings import PkgSettings, pkg_settings
@@ -436,3 +438,43 @@ def dump_api(
     yaml_text = dump(api_dump.model_dump(exclude_none=True), "yaml")
     ensure_parents_write_text(output, yaml_text)
     logger.info(f"API dump written to {output}")
+
+
+@app.command()
+def gen_examples(
+    ctx: typer.Context,
+    group: str | None = typer.Option(
+        None, "-g", "--group", help="Generate for specific group only"
+    ),
+):
+    """Generate example files for public API functions."""
+    settings: PkgSettings = ctx.obj
+    pkg_ctx = _create_stability_ctx(settings)
+    groups = settings.parse_computed_public_groups(PublicGroups)
+    version = str(read_current_version(pkg_ctx))
+    refs = {ref.local_id: ref for ref in pkg_ctx.code_state.all_refs}
+    api_dump = api_dumper.dump_public_api(
+        pkg_ctx.tool_state, groups, refs, settings.pkg_import_name, version
+    )
+    py_config = get_comment_config(".py")
+    groups_to_process = [api_dump.get_group(group)] if group else api_dump.groups
+    for group_dump in groups_to_process:
+        if not group_dump.symbols:
+            continue
+        path = settings.examples_file_path(group_dump.name)
+        new_content = example_gen.generate_group_examples_file(
+            group_dump, settings.pkg_import_name
+        )
+        if path.exists():
+            existing = path.read_text()
+            src_sections = {
+                s.id: s.content
+                for s in parse_sections(new_content, example_gen.TOOL_NAME, py_config)
+            }
+            merged = replace_sections(
+                existing, src_sections, example_gen.TOOL_NAME, py_config
+            )
+            path.write_text(merged)
+        else:
+            ensure_parents_write_text(path, new_content)
+        logger.info(f"Generated examples: {path}")

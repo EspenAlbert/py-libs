@@ -105,6 +105,9 @@ class PkgSettings(BaseSettings):
     def warnings_file_path(self) -> Path:
         return self.pkg_directory / "_warnings.py"
 
+    def examples_file_path(self, group_name: str) -> Path:
+        return self.pkg_directory / f"{group_name}_examples.py"
+
     def force_bot(self) -> None:
         self.is_bot = True
         self.skip_open_in_editor = True

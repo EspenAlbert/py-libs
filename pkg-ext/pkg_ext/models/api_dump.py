@@ -101,3 +101,9 @@ class PublicApiDump(Entity):
     version: str
     groups: list[GroupDump] = Field(default_factory=list)
     dumped_at: datetime
+
+    def get_group(self, name: str) -> GroupDump:
+        for g in self.groups:
+            if g.name == name:
+                return g
+        raise ValueError(f"Group not found: {name}")

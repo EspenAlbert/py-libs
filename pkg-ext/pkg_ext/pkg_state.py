@@ -6,15 +6,19 @@ from pathlib import Path
 from model_lib.model_base import Entity
 from pydantic import DirectoryPath, Field
 
-from pkg_ext.changelog import (
+from pkg_ext.changelog.actions import (
     ChangelogAction,
     DeleteAction,
+    DeprecatedAction,
+    ExperimentalAction,
     FixAction,
+    GAAction,
     GroupModuleAction,
     KeepPrivateAction,
     MakePublicAction,
     RenameAction,
 )
+from pkg_ext.config import Stability
 from pkg_ext.errors import RefSymbolNotInCodeError
 from pkg_ext.models.code_state import PkgCodeState
 from pkg_ext.models.groups import PublicGroups
@@ -42,6 +46,18 @@ class PkgExtState(Entity):
     included_shas: set[str] = Field(
         default_factory=set,
         description="Fix commits included in the changelog",
+    )
+    group_stability: dict[str, Stability] = Field(
+        default_factory=dict,
+        description="Group name to stability level. Absence means GA.",
+    )
+    symbol_stability: dict[str, Stability] = Field(
+        default_factory=dict,
+        description="Key = {group}.{symbol}, value = stability level.",
+    )
+    arg_stability: dict[str, Stability] = Field(
+        default_factory=dict,
+        description="Key = {group}.{symbol}.{arg}, value = stability level.",
     )
 
     def code_ref(
@@ -89,6 +105,51 @@ class PkgExtState(Entity):
             case FixAction(short_sha=sha, ignored=ignored):
                 shas = self.ignored_shas if ignored else self.included_shas
                 shas.add(sha)
+            case ExperimentalAction() | GAAction() | DeprecatedAction():
+                self._update_stability(action)
+
+    def _stability_from_action(self, action: ChangelogAction) -> Stability:
+        match action:
+            case ExperimentalAction():
+                return Stability.experimental
+            case GAAction():
+                return Stability.ga
+            case DeprecatedAction():
+                return Stability.deprecated
+        raise ValueError(f"Unknown stability action: {action}")
+
+    def _update_stability(
+        self, action: ExperimentalAction | GAAction | DeprecatedAction
+    ) -> None:
+        stability = self._stability_from_action(action)
+        target = str(action.target)
+        match target:
+            case "group":
+                self.group_stability[action.name] = stability
+            case "symbol":
+                key = f"{action.group}.{action.name}"
+                self.symbol_stability[key] = stability
+            case "arg":
+                key = f"{action.parent}.{action.name}"
+                self.arg_stability[key] = stability
+
+    def get_group_stability(self, group: str) -> Stability:
+        return self.group_stability.get(group, Stability.ga)
+
+    def get_symbol_stability(self, group: str, symbol: str) -> Stability:
+        key = f"{group}.{symbol}"
+        if key in self.symbol_stability:
+            return self.symbol_stability[key]
+        return self.get_group_stability(group)
+
+    def get_arg_stability(self, group: str, symbol: str, arg: str) -> Stability:
+        key = f"{group}.{symbol}.{arg}"
+        if key in self.arg_stability:
+            return self.arg_stability[key]
+        return self.get_symbol_stability(group, symbol)
+
+    def is_group_ga(self, group: str) -> bool:
+        return self.get_group_stability(group) == Stability.ga
 
     def _refs_by_short_name(self) -> dict[str, list[RefState]]:
         """Group refs by short name for lookups when group is unknown."""

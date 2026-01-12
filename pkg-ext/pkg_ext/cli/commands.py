@@ -7,7 +7,14 @@ import typer
 from typer import Typer
 from zero_3rdparty.file_utils import ensure_parents_write_text
 
-from pkg_ext.changelog import ReleaseAction, parse_changelog_actions
+from pkg_ext.changelog import (
+    DeprecatedAction,
+    ExperimentalAction,
+    GAAction,
+    ReleaseAction,
+    parse_changelog,
+    parse_changelog_actions,
+)
 from pkg_ext.changelog.write_changelog_md import read_changelog_section
 from pkg_ext.cli.options import (
     option_bump_version,
@@ -16,15 +23,25 @@ from pkg_ext.cli.options import (
     option_pr,
     option_push,
 )
+from pkg_ext.cli.stability import (
+    ParsedTarget,
+    StabilityLevel,
+    validate_group_is_ga,
+    validate_target,
+)
 from pkg_ext.cli.workflows import (
     GenerateApiInput,
     clean_old_entries,
     create_ctx,
     generate_api_workflow,
+    parse_pkg_code_state,
     post_merge_commit_workflow,
     sync_files,
 )
-from pkg_ext.git_usage import GitSince, head_merge_pr
+from pkg_ext.config import load_project_config
+from pkg_ext.context import pkg_ctx as PkgCtx
+from pkg_ext.git_usage import GitChanges, GitSince, head_merge_pr
+from pkg_ext.models import PublicGroups
 from pkg_ext.settings import PkgSettings, pkg_settings
 
 logger = logging.getLogger(__name__)
@@ -209,9 +226,6 @@ def generate_api(
 ):
     settings: PkgSettings = ctx.obj
     if dump_groups:
-        from pkg_ext.config import load_project_config
-        from pkg_ext.models import PublicGroups
-
         groups = settings.parse_computed_public_groups(PublicGroups)
         config = load_project_config(settings.repo_root)
         groups.merge_config(config)
@@ -266,3 +280,129 @@ def release_notes(
     )
     output_file = settings.repo_root / f"dist/{tag_name}.changelog.md"
     ensure_parents_write_text(output_file, content)
+
+
+def _create_stability_ctx(settings: PkgSettings) -> PkgCtx:
+    code_state = parse_pkg_code_state(settings)
+    tool_state, extra_actions = parse_changelog(settings, code_state)
+    return PkgCtx(
+        settings=settings,
+        tool_state=tool_state,
+        code_state=code_state,
+        git_changes=GitChanges.empty(),
+        _actions=extra_actions,
+    )
+
+
+@app.command()
+def exp(
+    ctx: typer.Context,
+    target: str = typer.Option(
+        ..., "--target", "-t", help="Target: group | group.symbol | group.symbol.arg"
+    ),
+):
+    """Mark target as experimental."""
+    settings: PkgSettings = ctx.obj
+    parsed = ParsedTarget.parse(target)
+    pkg_ctx = _create_stability_ctx(settings)
+    groups = settings.parse_computed_public_groups(PublicGroups)
+    validate_target(parsed, pkg_ctx.code_state, groups)
+    if parsed.level == StabilityLevel.arg:
+        validate_group_is_ga(parsed, pkg_ctx.tool_state)
+    match parsed.level:
+        case StabilityLevel.group:
+            action = ExperimentalAction(
+                name=parsed.group, target=parsed.as_stability_target()
+            )
+        case StabilityLevel.symbol:
+            action = ExperimentalAction(
+                name=parsed.symbol,
+                target=parsed.as_stability_target(),
+                group=parsed.group,
+            )
+        case StabilityLevel.arg:
+            action = ExperimentalAction(
+                name=parsed.arg,
+                target=parsed.as_stability_target(),
+                parent=parsed.parent,
+            )
+    with pkg_ctx:
+        pkg_ctx.add_changelog_action(action)
+    logger.info(f"Created experimental action in {pkg_ctx.changelog_path}")
+
+
+@app.command()
+def ga(
+    ctx: typer.Context,
+    target: str = typer.Option(
+        ..., "--target", "-t", help="Target: group | group.symbol | group.symbol.arg"
+    ),
+):
+    """Graduate target to GA (general availability)."""
+    settings: PkgSettings = ctx.obj
+    parsed = ParsedTarget.parse(target)
+    pkg_ctx = _create_stability_ctx(settings)
+    groups = settings.parse_computed_public_groups(PublicGroups)
+    validate_target(parsed, pkg_ctx.code_state, groups)
+    match parsed.level:
+        case StabilityLevel.group:
+            action = GAAction(name=parsed.group, target=parsed.as_stability_target())
+        case StabilityLevel.symbol:
+            action = GAAction(
+                name=parsed.symbol,
+                target=parsed.as_stability_target(),
+                group=parsed.group,
+            )
+        case StabilityLevel.arg:
+            action = GAAction(
+                name=parsed.arg,
+                target=parsed.as_stability_target(),
+                parent=parsed.parent,
+            )
+    with pkg_ctx:
+        pkg_ctx.add_changelog_action(action)
+    logger.info(f"Created GA action in {pkg_ctx.changelog_path}")
+
+
+@app.command()
+def dep(
+    ctx: typer.Context,
+    target: str = typer.Option(
+        ..., "--target", "-t", help="Target: group | group.symbol | group.symbol.arg"
+    ),
+    replacement: str | None = typer.Option(
+        None, "--replacement", "-r", help="Replacement suggestion"
+    ),
+):
+    """Mark target as deprecated."""
+    settings: PkgSettings = ctx.obj
+    parsed = ParsedTarget.parse(target)
+    pkg_ctx = _create_stability_ctx(settings)
+    groups = settings.parse_computed_public_groups(PublicGroups)
+    validate_target(parsed, pkg_ctx.code_state, groups)
+    if parsed.level == StabilityLevel.arg:
+        validate_group_is_ga(parsed, pkg_ctx.tool_state)
+    match parsed.level:
+        case StabilityLevel.group:
+            action = DeprecatedAction(
+                name=parsed.group,
+                target=parsed.as_stability_target(),
+                replacement=replacement,
+            )
+        case StabilityLevel.symbol:
+            action = DeprecatedAction(
+                name=parsed.symbol,
+                target=parsed.as_stability_target(),
+                group=parsed.group,
+                replacement=replacement,
+            )
+        case StabilityLevel.arg:
+            action = DeprecatedAction(
+                name=parsed.arg,
+                target=parsed.as_stability_target(),
+                parent=parsed.parent,
+                replacement=replacement,
+            )
+    with pkg_ctx:
+        pkg_ctx.add_changelog_action(action)
+    logger.info(f"Created deprecated action in {pkg_ctx.changelog_path}")

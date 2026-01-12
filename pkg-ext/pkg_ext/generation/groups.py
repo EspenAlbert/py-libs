@@ -9,6 +9,7 @@ from pkg_ext.models import (
     ref_id_module,
     ref_id_name,
 )
+from pkg_ext.pkg_state import PkgExtState
 from pkg_ext.settings import PkgSettings
 
 
@@ -25,22 +26,36 @@ def write_imports(code: PkgCodeState, refs: list[SymbolRefId]) -> list[str]:
     return [as_import_line(code.pkg_import_name, ref) for ref in code.sort_refs(refs)]
 
 
-def _stability_decorator_info(group: PublicGroup, pkg_name: str) -> tuple[str, str]:
+def _stability_decorator_info(
+    group: PublicGroup, pkg_name: str, tool_state: PkgExtState
+) -> tuple[str, str]:
     """Returns (import_line, decorator_call) for stability wrapping."""
-    match group.stability:
+    stability = tool_state.get_group_stability(group.name)
+    match stability:
         case Stability.experimental:
             return f"from {pkg_name}._warnings import _experimental", "_experimental"
         case Stability.deprecated:
-            reason = group.deprecation_reason.replace('"', '\\"')
+            reason = (
+                group.deprecation_reason.replace('"', '\\"')
+                if group.deprecation_reason
+                else "deprecated"
+            )
             return "from warnings import deprecated", f'deprecated("{reason}")'
     return "", ""
 
 
-def write_group(group: PublicGroup, settings: PkgSettings, code: PkgCodeState) -> Path:
+def write_group(
+    group: PublicGroup,
+    settings: PkgSettings,
+    code: PkgCodeState,
+    tool_state: PkgExtState,
+) -> Path:
     path = settings.pkg_directory / f"{group.name}.py"
     pkg_name = code.pkg_import_name
     imports = [as_import_line(pkg_name, ref) for ref in group.sorted_refs]
-    decorator_import, decorator_call = _stability_decorator_info(group, pkg_name)
+    decorator_import, decorator_call = _stability_decorator_info(
+        group, pkg_name, tool_state
+    )
 
     if decorator_call:
         exposed_vars = [
@@ -65,6 +80,6 @@ def write_groups(ctx: pkg_ctx) -> list[Path]:
     if ctx.settings.is_flat:
         return []
     return [
-        write_group(group, ctx.settings, ctx.code_state)
+        write_group(group, ctx.settings, ctx.code_state, ctx.tool_state)
         for group in ctx.tool_state.groups.groups_no_root
     ]

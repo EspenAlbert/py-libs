@@ -214,6 +214,7 @@ class GAAction(StabilityActionMixin, ChangelogActionBase):
 
 class DeprecatedAction(StabilityActionMixin, ChangelogActionBase):
     type: Literal["deprecated"] = "deprecated"
+    replacement: str | None = None
 
     @property
     def bump_type(self) -> BumpType:

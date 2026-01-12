@@ -108,6 +108,9 @@ class PkgSettings(BaseSettings):
     def examples_file_path(self, group_name: str) -> Path:
         return self.pkg_directory / f"{group_name}_examples.py"
 
+    def test_file_path(self, group_name: str) -> Path:
+        return self.pkg_directory / f"{group_name}_test.py"
+
     def force_bot(self) -> None:
         self.is_bot = True
         self.skip_open_in_editor = True

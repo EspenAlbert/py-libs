@@ -43,7 +43,7 @@ from pkg_ext.cli.workflows import (
 )
 from pkg_ext.config import load_project_config
 from pkg_ext.context import pkg_ctx as PkgCtx
-from pkg_ext.generation import example_gen
+from pkg_ext.generation import example_gen, test_gen
 from pkg_ext.git_usage import GitChanges, GitSince, head_merge_pr
 from pkg_ext.models import PublicGroups
 from pkg_ext.settings import PkgSettings, pkg_settings
@@ -478,3 +478,49 @@ def gen_examples(
         else:
             ensure_parents_write_text(path, new_content)
         logger.info(f"Generated examples: {path}")
+
+
+@app.command()
+def gen_tests(
+    ctx: typer.Context,
+    group: str | None = typer.Option(
+        None, "-g", "--group", help="Generate for specific group only"
+    ),
+):
+    """Generate parameterized test files from examples."""
+    settings: PkgSettings = ctx.obj
+    pkg_ctx = _create_stability_ctx(settings)
+    groups = settings.parse_computed_public_groups(PublicGroups)
+    version = str(read_current_version(pkg_ctx))
+    refs = {ref.local_id: ref for ref in pkg_ctx.code_state.all_refs}
+    api_dump = api_dumper.dump_public_api(
+        pkg_ctx.tool_state, groups, refs, settings.pkg_import_name, version
+    )
+    py_config = get_comment_config(".py")
+    groups_to_process = [api_dump.get_group(group)] if group else api_dump.groups
+    for group_dump in groups_to_process:
+        testable_symbols = [
+            s
+            for s in group_dump.symbols
+            if isinstance(s, api_dumper.FunctionDump | api_dumper.ClassDump)
+        ]
+        if not testable_symbols:
+            logger.debug(f"Skipping group with no testable symbols: {group_dump.name}")
+            continue
+        path = settings.test_file_path(group_dump.name)
+        new_content = test_gen.generate_group_test_file(
+            group_dump, settings.pkg_import_name
+        )
+        if path.exists():
+            existing = path.read_text()
+            src_sections = {
+                s.id: s.content
+                for s in parse_sections(new_content, test_gen.TOOL_NAME, py_config)
+            }
+            merged = replace_sections(
+                existing, src_sections, test_gen.TOOL_NAME, py_config
+            )
+            path.write_text(merged)
+        else:
+            ensure_parents_write_text(path, new_content)
+        logger.info(f"Generated tests: {path}")

@@ -8,10 +8,11 @@ A CLI tool for managing Python package public API, versioning, and changelog gen
 - Generates `__init__.py` with imports and `__all__` based on decisions stored in changelog entries
 - Creates group modules (e.g., `my_group.py`) that re-export related symbols
 - Maintains a structured changelog directory (`.changelog/`) per PR
-- Bumps version based on changelog action types (expose=minor, fix=patch, breaking=major)
+- Bumps version based on changelog action types (make_public=minor, fix=patch, delete/rename=major)
 - Writes a human-readable `CHANGELOG.md`
 - Supports flat packages (all modules public) with automatic changelog tracking
 - Provides [stability decorators](docs/stability.md) (`@experimental`, `@deprecated`) with suppressible warnings
+- Generates `_warnings.py` in target packages to avoid runtime pkg-ext dependency
 
 ## Installation
 
@@ -27,19 +28,34 @@ pip install pkg-ext
 Symbols are identified by `{module_path}.{symbol_name}`, e.g., `my_pkg.utils.parse_config`.
 
 ### Changelog Actions
-Stored in `.changelog/{pr_number}.yaml` files:
+Stored in `.changelog/{pr_number}.yaml` files using Pydantic discriminated unions:
 
-| Action | Description | Version Bump |
-|--------|-------------|--------------|
-| `expose` | Make symbol public | Minor |
-| `hide` | Keep symbol internal | None |
-| `fix` | Bug fix from git commit | Patch |
-| `deprecate` | Mark as deprecated | None |
-| `delete` | Remove from public API | None |
-| `rename_and_delete` | Rename with old alias | Major |
-| `breaking_change` | Breaking API change | Major |
-| `group_module` | Assign module to a group | None |
-| `release` | Version release marker | None |
+| Action Type | Description | Version Bump | Key Fields |
+|-------------|-------------|--------------|------------|
+| `make_public` | Make symbol public | Minor | `group`, `details` |
+| `keep_private` | Keep symbol internal | None | `full_path` |
+| `fix` | Bug fix from git commit | Patch | `short_sha`, `message`, `changelog_message`, `ignored` |
+| `delete` | Remove from public API | Major | `group` |
+| `rename` | Rename with old alias | Major | `group`, `old_name` |
+| `breaking_change` | Breaking API change | Major | `group`, `details` |
+| `additional_change` | Non-breaking change | Patch | `group`, `details` |
+| `group_module` | Assign module to a group | None | `module_path` |
+| `release` | Version release marker | None | `old_version` |
+| `experimental` | Mark as experimental | Patch | `target`, `group`/`parent` |
+| `ga` | Graduate to GA | Patch | `target`, `group`/`parent` |
+| `deprecated` | Mark as deprecated | Patch | `target`, `group`/`parent`, `replacement` |
+
+All actions inherit common fields: `name`, `ts`, `author`, `pr`.
+
+### Stability Targets
+
+Stability actions (`experimental`, `ga`, `deprecated`) support three target levels:
+
+| Target | Description | Required Field |
+|--------|-------------|----------------|
+| `group` | Entire group | `name` = group name |
+| `symbol` | Single symbol | `group` + `name` = symbol name |
+| `arg` | Function argument | `parent` = `{group}.{symbol}`, `name` = arg name |
 
 ### Public Groups
 Groups organize related symbols. Configured in `.groups.yaml`:
@@ -60,7 +76,7 @@ When a new symbol is exposed, the tool prompts you to select which group it belo
 
 ### Flat Packages
 
-Packages can opt into "flat mode" via configuration. In flat packages, all public modules are considered part of the public API and no interactive prompts are shown.
+Packages can opt into "flat mode" via configuration. Flat packages have modules at the root level instead of using a `_internal/` subdirectory structure.
 
 Enable in `pyproject.toml`:
 
@@ -69,21 +85,29 @@ Enable in `pyproject.toml`:
 flat_package = true
 ```
 
-**Flat package behavior:**
+**Current flat package behavior:**
 
-| Aspect | Standard Package | Flat Package |
-|--------|------------------|--------------|
-| Added refs | Prompt: expose/hide + group | Auto-expose, module = group |
-| Removed refs | Prompt: rename/delete | Auto-delete |
-| `__init__.py` | Imports + VERSION + `__all__` | VERSION only |
-| Group modules | Generated (`my_group.py`) | Not generated |
-| Fix commits | Prompt for group | Auto-infer from changed file |
+| Aspect | Standard Package | Flat Package (current) |
+|--------|------------------|------------------------|
+| Added refs | Prompt: expose/hide + group selection | Auto-expose, module name = group |
+| Removed refs | Prompt: rename/delete confirmation | Auto-delete |
+| `__init__.py` | Group imports + VERSION + `__all__` | VERSION only (no imports) |
+| Group modules | Generated (e.g., `my_group.py`) | Not generated |
+| Fix commits | Prompt: include/exclude + group selection | Prompt: include/exclude, auto-infer group |
+| Stability | Group/symbol/arg levels | Same (tracked in changelog) |
+
+**Planned change:** Flat packages will use the same interactive prompts as standard packages in a future release. The only difference will be import paths (no `_internal/` prefix) and default group suggestion (module name).
+
+**When to use flat packages:**
+- Libraries where users import directly from modules (e.g., `from pkg.utils import func`)
+- Simple packages without `_internal` private modules
+- Packages where all public modules are part of the public API
 
 **Example flat package structure:**
 
 ```
 zero_3rdparty/
-  __init__.py       # VERSION only, no imports
+  __init__.py       # VERSION only (current), will include imports in future
   file_utils.py     # group: file_utils
   iter_utils.py     # group: iter_utils
   datetime_utils.py # group: datetime_utils
@@ -156,12 +180,44 @@ Full workflow: analyze changes, prompt for decisions, generate files.
 pkg-ext generate-api --bump --tag --push
 ```
 
+Options:
+- `--dump-groups` - Regenerate `.groups.yaml` with merged config data
+
 #### `release-notes`
 Extract changelog section for a specific tag.
 
 ```bash
 pkg-ext release-notes --tag v1.2.0
 ```
+
+### Stability Commands
+
+Manage stability at group, symbol, and argument levels. All stability state is tracked in `.changelog/` as the single source of truth.
+
+#### `exp` - Mark as experimental
+```bash
+pkg-ext exp --target config              # Mark entire group
+pkg-ext exp --target config.parse        # Mark symbol in group
+pkg-ext exp --target config.parse.timeout  # Mark argument on symbol
+```
+
+#### `ga` - Graduate to GA
+```bash
+pkg-ext ga --target config               # Graduate group to stable
+pkg-ext ga --target config.parse         # Graduate symbol
+```
+
+#### `dep` - Mark as deprecated
+```bash
+pkg-ext dep --target config --replacement new_config
+pkg-ext dep --target config.parse.callback --replacement on_done
+```
+
+**Target format:** `{group}` or `{group}.{symbol}` or `{group}.{symbol}.{arg}`
+
+**Constraints:**
+- Arg-level stability changes require the parent group to be GA
+- Commands validate that the target exists before creating an action
 
 ## Configuration
 
@@ -186,6 +242,19 @@ changelog_keep_count = 10     # Keep this many after cleanup
 after_file_write_hooks = ["ruff format {pkg_path}"]
 flat_package = false  # Set true for packages without _internal structure
 ```
+
+### Group Configuration
+
+Define groups with explicit settings in `pyproject.toml`:
+
+```toml
+[tool.pkg-ext.groups.my_group]
+dependencies = ["__ROOT__"]  # Groups this depends on
+docs_exclude = ["internal_helper"]
+docstring = "Utilities for common operations"
+```
+
+**Note:** Stability is not configured here. Use `pkg-ext exp/ga/dep` CLI commands to manage stability via changelog actions.
 
 ### Dev Mode
 
@@ -225,6 +294,8 @@ VERSION = "0.1.0"
 
 ### Group Module (`my_group.py`)
 
+**Standard (GA stability):**
+
 ```python
 # Generated by pkg-ext
 from my_pkg.helpers import helper_func as _helper_func
@@ -232,23 +303,55 @@ from my_pkg.helpers import helper_func as _helper_func
 helper_func = _helper_func
 ```
 
+**With experimental stability:**
+
+```python
+# Generated by pkg-ext
+from my_pkg.helpers import helper_func as _helper_func
+from my_pkg._warnings import _experimental
+
+helper_func = _experimental(_helper_func)
+```
+
 The underscore alias pattern prevents re-export issues with `__all__`.
+
+### `_warnings.py` (Generated)
+
+When any group has non-GA stability, pkg-ext generates a `_warnings.py` module in the target package. This removes the runtime dependency on pkg-ext.
+
+```python
+"""Warning classes and decorators for MyPkg stability levels.
+
+Auto-generated by pkg-ext. Do not edit manually.
+"""
+# ... implementation details ...
+
+class MyPkgWarning(UserWarning): ...
+class MyPkgExperimentalWarning(MyPkgWarning): ...
+class MyPkgDeprecationWarning(MyPkgWarning, DeprecationWarning): ...
+```
+
+The warning class names use PascalCase of the package name (e.g., `PkgExtWarning` for `pkg_ext`).
 
 ### `.changelog/{pr}.yaml`
 
 ```yaml
 name: parse_config
-type: expose
+type: make_public
+group: my_group
 ts: '2025-01-02T10:00:00+00:00'
-author: UNSET
+author: username
 details: created in my_pkg/utils.py
 ---
 name: my_group
 type: group_module
 ts: '2025-01-02T10:00:01+00:00'
-details:
-  module_path: my_pkg.utils
-  type: group_module
+module_path: my_pkg.utils
+---
+name: my_group
+type: experimental
+target: group
+ts: '2025-01-02T10:00:02+00:00'
 ```
 
 ### `CHANGELOG.md`
@@ -289,6 +392,13 @@ details:
    - Updates `CHANGELOG.md`
    - Creates git tag
    - Pushes tag
+
+### Stability Workflow
+
+1. Mark new group as experimental: `pkg-ext exp --target new_group`
+2. Develop features, symbols auto-inherit group stability
+3. Graduate to GA: `pkg-ext ga --target new_group`
+4. Mark arg for deprecation: `pkg-ext dep --target group.func.old_arg --replacement new_arg`
 
 ## Symbol Detection
 
@@ -351,6 +461,10 @@ When exposing a function, its type hint arguments are auto-exposed if they refer
 - **Removed reference handling incomplete** - `select_ref` and `select_multiple_ref_state` raise `NotImplementedError`. This breaks rename workflows when symbols are removed.
 - **Alias creation not implemented** - `confirm_create_alias` always returns `False`
 
+### Stability
+- **Non-callable symbols** - Constants and type aliases in experimental/deprecated groups don't emit warnings. `@experimental` and `@deprecated` only work on functions and classes.
+- **Arg-level only for GA groups** - Cannot track arg-level stability changes until group is GA.
+
 ## File Structure
 
 **Standard package (with `_internal`):**
@@ -366,6 +480,7 @@ my-repo/
   my_pkg/
     __init__.py          # Generated exports
     my_group.py          # Generated group module
+    _warnings.py         # Generated stability module (if needed)
     utils.py             # Source file
     _internal.py         # Private module (ignored)
 ```

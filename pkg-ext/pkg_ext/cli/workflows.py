@@ -153,7 +153,7 @@ def sync_files(api_input: GenerateApiInput, ctx: pkg_ctx):
     version_new = bump_version(ctx, version_old)
     ctx.add_versions(str(version_old), str(version_new))
     version_str = str(version_new) if api_input.bump_version else str(version_old)
-    write_warnings_module(ctx.settings, ctx.tool_state.groups)
+    write_warnings_module(ctx.settings, ctx.tool_state)
     write_groups(ctx)
     write_init(ctx, version_str)
     update_pyproject_toml(ctx, version_str)

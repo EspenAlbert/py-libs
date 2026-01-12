@@ -35,11 +35,8 @@ def _stability_decorator_info(
         case Stability.experimental:
             return f"from {pkg_name}._warnings import _experimental", "_experimental"
         case Stability.deprecated:
-            reason = (
-                group.deprecation_reason.replace('"', '\\"')
-                if group.deprecation_reason
-                else "deprecated"
-            )
+            replacement = tool_state.get_deprecation_replacement(group.name)
+            reason = replacement.replace('"', '\\"') if replacement else "deprecated"
             return "from warnings import deprecated", f'deprecated("{reason}")'
     return "", ""
 

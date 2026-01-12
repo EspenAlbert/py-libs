@@ -1,36 +1,82 @@
-from pkg_ext.config import Stability
-from pkg_ext.models.groups import PublicGroup, PublicGroups
 from pkg_ext.warnings_gen import generate_warnings_content, needs_warnings_module
 
 
-def test_needs_warnings_module_false_when_all_ga():
-    groups = PublicGroups(
-        groups=[
-            PublicGroup(name="__ROOT__"),
-            PublicGroup(name="config", stability=Stability.ga),
-        ]
+def test_needs_warnings_module_false_when_all_ga(tmp_path):
+    from pkg_ext.models.groups import PublicGroup, PublicGroups
+    from pkg_ext.pkg_state import PkgExtState
+
+    changelog_dir = tmp_path / ".changelog"
+    changelog_dir.mkdir(exist_ok=True)
+    pkg_path = tmp_path / "my_pkg"
+    pkg_path.mkdir(exist_ok=True)
+
+    tool_state = PkgExtState(
+        repo_root=tmp_path,
+        changelog_dir=changelog_dir,
+        pkg_path=pkg_path,
+        groups=PublicGroups(
+            groups=[
+                PublicGroup(name="__ROOT__"),
+                PublicGroup(name="config"),
+            ]
+        ),
     )
-    assert not needs_warnings_module(groups)
+    # No stability set = all GA
+    assert not needs_warnings_module(tool_state)
 
 
-def test_needs_warnings_module_true_when_experimental():
-    groups = PublicGroups(
-        groups=[
-            PublicGroup(name="__ROOT__"),
-            PublicGroup(name="config", stability=Stability.experimental),
-        ]
+def test_needs_warnings_module_true_when_experimental(tmp_path):
+    from pkg_ext.changelog.actions import ExperimentalAction, StabilityTarget
+    from pkg_ext.models.groups import PublicGroup, PublicGroups
+    from pkg_ext.pkg_state import PkgExtState
+
+    changelog_dir = tmp_path / ".changelog"
+    changelog_dir.mkdir(exist_ok=True)
+    pkg_path = tmp_path / "my_pkg"
+    pkg_path.mkdir(exist_ok=True)
+
+    tool_state = PkgExtState(
+        repo_root=tmp_path,
+        changelog_dir=changelog_dir,
+        pkg_path=pkg_path,
+        groups=PublicGroups(
+            groups=[
+                PublicGroup(name="__ROOT__"),
+                PublicGroup(name="config"),
+            ]
+        ),
     )
-    assert needs_warnings_module(groups)
-
-
-def test_needs_warnings_module_true_when_deprecated():
-    groups = PublicGroups(
-        groups=[
-            PublicGroup(name="__ROOT__"),
-            PublicGroup(name="legacy", stability=Stability.deprecated),
-        ]
+    tool_state.update_state(
+        ExperimentalAction(name="config", target=StabilityTarget.group)
     )
-    assert needs_warnings_module(groups)
+    assert needs_warnings_module(tool_state)
+
+
+def test_needs_warnings_module_true_when_deprecated(tmp_path):
+    from pkg_ext.changelog.actions import DeprecatedAction, StabilityTarget
+    from pkg_ext.models.groups import PublicGroup, PublicGroups
+    from pkg_ext.pkg_state import PkgExtState
+
+    changelog_dir = tmp_path / ".changelog"
+    changelog_dir.mkdir(exist_ok=True)
+    pkg_path = tmp_path / "my_pkg"
+    pkg_path.mkdir(exist_ok=True)
+
+    tool_state = PkgExtState(
+        repo_root=tmp_path,
+        changelog_dir=changelog_dir,
+        pkg_path=pkg_path,
+        groups=PublicGroups(
+            groups=[
+                PublicGroup(name="__ROOT__"),
+                PublicGroup(name="config"),
+            ]
+        ),
+    )
+    tool_state.update_state(
+        DeprecatedAction(name="config", target=StabilityTarget.group)
+    )
+    assert needs_warnings_module(tool_state)
 
 
 def test_generate_warnings_content_format():

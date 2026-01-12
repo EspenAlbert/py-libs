@@ -1,20 +1,26 @@
 """Generator for _warnings.py module in target packages."""
 
+from __future__ import annotations
+
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from zero_3rdparty import file_utils
 from zero_3rdparty.humps import pascalize
 
 from pkg_ext.config import Stability
-from pkg_ext.models.groups import PublicGroups
 from pkg_ext.settings import PkgSettings
 
+if TYPE_CHECKING:
+    from pkg_ext.pkg_state import PkgExtState
 
-def needs_warnings_module(groups: PublicGroups) -> bool:
+
+def needs_warnings_module(tool_state: PkgExtState) -> bool:
+    """Check if any group has non-GA stability (from changelog actions)."""
     return any(
-        group.stability in (Stability.experimental, Stability.deprecated)
-        for group in groups.groups
-        if group.stability is not None
+        tool_state.get_group_stability(group.name)
+        in (Stability.experimental, Stability.deprecated)
+        for group in tool_state.groups.groups
     )
 
 
@@ -185,9 +191,11 @@ def _deprecated_arg(
 '''
 
 
-def write_warnings_module(settings: PkgSettings, groups: PublicGroups) -> Path | None:
+def write_warnings_module(
+    settings: PkgSettings, tool_state: PkgExtState
+) -> Path | None:
     """Write _warnings.py if stability features are used. Returns path or None."""
-    if not needs_warnings_module(groups):
+    if not needs_warnings_module(tool_state):
         return None
     content = generate_warnings_content(settings.pkg_import_name)
     file_utils.ensure_parents_write_text(settings.warnings_file_path, content)

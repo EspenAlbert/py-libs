@@ -39,16 +39,8 @@ class Stability(StrEnum):
 
 class GroupConfig(Entity):
     dependencies: list[str] = Field(default_factory=list)
-    stability: Stability = Stability.ga
-    deprecation_reason: str = ""
     docs_exclude: list[str] = Field(default_factory=list)
     docstring: str = ""
-
-    @model_validator(mode="after")
-    def validate_deprecation_reason(self) -> Self:
-        if self.stability == Stability.deprecated and not self.deprecation_reason:
-            raise ValueError("deprecation_reason required when stability=deprecated")
-        return self
 
 
 def _detect_cycle(groups: dict[str, GroupConfig]) -> list[str] | None:

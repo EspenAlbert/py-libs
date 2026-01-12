@@ -59,6 +59,10 @@ class PkgExtState(Entity):
         default_factory=dict,
         description="Key = {group}.{symbol}.{arg}, value = stability level.",
     )
+    deprecation_replacements: dict[str, str] = Field(
+        default_factory=dict,
+        description="Key = target (group/symbol/arg), value = replacement suggestion.",
+    )
 
     def code_ref(
         self, code_state: PkgCodeState, group: str, name: str
@@ -126,12 +130,18 @@ class PkgExtState(Entity):
         match target:
             case "group":
                 self.group_stability[action.name] = stability
+                if isinstance(action, DeprecatedAction) and action.replacement:
+                    self.deprecation_replacements[action.name] = action.replacement
             case "symbol":
                 key = f"{action.group}.{action.name}"
                 self.symbol_stability[key] = stability
+                if isinstance(action, DeprecatedAction) and action.replacement:
+                    self.deprecation_replacements[key] = action.replacement
             case "arg":
                 key = f"{action.parent}.{action.name}"
                 self.arg_stability[key] = stability
+                if isinstance(action, DeprecatedAction) and action.replacement:
+                    self.deprecation_replacements[key] = action.replacement
 
     def get_group_stability(self, group: str) -> Stability:
         return self.group_stability.get(group, Stability.ga)
@@ -150,6 +160,9 @@ class PkgExtState(Entity):
 
     def is_group_ga(self, group: str) -> bool:
         return self.get_group_stability(group) == Stability.ga
+
+    def get_deprecation_replacement(self, key: str) -> str:
+        return self.deprecation_replacements.get(key, "")
 
     def _refs_by_short_name(self) -> dict[str, list[RefState]]:
         """Group refs by short name for lookups when group is unknown."""

@@ -9,7 +9,6 @@ from model_lib.serialize import dump
 from pydantic import Field
 from zero_3rdparty import file_utils
 
-from pkg_ext.config import Stability
 from pkg_ext.errors import InvalidGroupSelectionError, NoPublicGroupMatch
 
 from .py_symbols import RefSymbol
@@ -41,8 +40,6 @@ class PublicGroup(Entity):
     owned_refs: set[SymbolRefId] = Field(default_factory=set)
     owned_modules: set[str] = Field(default_factory=set)
     # Config fields (populated from GroupConfig when merging)
-    stability: Stability | None = None
-    deprecation_reason: str = ""
     dependencies: list[str] = Field(default_factory=list)
     docs_exclude: list[str] = Field(default_factory=list)
     docstring: str = ""
@@ -148,8 +145,6 @@ class PublicGroups(Entity):
     def merge_config(self, config: ProjectConfig) -> None:
         for name, group_cfg in config.groups.items():
             group = self.get_or_create_group(name)
-            group.stability = group_cfg.stability
-            group.deprecation_reason = group_cfg.deprecation_reason
             group.dependencies = group_cfg.dependencies.copy()
             group.docs_exclude = group_cfg.docs_exclude.copy()
             group.docstring = group_cfg.docstring
@@ -165,8 +160,6 @@ class PublicGroups(Entity):
                 exclude={
                     "owned_refs",
                     "owned_modules",
-                    "stability",
-                    "deprecation_reason",
                     "dependencies",
                     "docs_exclude",
                     "docstring",
@@ -176,10 +169,6 @@ class PublicGroups(Entity):
                 group_dict["owned_modules"] = owned_modules
             if owned_refs := sorted(group.owned_refs):
                 group_dict["owned_refs"] = owned_refs
-            if group.stability:
-                group_dict["stability"] = str(group.stability)
-            if group.deprecation_reason:
-                group_dict["deprecation_reason"] = group.deprecation_reason
             if group.dependencies:
                 group_dict["dependencies"] = group.dependencies
             if group.docs_exclude:

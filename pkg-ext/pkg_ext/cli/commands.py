@@ -316,13 +316,13 @@ def exp(
             )
         case StabilityLevel.symbol:
             action = ExperimentalAction(
-                name=parsed.symbol,
+                name=parsed.symbol_name,
                 target=parsed.as_stability_target(),
                 group=parsed.group,
             )
         case StabilityLevel.arg:
             action = ExperimentalAction(
-                name=parsed.arg,
+                name=parsed.arg_name,
                 target=parsed.as_stability_target(),
                 parent=parsed.parent,
             )
@@ -349,13 +349,13 @@ def ga(
             action = GAAction(name=parsed.group, target=parsed.as_stability_target())
         case StabilityLevel.symbol:
             action = GAAction(
-                name=parsed.symbol,
+                name=parsed.symbol_name,
                 target=parsed.as_stability_target(),
                 group=parsed.group,
             )
         case StabilityLevel.arg:
             action = GAAction(
-                name=parsed.arg,
+                name=parsed.arg_name,
                 target=parsed.as_stability_target(),
                 parent=parsed.parent,
             )
@@ -391,14 +391,14 @@ def dep(
             )
         case StabilityLevel.symbol:
             action = DeprecatedAction(
-                name=parsed.symbol,
+                name=parsed.symbol_name,
                 target=parsed.as_stability_target(),
                 group=parsed.group,
                 replacement=replacement,
             )
         case StabilityLevel.arg:
             action = DeprecatedAction(
-                name=parsed.arg,
+                name=parsed.arg_name,
                 target=parsed.as_stability_target(),
                 parent=parsed.parent,
                 replacement=replacement,

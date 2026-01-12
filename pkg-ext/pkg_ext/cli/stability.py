@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import inspect
-from dataclasses import dataclass
 from pydoc import locate
 from typing import Self
 
+from model_lib import Entity
 from zero_3rdparty.enum_utils import StrEnum
 
 from pkg_ext.changelog.actions import StabilityTarget
@@ -22,8 +22,7 @@ class StabilityLevel(StrEnum):
     arg = "arg"
 
 
-@dataclass
-class ParsedTarget:
+class ParsedTarget(Entity):
     level: StabilityLevel
     group: str
     symbol: str | None = None
@@ -53,10 +52,21 @@ class ParsedTarget:
         return StabilityTarget(self.level.value)
 
     @property
-    def parent(self) -> str | None:
-        if self.level == StabilityLevel.arg:
-            return f"{self.group}.{self.symbol}"
-        return None
+    def symbol_name(self) -> str:
+        assert self.symbol, f"symbol_name called on group-level target: {self}"
+        return self.symbol
+
+    @property
+    def arg_name(self) -> str:
+        assert self.arg, f"arg_name called on non-arg-level target: {self}"
+        return self.arg
+
+    @property
+    def parent(self) -> str:
+        assert self.level == StabilityLevel.arg, (
+            f"parent called on non-arg target: {self}"
+        )
+        return f"{self.group}.{self.symbol}"
 
 
 def validate_group_exists(target: ParsedTarget, groups: PublicGroups) -> None:

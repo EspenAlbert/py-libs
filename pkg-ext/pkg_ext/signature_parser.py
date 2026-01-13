@@ -57,24 +57,93 @@ def _annotation_str(annotation: Any) -> str | None:
     return str(annotation)
 
 
-MODULE_NORMALIZATION = {
-    "pathlib._local": "pathlib",
-}
+def _normalize_module(module: str, pkg_name: str = "") -> str:
+    """Normalize internal module paths by dropping trailing underscore-prefixed segments.
+
+    Examples:
+        - pathlib._local -> pathlib
+        - collections._abc -> collections
+        - mypackage._internal.utils -> mypackage (unless within mypackage itself)
+
+    If pkg_name is provided, internal modules within that package are preserved.
+    """
+    parts = module.split(".")
+    # Drop trailing parts that start with underscore (internal implementation details)
+    while len(parts) > 1 and parts[-1].startswith("_"):
+        # Keep internal modules if they're part of the current package
+        if pkg_name and parts[0] == pkg_name:
+            break
+        parts.pop()
+    return ".".join(parts)
 
 
-def _annotation_import(annotation: Any) -> str | None:
-    """Extract the full import path for a type annotation."""
+def _annotation_import(annotation: Any, pkg_name: str = "") -> str | None:
+    """Extract the full import path for a type annotation.
+
+    Handles union types (X | Y) by returning imports for all component types.
+    Returns None for builtins.
+    """
     if annotation is inspect.Parameter.empty:
         return None
+
+    # Handle Union types (X | Y or Union[X, Y])
+    if isinstance(annotation, types.UnionType):
+        # Return first non-builtin import from union components
+        for arg in typing.get_args(annotation):
+            if result := _annotation_import(arg, pkg_name):
+                return result
+        return None
+
+    origin = get_origin(annotation)
+    if origin is Union:
+        for arg in typing.get_args(annotation):
+            if result := _annotation_import(arg, pkg_name):
+                return result
+        return None
+
     if isinstance(annotation, type):
         module = annotation.__module__
         name = annotation.__name__
         if module == "builtins":
             return None
-        # Normalize internal module paths
-        module = MODULE_NORMALIZATION.get(module, module)
+        module = _normalize_module(module, pkg_name)
         return f"{module}.{name}"
     return None
+
+
+def _collect_all_annotation_imports(annotation: Any, pkg_name: str = "") -> list[str]:
+    """Collect ALL import paths from a type annotation, including all union members."""
+    imports: list[str] = []
+
+    if annotation is inspect.Parameter.empty:
+        return imports
+
+    # Handle Union types - collect from all components
+    if isinstance(annotation, types.UnionType):
+        for arg in typing.get_args(annotation):
+            imports.extend(_collect_all_annotation_imports(arg, pkg_name))
+        return imports
+
+    origin = get_origin(annotation)
+    if origin is Union:
+        for arg in typing.get_args(annotation):
+            imports.extend(_collect_all_annotation_imports(arg, pkg_name))
+        return imports
+
+    # Handle generic types like list[SomeType]
+    if origin is not None:
+        for arg in typing.get_args(annotation):
+            imports.extend(_collect_all_annotation_imports(arg, pkg_name))
+        return imports
+
+    if isinstance(annotation, type):
+        module = annotation.__module__
+        name = annotation.__name__
+        if module != "builtins":
+            module = _normalize_module(module, pkg_name)
+            imports.append(f"{module}.{name}")
+
+    return imports
 
 
 def parse_param_default(param: inspect.Parameter) -> ParamDefault | None:
@@ -100,7 +169,7 @@ def _parse_func_param(
         name=param.name,
         kind=_PARAM_KIND_MAP[param.kind],
         type_annotation=_annotation_str(annotation),
-        type_import=_annotation_import(annotation),
+        type_imports=_collect_all_annotation_imports(annotation),
         default=parse_param_default(param),
     )
 
@@ -122,6 +191,9 @@ def parse_signature(obj: Callable) -> CallableSignature:
     return CallableSignature(
         parameters=params,
         return_annotation=_annotation_str(return_hint) if return_hint else None,
+        return_type_imports=_collect_all_annotation_imports(return_hint)
+        if return_hint
+        else [],
     )
 
 
@@ -170,7 +242,7 @@ def _parse_pydantic_fields(cls: type) -> list[ClassFieldInfo]:
             ClassFieldInfo(
                 name=name,
                 type_annotation=_annotation_str(field.annotation),
-                type_import=_annotation_import(field.annotation),
+                type_imports=_collect_all_annotation_imports(field.annotation),
                 default=_parse_field_default(field),
                 is_class_var=False,
                 is_computed=False,
@@ -187,7 +259,7 @@ def _parse_pydantic_fields(cls: type) -> list[ClassFieldInfo]:
                 ClassFieldInfo(
                     name=name,
                     type_annotation=_annotation_str(computed.return_type),
-                    type_import=_annotation_import(computed.return_type),
+                    type_imports=_collect_all_annotation_imports(computed.return_type),
                     is_computed=True,
                     description=computed.description
                     if hasattr(computed, "description")
@@ -214,7 +286,7 @@ def _parse_dataclass_fields(cls: type) -> list[ClassFieldInfo]:
             ClassFieldInfo(
                 name=f.name,
                 type_annotation=_annotation_str(annotation),
-                type_import=_annotation_import(annotation),
+                type_imports=_collect_all_annotation_imports(annotation),
                 default=default,
                 is_class_var=is_class_var,
             )

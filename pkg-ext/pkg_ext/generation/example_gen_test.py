@@ -123,7 +123,7 @@ def test_generate_group_examples_file():
 
 
 def test_generate_group_examples_file_with_imports():
-    """Ensure type imports are generated from type_import field."""
+    """Ensure type imports are generated from type_imports field."""
     group = GroupDump(
         name="sections",
         stability=Stability.ga,
@@ -144,13 +144,13 @@ def test_generate_group_examples_file_with_imports():
                             name="path",
                             kind=ParamKind.POSITIONAL_OR_KEYWORD,
                             type_annotation="Path",
-                            type_import="pathlib.Path",
+                            type_imports=["pathlib.Path"],
                         ),
                         FuncParamInfo(
                             name="config",
                             kind=ParamKind.POSITIONAL_OR_KEYWORD,
                             type_annotation="CommentConfig",
-                            type_import="my_pkg.sections.CommentConfig",
+                            type_imports=["my_pkg.sections.CommentConfig"],
                         ),
                     ]
                 ),

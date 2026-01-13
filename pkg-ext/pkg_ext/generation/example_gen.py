@@ -32,24 +32,23 @@ def _type_str(type_annotation: str | None) -> str:
 
 
 def _collect_type_imports(group: GroupDump) -> set[str]:
-    """Collect all type_import values from a group's symbols."""
+    """Collect all type_imports values from a group's symbols (parameters, fields, and return types)."""
     imports: set[str] = set()
     for symbol in group.symbols:
         match symbol:
             case FunctionDump():
                 for p in symbol.signature.parameters:
-                    if p.type_import:
-                        imports.add(p.type_import)
+                    imports.update(p.type_imports)
+                imports.update(symbol.signature.return_type_imports)
             case ClassDump():
                 if symbol.fields:
                     for f in symbol.fields:
-                        if f.type_import:
-                            imports.add(f.type_import)
+                        imports.update(f.type_imports)
     return imports
 
 
 def _generate_type_imports(group: GroupDump) -> tuple[list[str], list[str]]:
-    """Generate import statements from collected type_import values.
+    """Generate import statements from collected type_imports values.
 
     Returns (stdlib_imports, pkg_imports) tuple for proper ordering.
     """

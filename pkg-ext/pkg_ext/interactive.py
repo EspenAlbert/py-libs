@@ -1,3 +1,6 @@
+import logging
+from pathlib import Path
+
 from ask_shell._internal.interactive import (
     ChoiceTyped,
     NewHandlerChoice,
@@ -17,6 +20,8 @@ from pkg_ext.models import (
     RefStateWithSymbol,
     RefSymbol,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def as_choices(
@@ -73,14 +78,25 @@ def select_group_name(
     return select_list_choice(prompt_text, choices)
 
 
-def select_group(groups: PublicGroups, ref: RefSymbol) -> PublicGroup:
-    choices = as_choices(groups)
-    group = select_list_choice(
-        f"Choose public API group name for {ref.local_id}",
-        choices,
-        options=new_public_group_constructor(groups, ref),
-    )
-    return groups.add_ref(ref, group.name)
+def has_group_conflict(pkg_path: Path, group_name: str) -> bool:
+    """Check if group name conflicts with existing source file."""
+    return (pkg_path / f"{group_name}.py").exists()
+
+
+def select_group(groups: PublicGroups, ref: RefSymbol, pkg_path: Path) -> PublicGroup:
+    while True:
+        choices = as_choices(groups)
+        group = select_list_choice(
+            f"Choose public API group name for {ref.local_id}",
+            choices,
+            options=new_public_group_constructor(groups, ref),
+        )
+        if not group.is_root and has_group_conflict(pkg_path, group.name):
+            logger.warning(
+                f"Group '{group.name}' conflicts with source file {pkg_path / f'{group.name}.py'}"
+            )
+            continue
+        return groups.add_ref(ref, group.name)
 
 
 def _as_choice_ref_symbol(ref: RefSymbol, checked: bool) -> ChoiceTyped[RefSymbol]:

@@ -26,7 +26,6 @@ def test_load_project_config(tmp_path):
 
 pyproject_with_groups = """\
 [tool.pkg-ext]
-flat_package = true
 
 [tool.pkg-ext.groups.datez]
 docstring = "Date utilities"
@@ -42,7 +41,6 @@ def test_load_project_config_with_groups(tmp_path):
     file.write_text(pyproject_with_groups)
     config = load_project_config(tmp_path)
 
-    assert config.flat_package
     assert len(config.groups) == 2
 
     datez = config.groups["datez"]

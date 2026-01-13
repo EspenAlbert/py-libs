@@ -1,6 +1,3 @@
-import logging
-from pathlib import Path
-
 from zero_3rdparty.iter_utils import flat_map
 
 from pkg_ext.context import pkg_ctx
@@ -8,42 +5,9 @@ from pkg_ext.generation.groups import as_import_line
 from pkg_ext.models import PublicGroup, SymbolRefId
 from pkg_ext.warnings_gen import get_warning_class_names
 
-logger = logging.getLogger(__name__)
-
-
-def read_existing_docstring(init_path: Path) -> str:
-    """Extract leading docstring from existing __init__.py."""
-    if not init_path.exists():
-        return ""
-    text = init_path.read_text().strip()
-    if not text:
-        return ""
-    lines = text.split("\n")
-    start = 0
-    for i, line in enumerate(lines):
-        if line.startswith("#"):
-            start = i + 1
-        else:
-            break
-    remaining = "\n".join(lines[start:]).strip()
-    if remaining.startswith('"""'):
-        end = remaining.find('"""', 3)
-        if end != -1:
-            return remaining[: end + 3]
-    return ""
-
 
 def write_init(ctx: pkg_ctx, version: str):
     settings = ctx.settings
-    if settings.is_flat:
-        docstring = read_existing_docstring(settings.init_path)
-        lines = [settings.file_header, "# flake8: noqa"]
-        if docstring:
-            lines.extend(["", docstring])
-        lines.extend(["", f'VERSION = "{version}"', ""])
-        settings.init_path.write_text("\n".join(lines))
-        return
-
     code = ctx.code_state
     tool_state = ctx.tool_state
     pkg_name = code.pkg_import_name

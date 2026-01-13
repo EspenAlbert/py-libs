@@ -2,13 +2,18 @@ from pathlib import Path
 from typing import ClassVar, Self, TypeVar
 
 from model_lib.serialize.parse import parse_model
-from pydantic import DirectoryPath, Field, model_validator
+from pydantic import DirectoryPath, Field, computed_field, model_validator
 from pydantic_settings import BaseSettings
 from zero_3rdparty import file_utils
 
 from pkg_ext.config import ProjectConfig, load_project_config, load_user_config
 
 T = TypeVar("T")
+
+
+def detect_is_flat(pkg_path: Path) -> bool:
+    """Auto-detect flat package (no _internal/ directory)."""
+    return not (pkg_path / "_internal").is_dir()
 
 
 def default_commit_fix_prefixes() -> tuple[str, ...]:
@@ -49,9 +54,13 @@ class PkgSettings(BaseSettings):
     repo_root: DirectoryPath
     skip_open_in_editor: bool = False
     tag_prefix: str = ""
-    is_flat: bool = False
     keep_prerelease: bool = False
     ignored_symbols: frozenset[str] = frozenset()
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def is_flat(self) -> bool:
+        return detect_is_flat(self.pkg_directory)
 
     def _with_dev_suffix(self, path: Path) -> Path:
         if self.dev_mode:
@@ -144,7 +153,6 @@ def pkg_settings(
     commit_fix_prefixes: tuple[str, ...] | None = None,
     commit_fix_diff_suffixes: tuple[str, ...] | None = None,
     after_file_write_hooks: tuple[str, ...] | None = None,
-    is_flat: bool | None = None,
     keep_prerelease: bool | None = None,
     ignored_symbols: frozenset[str] | None = None,
 ) -> PkgSettings:
@@ -170,7 +178,6 @@ def pkg_settings(
         tag_prefix=tag_prefix if tag_prefix is not None else project_config.tag_prefix,
         changelog_cleanup_count=project_config.changelog_cleanup_count,
         changelog_keep_count=project_config.changelog_keep_count,
-        is_flat=is_flat if is_flat is not None else project_config.flat_package,
         keep_prerelease=keep_prerelease
         if keep_prerelease is not None
         else project_config.keep_prerelease,

@@ -1,5 +1,6 @@
 import logging
 from collections import defaultdict
+from pathlib import Path
 from typing import get_type_hints
 
 from ask_shell._internal._run import run_and_wait
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_or_prompt_group(
-    groups: PublicGroups, ref: RefSymbol
+    groups: PublicGroups, ref: RefSymbol, pkg_path: Path
 ) -> tuple[str, GroupModuleAction | None]:
     """Get group name for ref, prompting if not found. Returns (group_name, optional action)."""
     try:
@@ -33,33 +34,10 @@ def get_or_prompt_group(
         groups.add_ref(ref, group.name)
         return group.name, None
     except NoPublicGroupMatch:
-        new_group = select_group(groups, ref)
+        new_group = select_group(groups, ref, pkg_path)
         return new_group.name, GroupModuleAction(
             name=new_group.name, module_path=ref.module_path
         )
-
-
-def handle_added_refs_flat(ctx: pkg_ctx) -> None:
-    tool_state = ctx.tool_state
-    code_state = ctx.code_state
-    added_refs = tool_state.added_refs(code_state.named_refs)
-    if not added_refs:
-        logger.info("No new references found in the package")
-        return
-
-    groups = tool_state.groups
-    for ref_name, ref_with_symbol in added_refs.items():
-        ref = ref_with_symbol.symbol
-        group_name = ref.module_path
-        groups.add_ref(ref, group_name)
-        ctx.add_changelog_action(
-            MakePublicAction(
-                name=ref_name,
-                group=group_name,
-                details=f"auto-exposed from {ref.rel_path}",
-            )
-        )
-    logger.info(f"Auto-exposed {len(added_refs)} refs in flat package")
 
 
 def ensure_function_args_exposed(
@@ -77,9 +55,9 @@ def ensure_function_args_exposed(
 
 
 def _expose_ref(
-    ctx: pkg_ctx, groups: PublicGroups, ref: RefSymbol, details: str
+    ctx: pkg_ctx, groups: PublicGroups, ref: RefSymbol, details: str, pkg_path: Path
 ) -> None:
-    group_name, group_action = get_or_prompt_group(groups, ref)
+    group_name, group_action = get_or_prompt_group(groups, ref, pkg_path)
     if group_action:
         ctx.add_changelog_action(group_action)
     ctx.add_changelog_action(
@@ -94,6 +72,7 @@ def _expose_function_args(
     exposed: list[RefStateWithSymbol],
 ) -> list[RefSymbol]:
     groups = tool_state.groups
+    pkg_path = tool_state.pkg_path
     arg_refs_all: list[RefSymbol] = []
     args_exposed = ensure_function_args_exposed(code_state, exposed)
     for func_ref, arg_refs in args_exposed.items():
@@ -102,7 +81,11 @@ def _expose_function_args(
             if tool_state.has_decision(ref.name):
                 continue
             _expose_ref(
-                ctx, groups, ref, f"exposed in the function {func_ref.symbol.local_id}"
+                ctx,
+                groups,
+                ref,
+                f"exposed in the function {func_ref.symbol.local_id}",
+                pkg_path,
             )
     return arg_refs_all
 
@@ -117,15 +100,16 @@ def make_expose_decisions(
 ) -> list[RefStateWithSymbol | RefSymbol]:
     decided_refs: list[RefStateWithSymbol | RefSymbol] = []
     groups = tool_state.groups
+    pkg_path = tool_state.pkg_path
     for rel_path, file_states in refs.items():
         if not settings.skip_open_in_editor:
-            run_and_wait(f"{get_default_editor()} {tool_state.pkg_path / rel_path}")
+            run_and_wait(f"{get_default_editor()} {pkg_path / rel_path}")
         exposed = select_multiple_refs(
             f"Select references of type {symbol_type} to expose from {rel_path} (if any):",
             file_states,
         )
         for ref in exposed:
-            _expose_ref(ctx, groups, ref.symbol, f"created in {rel_path}")
+            _expose_ref(ctx, groups, ref.symbol, f"created in {rel_path}", pkg_path)
         hidden = [state for state in file_states if state not in exposed]
         for ref in hidden:
             ctx.add_changelog_action(

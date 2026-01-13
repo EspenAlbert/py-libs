@@ -1,6 +1,0 @@
-[project]
-name = "my-pkg"
-version = "0.1.0"
-
-[tool.pkg-ext]
-flat_package = true

@@ -74,8 +74,6 @@ def write_group(
 
 
 def write_groups(ctx: pkg_ctx) -> list[Path]:
-    if ctx.settings.is_flat:
-        return []
     return [
         write_group(group, ctx.settings, ctx.code_state, ctx.tool_state)
         for group in ctx.tool_state.groups.groups_no_root

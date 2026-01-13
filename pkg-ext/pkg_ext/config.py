@@ -81,7 +81,6 @@ class ProjectConfig(Entity):
     changelog_cleanup_count: int = DEFAULT_CHANGELOG_CLEANUP_COUNT
     changelog_keep_count: int = DEFAULT_CHANGELOG_KEEP_COUNT
     after_file_write_hooks: tuple[str, ...] | None = None
-    flat_package: bool = False
     keep_prerelease: bool = False
     ignored_symbols: tuple[str, ...] = ()
     groups: dict[str, GroupConfig] = Field(default_factory=dict)

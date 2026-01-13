@@ -15,19 +15,6 @@ from pkg_ext.models import RefState, RefStateWithSymbol
 logger = logging.getLogger(__name__)
 
 
-def handle_removed_refs_flat(ctx: pkg_ctx) -> None:
-    tool_state = ctx.tool_state
-    code_state = ctx.code_state
-    removed_refs = tool_state.removed_refs(code_state)
-    if not removed_refs:
-        logger.info("No removed references found in the package")
-        return
-
-    for group, ref in removed_refs:
-        ctx.add_changelog_action(DeleteAction(name=ref.name, group=group))
-    logger.info(f"Auto-deleted {len(removed_refs)} refs in flat package")
-
-
 def process_reference_renames(
     active_refs: dict[str, RefStateWithSymbol],
     renames: list[tuple[str, RefState]],

@@ -1,7 +1,6 @@
 import difflib
 from collections import Counter
 from contextlib import suppress
-from pathlib import Path
 
 from ask_shell._internal.rich_live import print_to_live
 from rich.markdown import Markdown
@@ -16,7 +15,7 @@ from pkg_ext.interactive import (
     select_commit_rephrased,
     select_group_name,
 )
-from pkg_ext.models import PublicGroup, PublicGroups, as_module_path
+from pkg_ext.models import PublicGroups, as_module_path
 
 
 def py_diff(old: str, new: str) -> str:
@@ -51,14 +50,6 @@ def infer_group(groups: PublicGroups, changes: dict[str, str]) -> str:
     if not group_counts:
         return ""
     return group_counts.most_common(1)[0][0]
-
-
-def infer_group_from_paths(pkg_changes: list[str]) -> str:
-    for path in pkg_changes:
-        filename = Path(path).stem
-        if not filename.startswith("_") and filename != "__init__":
-            return filename
-    return PublicGroup.ROOT_GROUP_NAME
 
 
 def prompt_for_fix(sha: str, commit_message: str, prompt_text: str) -> FixAction:
@@ -111,14 +102,11 @@ def fix_changelog_action(commit: GitCommit, ctx: pkg_ctx) -> FixAction | None:
     commit_message = commit.message
     commit_sha = commit.sha
 
-    if ctx.settings.is_flat:
-        group = infer_group_from_paths(pkg_changes)
-    else:
-        groups = tool_state.groups
-        group = infer_group(groups, diffs)
-        prompt_text = f"commit({commit_sha}): {commit_message}"
-        public_group = select_group_name(prompt_text, groups, default=group)
-        group = public_group.name
+    groups = tool_state.groups
+    group = infer_group(groups, diffs)
+    prompt_text = f"commit({commit_sha}): {commit_message}"
+    public_group = select_group_name(prompt_text, groups, default=group)
+    group = public_group.name
 
     prompt_text = f"commit({commit_sha}): {commit_message}"
     fix = prompt_for_fix(commit_sha, commit_message, prompt_text)

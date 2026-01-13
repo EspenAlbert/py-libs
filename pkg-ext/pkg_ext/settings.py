@@ -120,6 +120,14 @@ class PkgSettings(BaseSettings):
     def test_file_path(self, group_name: str) -> Path:
         return self.pkg_directory / f"{group_name}_test.py"
 
+    @property
+    def docs_dir(self) -> Path:
+        return self.state_dir / "docs"
+
+    @property
+    def mkdocs_yml(self) -> Path:
+        return self.state_dir / "mkdocs.yml"
+
     def force_bot(self) -> None:
         self.is_bot = True
         self.skip_open_in_editor = True

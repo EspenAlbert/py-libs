@@ -84,6 +84,7 @@ class ProjectConfig(Entity):
     after_file_write_hooks: tuple[str, ...] | None = None
     keep_prerelease: bool = False
     ignored_symbols: tuple[str, ...] = ()
+    mkdocs_skip_sections: tuple[str, ...] = ()
     groups: dict[str, GroupConfig] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -146,6 +147,7 @@ def _convert_tuple_fields(data: dict[str, Any]) -> dict[str, Any]:
         "commit_diff_suffixes",
         "after_file_write_hooks",
         "ignored_symbols",
+        "mkdocs_skip_sections",
     )
     for field in tuple_fields:
         if field in data and isinstance(data[field], list):

@@ -43,7 +43,7 @@ from pkg_ext.cli.workflows import (
 )
 from pkg_ext.config import load_project_config
 from pkg_ext.context import pkg_ctx as PkgCtx
-from pkg_ext.generation import example_gen, test_gen
+from pkg_ext.generation import docs, example_gen, test_gen
 from pkg_ext.git_usage import GitChanges, GitSince, head_merge_pr
 from pkg_ext.models import PublicGroups
 from pkg_ext.settings import PkgSettings, pkg_settings
@@ -524,3 +524,59 @@ def gen_tests(
         else:
             ensure_parents_write_text(path, new_content)
         logger.info(f"Generated tests: {path}")
+
+
+@app.command(name="docs")
+def gen_docs(
+    ctx: typer.Context,
+    output_dir: Path | None = typer.Option(
+        None, "-o", "--output-dir", help="Output directory (default: docs/)"
+    ),
+    group: str | None = typer.Option(
+        None, "-g", "--group", help="Generate for specific group only"
+    ),
+):
+    """Generate documentation from public API."""
+    settings: PkgSettings = ctx.obj
+    pkg_ctx = _create_stability_ctx(settings)
+    groups = settings.parse_computed_public_groups(PublicGroups)
+    version = str(read_current_version(pkg_ctx))
+    refs = {ref.local_id: ref for ref in pkg_ctx.code_state.all_refs}
+    api_dump = api_dumper.dump_public_api(
+        pkg_ctx.tool_state, groups, refs, settings.pkg_import_name, version
+    )
+
+    config = load_project_config(settings.state_dir)
+    docs_dir = output_dir or settings.docs_dir
+    pkg_src_dir = settings.repo_root
+    changelog_actions = parse_changelog_actions(settings.changelog_dir)
+
+    example_symbols: dict[str, set[str]] = {}
+    groups_to_process = [api_dump.get_group(group)] if group else api_dump.groups
+    for group_dump in groups_to_process:
+        loaded = docs.load_examples_for_group(settings.pkg_import_name, group_dump.name)
+        example_symbols[group_dump.name] = set(loaded.keys())
+
+    output = docs.generate_docs(
+        api_dump=api_dump,
+        config=config,
+        example_symbols=example_symbols,
+        changelog_actions=changelog_actions,
+        docs_dir=docs_dir,
+        pkg_src_dir=pkg_src_dir,
+        load_examples=True,
+    )
+
+    if group:
+        dir_name = docs.group_dir_name(api_dump.get_group(group))
+        output.path_contents = {
+            k: v for k, v in output.path_contents.items() if k.startswith(dir_name)
+        }
+
+    docs.copy_readme_as_index(settings.state_dir, docs_dir, settings.pkg_import_name)
+    count = docs.write_docs_files(output, docs_dir)
+    nav = docs.generate_mkdocs_nav(api_dump, settings.pkg_import_name)
+    docs.write_mkdocs_yml(
+        settings.mkdocs_yml, settings.pkg_import_name, nav, config.mkdocs_skip_sections
+    )
+    logger.info(f"Generated {count} doc files in {docs_dir}")

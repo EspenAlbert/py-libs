@@ -17,6 +17,7 @@ from model_lib.model_base import Entity
 from pydantic import Field, model_validator
 
 if TYPE_CHECKING:
+    from pkg_ext.models.api_dump import GroupDump
     from pkg_ext.models.groups import PublicGroups
 
 logger = logging.getLogger(__name__)
@@ -131,6 +132,16 @@ class ProjectConfig(Entity):
                 )
             return [n for n in symbol_names if n not in group_cfg.examples_exclude]
         return symbol_names
+
+    def filter_group_for_examples(self, group: GroupDump) -> GroupDump | None:
+        """Filter a GroupDump to only include symbols with examples enabled."""
+        symbol_names = [s.name for s in group.symbols]
+        if not symbol_names:
+            return None
+        include_names = self.filter_example_symbols(group.name, symbol_names)
+        if not include_names:
+            return None
+        return group.filter_symbols(set(include_names))
 
     @model_validator(mode="after")
     def validate_dependencies(self) -> Self:

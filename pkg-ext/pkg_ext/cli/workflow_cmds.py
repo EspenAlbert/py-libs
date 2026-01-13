@@ -91,16 +91,12 @@ def generate_examples_for_groups(
     config = config or load_project_config(settings.repo_root)
     generated_paths: list[Path] = []
     for group_dump in groups:
-        if not group_dump.symbols:
-            continue
-        symbol_names = [s.name for s in group_dump.symbols]
-        include_symbols = config.filter_example_symbols(group_dump.name, symbol_names)
-        if not include_symbols:
+        if not (filtered := config.filter_group_for_examples(group_dump)):
             logger.debug(f"Skipping examples for {group_dump.name}: no symbols enabled")
             continue
-        path = settings.examples_file_path(group_dump.name)
+        path = settings.examples_file_path(filtered.name)
         new_content = example_gen.generate_group_examples_file(
-            group_dump, settings.pkg_import_name, include_symbols
+            filtered, settings.pkg_import_name
         )
         if path.exists():
             existing = path.read_text()
@@ -123,21 +119,31 @@ def generate_examples_for_groups(
 def generate_tests_for_groups(
     settings: PkgSettings,
     groups: list[api_dumper.GroupDump],
+    config: ProjectConfig | None = None,
 ) -> int:
     py_config = get_comment_config("file.py")
+    config = config or load_project_config(settings.repo_root)
     generated_paths: list[Path] = []
     for group_dump in groups:
-        testable_symbols = [
+        if not (filtered := config.filter_group_for_examples(group_dump)):
+            logger.debug(
+                f"Skipping tests for {group_dump.name}: no symbols with examples"
+            )
+            continue
+        # Further filter to only testable types (functions/classes)
+        testable = [
             s
-            for s in group_dump.symbols
+            for s in filtered.symbols
             if isinstance(s, api_dumper.FunctionDump | api_dumper.ClassDump)
         ]
-        if not testable_symbols:
-            logger.debug(f"Skipping group with no testable symbols: {group_dump.name}")
+        if not testable:
             continue
-        path = settings.test_file_path(group_dump.name)
+        filtered = api_dumper.GroupDump(
+            name=filtered.name, stability=filtered.stability, symbols=testable
+        )
+        path = settings.test_file_path(filtered.name)
         new_content = test_gen.generate_group_test_file(
-            group_dump, settings.pkg_import_name
+            filtered, settings.pkg_import_name
         )
         if path.exists():
             existing = path.read_text()

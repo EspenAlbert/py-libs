@@ -10,6 +10,23 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_LINE_LENGTH = 80
+
+
+def format_python_string(code: str, line_length: int = DEFAULT_LINE_LENGTH) -> str:
+    """Format Python code string using ruff, fallback to original on error."""
+    try:
+        result = subprocess.run(
+            ["ruff", "format", "--line-length", str(line_length), "-"],
+            input=code,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.rstrip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return code
+
 
 def format_python_files(
     paths: list[Path],

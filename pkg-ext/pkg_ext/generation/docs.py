@@ -59,6 +59,7 @@ from pkg_ext.models.api_dump import (
     SymbolDump,
     TypeAliasDump,
 )
+from pkg_ext.py_format import format_python_string
 
 logger = logging.getLogger(__name__)
 MD_CONFIG = CommentConfig("<!--", " -->")
@@ -169,6 +170,8 @@ def load_examples_for_group(
 
 def _format_example_value(value: Any) -> str:
     if isinstance(value, str):
+        if "\n" in value:
+            return f'"""\\\n{value}"""'
         return repr(value)
     if isinstance(value, datetime):
         return f"datetime({value.year}, {value.month}, {value.day})"
@@ -196,10 +199,12 @@ def render_example_section(
     else:
         code = f"# {symbol.name} example"
 
+    formatted_code = format_python_string(code)
+
     lines = [f"### Example: {example_name}"]
     if description:
         lines.append(description)
-    lines.extend(["", "```python", code, "```"])
+    lines.extend(["", "```python", formatted_code, "```"])
 
     return wrap_section("\n".join(lines), section_id, PKG_EXT_TOOL_NAME, MD_CONFIG)
 

@@ -98,6 +98,13 @@ class GroupDump(Entity):
     stability: Stability = Stability.ga
     symbols: list[SymbolDump] = Field(default_factory=list)
 
+    def filter_symbols(self, include_names: set[str]) -> GroupDump | None:
+        """Return a new GroupDump with only symbols in include_names, or None if empty."""
+        filtered = [s for s in self.symbols if s.name in include_names]
+        if not filtered:
+            return None
+        return GroupDump(name=self.name, stability=self.stability, symbols=filtered)
+
 
 class PublicApiDump(Entity):
     pkg_import_name: str

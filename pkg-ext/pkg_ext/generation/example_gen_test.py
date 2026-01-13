@@ -119,3 +119,43 @@ def test_generate_group_examples_file():
     assert "OK_EDIT: pkg-ext header" in result
     assert "DO_NOT_EDIT: pkg-ext class_load" in result
     assert "OK_EDIT: pkg-ext class_load" in result
+
+
+def test_generate_group_examples_file_with_imports():
+    """Ensure type imports are generated from type_import field."""
+    group = GroupDump(
+        name="sections",
+        stability=Stability.ga,
+        symbols=[
+            ClassDump(
+                name="CommentConfig",
+                module_path="my_pkg.sections",
+                fields=[
+                    ClassFieldInfo(name="prefix", type_annotation="str"),
+                ],
+            ),
+            FunctionDump(
+                name="parse_sections",
+                module_path="my_pkg.sections",
+                signature=CallableSignature(
+                    parameters=[
+                        FuncParamInfo(
+                            name="path",
+                            kind=ParamKind.POSITIONAL_OR_KEYWORD,
+                            type_annotation="Path",
+                            type_import="pathlib.Path",
+                        ),
+                        FuncParamInfo(
+                            name="config",
+                            kind=ParamKind.POSITIONAL_OR_KEYWORD,
+                            type_annotation="CommentConfig",
+                            type_import="my_pkg.sections.CommentConfig",
+                        ),
+                    ]
+                ),
+            ),
+        ],
+    )
+    result = generate_group_examples_file(group, "my_pkg")
+    assert "from pathlib import Path" in result
+    assert "from my_pkg.sections import CommentConfig" in result

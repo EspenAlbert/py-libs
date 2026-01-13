@@ -59,6 +59,7 @@ class PkgSettings(BaseSettings):
     tag_prefix: str = ""
     keep_prerelease: bool = False
     ignored_symbols: frozenset[str] = frozenset()
+    format_command: tuple[str, ...] = ProjectConfig.DEFAULT_FORMAT_COMMAND
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -198,4 +199,5 @@ def pkg_settings(
         ignored_symbols=ignored_symbols
         if ignored_symbols is not None
         else frozenset(project_config.ignored_symbols),
+        format_command=project_config.format_command,
     )

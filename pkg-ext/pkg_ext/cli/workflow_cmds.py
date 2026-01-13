@@ -1,6 +1,7 @@
 """Git workflow commands: pre_change, pre_commit, post_merge."""
 
 import logging
+import subprocess
 from pathlib import Path
 
 import typer
@@ -87,7 +88,7 @@ def generate_examples_for_groups(
     groups: list[api_dumper.GroupDump],
 ) -> int:
     py_config = get_comment_config("file.py")
-    count = 0
+    generated_paths: list[Path] = []
     for group_dump in groups:
         if not group_dump.symbols:
             continue
@@ -108,8 +109,14 @@ def generate_examples_for_groups(
         else:
             ensure_parents_write_text(path, new_content)
         logger.info(f"Generated examples: {path}")
-        count += 1
-    return count
+        generated_paths.append(path)
+    if generated_paths and settings.format_command:
+        subprocess.run(
+            [*settings.format_command, *[str(p) for p in generated_paths]],
+            check=False,
+            capture_output=True,
+        )
+    return len(generated_paths)
 
 
 def generate_tests_for_groups(

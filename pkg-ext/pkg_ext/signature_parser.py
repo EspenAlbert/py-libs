@@ -30,6 +30,26 @@ def _annotation_str(annotation: Any) -> str | None:
     return str(annotation)
 
 
+MODULE_NORMALIZATION = {
+    "pathlib._local": "pathlib",
+}
+
+
+def _annotation_import(annotation: Any) -> str | None:
+    """Extract the full import path for a type annotation."""
+    if annotation is inspect.Parameter.empty:
+        return None
+    if isinstance(annotation, type):
+        module = annotation.__module__
+        name = annotation.__name__
+        if module == "builtins":
+            return None
+        # Normalize internal module paths
+        module = MODULE_NORMALIZATION.get(module, module)
+        return f"{module}.{name}"
+    return None
+
+
 def parse_param_default(param: inspect.Parameter) -> ParamDefault | None:
     if param.default is inspect.Parameter.empty:
         return None
@@ -43,11 +63,17 @@ def parse_param_default(param: inspect.Parameter) -> ParamDefault | None:
     return ParamDefault(value_repr=repr(param.default))
 
 
-def parse_func_param(param: inspect.Parameter) -> FuncParamInfo:
+def _parse_func_param(
+    param: inspect.Parameter, resolved_annotation: Any | None = None
+) -> FuncParamInfo:
+    annotation = (
+        resolved_annotation if resolved_annotation is not None else param.annotation
+    )
     return FuncParamInfo(
         name=param.name,
         kind=_PARAM_KIND_MAP[param.kind],
-        type_annotation=_annotation_str(param.annotation),
+        type_annotation=_annotation_str(annotation),
+        type_import=_annotation_import(annotation),
         default=parse_param_default(param),
     )
 
@@ -57,10 +83,18 @@ def parse_signature(obj: Callable) -> CallableSignature:
         sig = inspect.signature(obj)
     except (ValueError, TypeError):
         return CallableSignature()
-    params = [parse_func_param(p) for p in sig.parameters.values()]
+
+    # Resolve string annotations to actual types
+    try:
+        hints = get_type_hints(obj)
+    except Exception:
+        hints = {}
+
+    params = [_parse_func_param(p, hints.get(p.name)) for p in sig.parameters.values()]
+    return_hint = hints.get("return")
     return CallableSignature(
         parameters=params,
-        return_annotation=_annotation_str(sig.return_annotation),
+        return_annotation=_annotation_str(return_hint) if return_hint else None,
     )
 
 
@@ -108,7 +142,8 @@ def _parse_pydantic_fields(cls: type) -> list[ClassFieldInfo]:
         fields.append(
             ClassFieldInfo(
                 name=name,
-                type_annotation=str(field.annotation) if field.annotation else None,
+                type_annotation=_annotation_str(field.annotation),
+                type_import=_annotation_import(field.annotation),
                 default=_parse_field_default(field),
                 is_class_var=False,
                 is_computed=False,
@@ -124,9 +159,8 @@ def _parse_pydantic_fields(cls: type) -> list[ClassFieldInfo]:
             fields.append(
                 ClassFieldInfo(
                     name=name,
-                    type_annotation=(
-                        str(computed.return_type) if computed.return_type else None
-                    ),
+                    type_annotation=_annotation_str(computed.return_type),
+                    type_import=_annotation_import(computed.return_type),
                     is_computed=True,
                     description=computed.description
                     if hasattr(computed, "description")
@@ -152,7 +186,8 @@ def _parse_dataclass_fields(cls: type) -> list[ClassFieldInfo]:
         fields.append(
             ClassFieldInfo(
                 name=f.name,
-                type_annotation=str(annotation) if annotation else None,
+                type_annotation=_annotation_str(annotation),
+                type_import=_annotation_import(annotation),
                 default=default,
                 is_class_var=is_class_var,
             )

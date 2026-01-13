@@ -28,6 +28,7 @@ class FuncParamInfo(Entity):
     name: str
     kind: ParamKind
     type_annotation: str | None = None
+    type_import: str | None = None  # Full import path, e.g., "pathlib.Path"
     default: ParamDefault | None = None
 
 
@@ -39,6 +40,7 @@ class CallableSignature(Entity):
 class ClassFieldInfo(Entity):
     name: str
     type_annotation: str | None = None
+    type_import: str | None = None  # Full import path, e.g., "pathlib.Path"
     default: ParamDefault | None = None
     is_class_var: bool = False
     is_computed: bool = False

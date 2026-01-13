@@ -248,8 +248,8 @@ commit_fix_prefixes = ["fix:", "bugfix:", "hotfix:"]
 commit_diff_suffixes = [".py", ".pyi"]
 changelog_cleanup_count = 30  # Archive when count exceeds this
 changelog_keep_count = 10     # Keep this many after cleanup
-after_file_write_hooks = ["ruff format {pkg_path}"]
-flat_package = false  # Set true for packages without _internal structure
+format_command = ["ruff", "format"]  # ruff check --fix always runs first
+# after_file_write_hooks = ["extra-cmd {pkg_path}"]  # Custom post-write hooks
 ```
 
 ### Group Configuration

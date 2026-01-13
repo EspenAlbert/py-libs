@@ -146,26 +146,6 @@ pkg-ext [OPTIONS] COMMAND
 
 ### Commands
 
-#### `pre-push`
-Run before pushing. Prompts about new/removed symbols and commit messages.
-
-```bash
-pkg-ext pre-push --git-since default
-```
-
-The `--git-since` option controls which commits to analyze:
-- `default` - PR base branch first, then last git tag
-- `pr_base_branch` - Changes since PR base
-- `last_git_tag` - Changes since last tag
-- `no_git_changes` - Skip git analysis
-
-#### `pre-merge`
-CI check before merge. Ensures all decisions are made (no prompts in bot mode).
-
-```bash
-pkg-ext pre-merge --is-bot
-```
-
 #### `post-merge`
 Run after merge on default branch. Bumps version, creates tag, cleans old changelog entries.
 
@@ -258,7 +238,7 @@ docstring = "Utilities for common operations"
 
 ### Dev Mode
 
-The `pre-push` and `pre-merge` commands automatically enable dev mode, which creates `-dev` suffixed files:
+The `pre-commit` command enables dev mode, which writes to `-dev` suffixed files:
 - `.groups-dev.yaml` instead of `.groups.yaml`
 - `CHANGELOG-dev.md` instead of `CHANGELOG.md`
 
@@ -266,7 +246,43 @@ This allows iterating on changelog entries during development without modifying 
 
 ## Generated Files
 
-### `__init__.py`
+### Files Updated During PR
+
+These files are created/updated when running `pre-commit` during development:
+
+| File | Purpose | Editable |
+|------|---------|----------|
+| `.changelog/{pr}.yaml` | Changelog actions for this PR | Yes |
+| `.groups-dev.yaml` | Group assignments (dev copy) | No |
+| `CHANGELOG-dev.md` | Human-readable changelog (dev copy) | No |
+| `{pkg}.api.yaml` | API dump for breaking change detection | No |
+| `{pkg}/__init__.py` | Package exports (VERSION unchanged) | No |
+| `{pkg}/{group}.py` | Group re-export modules | No |
+| `{pkg}/_warnings.py` | Stability warning decorators | No |
+| `docs/**/*.md` | API documentation | Yes (outside markers) |
+| `{group}_examples.py` | Example scaffolds | Yes (outside markers) |
+| `{group}_test.py` | Test scaffolds | Yes (outside markers) |
+
+- `__init__.py` exports are updated but VERSION remains unchanged until release
+- Symbol doc pages include a "Changes" table showing unreleased modifications
+- Content outside `=== OK_EDIT: pkg-ext ... ===` markers can be customized and is preserved
+
+### Files Updated During Release (main branch only)
+
+These files are updated by `post-merge` after PR is merged:
+
+| File | What Changes |
+|------|--------------|
+| `.groups.yaml` | Copied from `.groups-dev.yaml` |
+| `CHANGELOG.md` | Copied from `CHANGELOG-dev.md` |
+| `{pkg}/__init__.py` | VERSION updated to new version |
+| `pyproject.toml` | Version field updated (if used) |
+| `{pkg}.api.yaml` | Regenerated with new version |
+| `docs/**/*.md` | Unreleased changes become versioned |
+
+### File Contents
+
+#### `__init__.py`
 
 **Standard packages:**
 
@@ -368,30 +384,53 @@ ts: '2025-01-02T10:00:02+00:00'
 - Fixed parsing edge case [abc123](https://github.com/user/repo/commit/abc123)
 ```
 
-## Workflow
+## Developer Workflow
 
-### Development Workflow
+### Commands Overview
 
-1. Make code changes
-2. Run `pkg-ext pre-push`
-   - Prompts for new symbols: expose or hide?
-   - Prompts for removed symbols: delete or rename?
-   - Prompts about fix commits: include, exclude, or rephrase?
-   - Assigns symbols to groups
-3. Commit the generated `.changelog/*.yaml` file
-4. Push and create PR
+| Command | When | Interactive | Writes |
+|---------|------|-------------|--------|
+| `pre-change` | After adding/removing symbols | Yes | Examples, tests |
+| `pre-commit` | Before commit / CI validation | No | `-dev` files, docs |
+| `post-merge` | After merge to main | No | Real files, tag |
 
-### CI Workflow
+### Typical Development Cycle
 
-1. PR checks run `pkg-ext pre-merge --is-bot`
-   - Fails if any decision is missing
-   - Ensures changelog entries exist for all changes
-2. After merge, run `pkg-ext post-merge --push`
-   - Reads PR number from merge commit
-   - Bumps version based on actions
-   - Updates `CHANGELOG.md`
-   - Creates git tag
-   - Pushes tag
+1. Create branch, make code changes
+2. Run `pkg-ext pre-change` - prompts for new/removed symbols, generates scaffolds
+3. Fill in examples, run tests locally
+4. Run `pkg-ext pre-commit` - validates decisions, updates `-dev` files and docs
+5. Commit and push
+6. CI runs `pkg-ext pre-commit` - validates all decisions, regenerates docs
+7. After merge, CI runs `pkg-ext post-merge` - bumps version, writes real files, creates tag
+
+### Command Details
+
+#### `pre-change`
+
+```bash
+pkg-ext pre-change           # All groups
+pkg-ext pre-change -g config # Single group
+```
+
+Prompts for new symbols (expose or hide) and removed symbols (delete or alias). Generates `{group}_examples.py` and `{group}_test.py` scaffolds.
+
+#### `pre-commit`
+
+```bash
+pkg-ext pre-commit              # With docs
+pkg-ext pre-commit --skip-docs  # Faster, skip docs
+```
+
+Runs in bot mode (fails if pending prompts). Updates `.groups-dev.yaml`, `CHANGELOG-dev.md`, and docs.
+
+#### `post-merge`
+
+```bash
+pkg-ext post-merge --push --pr 123
+```
+
+Bumps version, creates git tag, cleans old changelog entries.
 
 ### Stability Workflow
 
@@ -399,6 +438,28 @@ ts: '2025-01-02T10:00:02+00:00'
 2. Develop features, symbols auto-inherit group stability
 3. Graduate to GA: `pkg-ext ga --target new_group`
 4. Mark arg for deprecation: `pkg-ext dep --target group.func.old_arg --replacement new_arg`
+
+### Git Hook Setup
+
+**Manual hook** (`.git/hooks/pre-commit`):
+
+```bash
+#!/bin/bash
+pkg-ext pre-commit
+```
+
+**pre-commit framework** (`.pre-commit-config.yaml`):
+
+```yaml
+repos:
+  - repo: local
+    hooks:
+      - id: pkg-ext
+        name: pkg-ext pre-commit
+        entry: pkg-ext pre-commit
+        language: system
+        pass_filenames: false
+```
 
 ## Symbol Detection
 
@@ -505,3 +566,28 @@ my-repo/
 - **[ask-shell](https://github.com/EspenAlbert/py-libs)** - Interactive prompts and shell execution
 - **[model-lib](https://github.com/EspenAlbert/py-libs)** - YAML/TOML parsing and Pydantic models
 - **[GitPython](https://gitpython.readthedocs.io/)** - Git repository access
+
+## Appendix: CI Configuration
+
+### GitHub Actions
+
+```yaml
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install pkg-ext
+      - run: pkg-ext pre-commit
+
+  release:
+    if: github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: pip install pkg-ext
+      - run: pkg-ext post-merge --push
+```

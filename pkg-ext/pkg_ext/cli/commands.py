@@ -145,43 +145,6 @@ def main(
 
 
 @app.command()
-def pre_push(
-    ctx: typer.Context,
-    git_changes_since: GitSince = option_git_changes_since,
-):
-    settings: PkgSettings = ctx.obj
-    settings.dev_mode = True
-
-    api_input = GenerateApiInput(
-        settings=settings,
-        git_changes_since=git_changes_since,
-        bump_version=False,
-        create_tag=False,
-        push=False,
-    )
-    generate_api_workflow(api_input)
-
-
-@app.command()
-def pre_merge(
-    ctx: typer.Context,
-    git_changes_since: GitSince = option_git_changes_since,
-):
-    settings: PkgSettings = ctx.obj
-    settings.force_bot()
-    settings.dev_mode = True
-
-    api_input = GenerateApiInput(
-        settings=settings,
-        git_changes_since=git_changes_since,
-        bump_version=False,
-        create_tag=False,
-        push=False,
-    )
-    generate_api_workflow(api_input)
-
-
-@app.command()
 def post_merge(
     ctx: typer.Context,
     explicit_pr: int = option_pr,
@@ -594,9 +557,10 @@ def pre_commit(
     git_changes_since: GitSince = option_git_changes_since,
     skip_docs: bool = typer.Option(False, "--skip-docs", help="Skip doc regeneration"),
 ):
-    """Update changelog and regenerate docs (bot mode, no prompts)."""
+    """Update changelog and regenerate docs (bot mode, writes to -dev files)."""
     settings: PkgSettings = ctx.obj
     settings.force_bot()
+    settings.dev_mode = True
 
     api_input = GenerateApiInput(
         settings=settings,

@@ -12,6 +12,7 @@ from zero_3rdparty import file_utils
 from zero_3rdparty.file_utils import ensure_parents_write_text
 from zero_3rdparty.str_utils import ensure_prefix
 
+from pkg_ext.config import ProjectConfig
 from pkg_ext.settings import PkgSettings
 
 REPO_PATH = Path(__file__).parent.parent.parent
@@ -175,3 +176,8 @@ def e2e_dirs(tmp_path, _e2e_dir, _e2e_pkg_path):
 @pytest.fixture()
 def file_regression_e2e(file_regression, e2e_dirs) -> E2eRegressionCheck:  # type: ignore
     yield E2eRegressionCheck(e2e_dirs, file_regression)  # type: ignore
+
+
+@pytest.fixture()
+def project_config() -> ProjectConfig:
+    return ProjectConfig()

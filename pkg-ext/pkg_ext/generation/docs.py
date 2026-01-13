@@ -15,10 +15,14 @@ from pkg_ext.changelog.actions import (
     FixAction,
     RenameAction,
 )
-from pkg_ext.config import ROOT_GROUP_NAME
+from pkg_ext.config import (
+    PKG_EXT_TOOL_NAME,
+    ROOT_GROUP_NAME,
+    GroupConfig,
+    ProjectConfig,
+)
 from pkg_ext.models.api_dump import ClassDump, GroupDump, PublicApiDump, SymbolDump
 
-TOOL_NAME = "pkg-ext"
 MD_CONFIG = CommentConfig("<!--", " -->")
 ROOT_DIR = "_root"
 
@@ -87,8 +91,12 @@ def render_symbol_entry(ctx: SymbolContext) -> str:
     return f"- `{name}`"
 
 
-def render_group_index(group: GroupDump, contexts: list[SymbolContext]) -> str:
+def render_group_index(
+    group: GroupDump, contexts: list[SymbolContext], group_config: GroupConfig
+) -> str:
     header = f"# {group.name}\n"
+    if group_config.docstring:
+        header += f"\n{group_config.docstring}\n"
     sorted_contexts = sorted(contexts, key=lambda c: c.symbol.name)
     symbol_entries = [render_symbol_entry(c) for c in sorted_contexts]
     symbol_list = "\n".join(symbol_entries)
@@ -100,20 +108,23 @@ def render_group_index(group: GroupDump, contexts: list[SymbolContext]) -> str:
             type_label = ctx.symbol.type.value
             inline_content = f"### {type_label}: `{ctx.symbol.name}`"
             inline_sections.append(
-                wrap_section(inline_content, section_id, TOOL_NAME, MD_CONFIG)
+                wrap_section(inline_content, section_id, PKG_EXT_TOOL_NAME, MD_CONFIG)
             )
 
     parts = [
-        wrap_section(header, "header", TOOL_NAME, MD_CONFIG),
+        wrap_section(header, "header", PKG_EXT_TOOL_NAME, MD_CONFIG),
         "",
-        wrap_section(symbol_list, "symbols", TOOL_NAME, MD_CONFIG),
+        wrap_section(symbol_list, "symbols", PKG_EXT_TOOL_NAME, MD_CONFIG),
     ]
     if inline_sections:
         parts.extend(
             (
                 "",
                 wrap_section(
-                    "## Symbol Details", "symbol_details_header", TOOL_NAME, MD_CONFIG
+                    "## Symbol Details",
+                    "symbol_details_header",
+                    PKG_EXT_TOOL_NAME,
+                    MD_CONFIG,
                 ),
                 "",
                 *inline_sections,
@@ -125,6 +136,7 @@ def render_group_index(group: GroupDump, contexts: list[SymbolContext]) -> str:
 
 def generate_docs(
     api_dump: PublicApiDump,
+    config: ProjectConfig,
     example_symbols: dict[str, set[str]],
     changelog_actions: list[ChangelogAction],
 ) -> GeneratedDocsOutput:
@@ -133,12 +145,13 @@ def generate_docs(
     for group in api_dump.groups:
         dir_name = group_dir_name(group)
         group_examples = example_symbols.get(group.name, set())
+        group_config = config.groups.get(group.name, GroupConfig())
         contexts = [
             build_symbol_context(s, group_examples, changelog_actions)
             for s in group.symbols
         ]
         index_path = f"{dir_name}/index.md"
-        path_contents[index_path] = render_group_index(group, contexts)
+        path_contents[index_path] = render_group_index(group, contexts, group_config)
 
         for ctx in contexts:
             if ctx.is_complex:

@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from zero_3rdparty.sections import parse_sections
 
 from pkg_ext.changelog.actions import FixAction, MakePublicAction
-from pkg_ext.config import ROOT_GROUP_NAME, Stability
+from pkg_ext.config import ROOT_GROUP_NAME, GroupConfig, ProjectConfig, Stability
 from pkg_ext.generation.docs import (
     MD_CONFIG,
     ROOT_DIR,
@@ -91,7 +91,7 @@ def test_build_symbol_context_fix_action_is_complex():
 def test_render_group_index_has_valid_sections():
     group = GroupDump(name="config", symbols=[_func_dump("load"), _func_dump("save")])
     contexts = [SymbolContext(symbol=s) for s in group.symbols]
-    content = render_group_index(group, contexts)
+    content = render_group_index(group, contexts, GroupConfig())
 
     sections = parse_sections(content, TOOL_NAME, MD_CONFIG)
     section_ids = {s.id for s in sections}
@@ -102,7 +102,14 @@ def test_render_group_index_has_valid_sections():
     assert "save_def" in section_ids
 
 
-def test_generate_docs_creates_index_and_complex_pages():
+def test_render_group_index_includes_docstring():
+    group = GroupDump(name="config", symbols=[])
+    group_config = GroupConfig(docstring="Configuration utilities.")
+    content = render_group_index(group, [], group_config)
+    assert "Configuration utilities." in content
+
+
+def test_generate_docs_creates_index_and_complex_pages(project_config: ProjectConfig):
     api_dump = PublicApiDump(
         pkg_import_name="my_pkg",
         version="1.0.0",
@@ -118,7 +125,7 @@ def test_generate_docs_creates_index_and_complex_pages():
             )
         ],
     )
-    result = generate_docs(api_dump, {}, [])
+    result = generate_docs(api_dump, project_config, {}, [])
     assert isinstance(result, GeneratedDocsOutput)
     assert "config/index.md" in result.path_contents
     assert "config/envclass.md" in result.path_contents

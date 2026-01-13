@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+import importlib
+import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from textwrap import dedent
+from typing import Any
 
-from model_lib.model_base import Entity
+from model_lib import utc_datetime
+from model_lib.model_base import Entity, Event
+from pydantic import BaseModel
+from zero_3rdparty.humps import depascalize
 from zero_3rdparty.sections import CommentConfig, slug, wrap_section
 
 from pkg_ext.changelog.actions import (
@@ -15,6 +23,8 @@ from pkg_ext.changelog.actions import (
     ChangelogAction,
     DeprecatedAction,
     FixAction,
+    MakePublicAction,
+    ReleaseAction,
     RenameAction,
 )
 from pkg_ext.config import (
@@ -23,6 +33,11 @@ from pkg_ext.config import (
     GroupConfig,
     ProjectConfig,
     Stability,
+)
+from pkg_ext.generation.example_gen import (
+    EXAMPLE_BASE_FIELDS,
+    EXAMPLE_DESCRIPTION_FIELD,
+    EXAMPLE_NAME_FIELD,
 )
 from pkg_ext.models.api_dump import (
     ClassDump,
@@ -37,6 +52,7 @@ from pkg_ext.models.api_dump import (
     TypeAliasDump,
 )
 
+logger = logging.getLogger(__name__)
 MD_CONFIG = CommentConfig("<!--", " -->")
 ROOT_DIR = "_root"
 
@@ -47,6 +63,144 @@ MEANINGFUL_CHANGE_ACTIONS: tuple[type, ...] = (
     RenameAction,
     DeprecatedAction,
 )
+
+UNRELEASED_VERSION = "unreleased"
+
+
+class SymbolChange(Event):
+    version: str
+    description: str
+    ts: utc_datetime
+
+
+def _action_description(action: ChangelogAction) -> str:
+    match action:
+        case MakePublicAction():
+            return "Made public"
+        case FixAction():
+            return action.changelog_message or action.message
+        case BreakingChangeAction():
+            return action.details
+        case AdditionalChangeAction():
+            return action.details
+        case RenameAction():
+            base = f"Renamed from `{action.old_name}`"
+            return base
+        case DeprecatedAction():
+            if action.replacement:
+                return f"Deprecated, use `{action.replacement}` instead"
+            return "Deprecated"
+    return ""
+
+
+def build_symbol_changes(
+    symbol_name: str, changelog_actions: Sequence[ChangelogAction]
+) -> list[SymbolChange]:
+    """Build change history for a symbol with version tracking."""
+    current_version = UNRELEASED_VERSION
+    changes: list[SymbolChange] = []
+    for action in sorted(changelog_actions):
+        if isinstance(action, ReleaseAction):
+            current_version = action.name
+            continue
+        if action.name != symbol_name:
+            continue
+        if isinstance(action, MakePublicAction):
+            changes.append(
+                SymbolChange(
+                    version=current_version, description="Made public", ts=action.ts
+                )
+            )
+        elif isinstance(action, MEANINGFUL_CHANGE_ACTIONS):
+            desc = _action_description(action)
+            if desc:
+                changes.append(
+                    SymbolChange(
+                        version=current_version, description=desc, ts=action.ts
+                    )
+                )
+    return sorted(
+        changes, key=lambda c: (c.version != UNRELEASED_VERSION, c.ts), reverse=True
+    )
+
+
+def load_examples_for_group(
+    pkg_import_name: str, group_name: str
+) -> dict[str, list[Any]]:
+    """Load example instances from {group}_examples.py, grouped by symbol name."""
+    module_name = f"{pkg_import_name}.{group_name}_examples"
+    try:
+        module = importlib.import_module(module_name)
+    except ImportError:
+        logger.debug(f"No examples module found: {module_name}")
+        return {}
+
+    result: dict[str, list[Any]] = {}
+    for obj in vars(module).values():
+        if not isinstance(obj, BaseModel):
+            continue
+        cls_name = type(obj).__name__
+        if not cls_name.endswith("Example") or cls_name == "Example":
+            continue
+        symbol_name = depascalize(cls_name.removesuffix("Example"))
+        result.setdefault(symbol_name, []).append(obj)
+
+    for examples in result.values():
+        examples.sort(key=lambda e: getattr(e, EXAMPLE_NAME_FIELD, ""))
+    return result
+
+
+def _format_example_value(value: Any) -> str:
+    if isinstance(value, str):
+        return repr(value)
+    if isinstance(value, datetime):
+        return f"datetime({value.year}, {value.month}, {value.day})"
+    return repr(value)
+
+
+def render_example_section(
+    example: Any, symbol: SymbolDump, pkg_import_name: str
+) -> str:
+    """Render single example section with code snippet."""
+    example_name = getattr(example, EXAMPLE_NAME_FIELD, "")
+    description = getattr(example, EXAMPLE_DESCRIPTION_FIELD, "")
+    section_id = f"{slug(symbol.name)}_example_{slug(example_name)}"
+
+    fields = {
+        k: v for k, v in example.model_dump().items() if k not in EXAMPLE_BASE_FIELDS
+    }
+
+    if isinstance(symbol, FunctionDump):
+        args = ", ".join(f"{k}={_format_example_value(v)}" for k, v in fields.items())
+        code = f"result = {symbol.name}({args})"
+    elif isinstance(symbol, ClassDump):
+        args = ", ".join(f"{k}={_format_example_value(v)}" for k, v in fields.items())
+        code = f"instance = {symbol.name}({args})"
+    else:
+        code = f"# {symbol.name} example"
+
+    lines = [f"### Example: {example_name}"]
+    if description:
+        lines.append(description)
+    lines.extend(["", "```python", code, "```"])
+
+    return wrap_section("\n".join(lines), section_id, PKG_EXT_TOOL_NAME, MD_CONFIG)
+
+
+def render_changes_section(changes: list[SymbolChange], symbol_name: str) -> str:
+    """Render changes table sorted by version descending."""
+    if not changes:
+        return ""
+    section_id = f"{slug(symbol_name)}_changes"
+    lines = [
+        "### Changes",
+        "",
+        "| Version | Change |",
+        "|---------|--------|",
+    ]
+    for c in changes:
+        lines.append(f"| {c.version} | {c.description} |")
+    return wrap_section("\n".join(lines), section_id, PKG_EXT_TOOL_NAME, MD_CONFIG)
 
 
 def _format_param(p) -> str:
@@ -189,6 +343,9 @@ def render_symbol_page(
     group: GroupDump,
     symbol_doc_path: Path,
     pkg_src_dir: Path,
+    pkg_import_name: str,
+    examples: list[Any] | None = None,
+    changes: list[SymbolChange] | None = None,
 ) -> str:
     """Render full content for a complex symbol's dedicated page."""
     symbol = ctx.symbol
@@ -219,6 +376,12 @@ def render_symbol_page(
         env_table = render_env_var_table(symbol)
         if env_table:
             parts.extend(["", env_table])
+
+    for ex in examples or []:
+        parts.extend(["", render_example_section(ex, symbol, pkg_import_name)])
+
+    if changes:
+        parts.extend(["", render_changes_section(changes, symbol.name)])
 
     return "\n".join(parts)
 
@@ -329,8 +492,10 @@ def generate_docs(
     changelog_actions: list[ChangelogAction],
     docs_dir: Path | None = None,
     pkg_src_dir: Path | None = None,
+    load_examples: bool = False,
 ) -> GeneratedDocsOutput:
     path_contents: dict[str, str] = {}
+    pkg_import_name = api_dump.pkg_import_name
 
     for group in api_dump.groups:
         dir_name = group_dir_name(group)
@@ -343,13 +508,27 @@ def generate_docs(
         index_path = f"{dir_name}/index.md"
         path_contents[index_path] = render_group_index(group, contexts, group_config)
 
+        loaded_examples: dict[str, list[Any]] = {}
+        if load_examples:
+            loaded_examples = load_examples_for_group(pkg_import_name, group.name)
+
         for ctx in contexts:
             if ctx.is_complex:
                 symbol_path = f"{dir_name}/{ctx.page_filename}"
                 if docs_dir and pkg_src_dir:
                     symbol_doc_path = docs_dir / symbol_path
+                    symbol_examples = loaded_examples.get(ctx.symbol.name, [])
+                    symbol_changes = build_symbol_changes(
+                        ctx.symbol.name, changelog_actions
+                    )
                     path_contents[symbol_path] = render_symbol_page(
-                        ctx, group, symbol_doc_path, pkg_src_dir
+                        ctx,
+                        group,
+                        symbol_doc_path,
+                        pkg_src_dir,
+                        pkg_import_name,
+                        examples=symbol_examples,
+                        changes=symbol_changes,
                     )
                 else:
                     path_contents[symbol_path] = f"# {ctx.symbol.name}\n"

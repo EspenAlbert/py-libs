@@ -1,9 +1,17 @@
 from datetime import UTC, datetime
 from pathlib import Path
 
+from pydantic import BaseModel
 from zero_3rdparty.sections import parse_sections
 
-from pkg_ext.changelog.actions import FixAction, MakePublicAction
+from pkg_ext.changelog.actions import (
+    DeprecatedAction,
+    FixAction,
+    MakePublicAction,
+    ReleaseAction,
+    RenameAction,
+    StabilityTarget,
+)
 from pkg_ext.config import (
     PKG_EXT_TOOL_NAME,
     ROOT_GROUP_NAME,
@@ -14,8 +22,11 @@ from pkg_ext.config import (
 from pkg_ext.generation.docs import (
     MD_CONFIG,
     ROOT_DIR,
+    UNRELEASED_VERSION,
     GeneratedDocsOutput,
+    SymbolChange,
     SymbolContext,
+    build_symbol_changes,
     build_symbol_context,
     calculate_source_link,
     format_docstring,
@@ -23,7 +34,9 @@ from pkg_ext.generation.docs import (
     generate_docs,
     group_dir_name,
     has_env_vars,
+    render_changes_section,
     render_env_var_table,
+    render_example_section,
     render_group_index,
     render_stability_badge,
 )
@@ -267,3 +280,116 @@ def test_calculate_source_link():
     repo_root = Path("/repo")
     link = calculate_source_link(doc_path, "pkg_ext.config", repo_root, 42)
     assert link == "../../pkg_ext/config.py#L42"
+
+
+def test_build_symbol_changes_unreleased():
+    actions = [
+        MakePublicAction(
+            name="my_func", group="config", ts=datetime(2025, 1, 1, tzinfo=UTC)
+        ),
+        FixAction(
+            name="my_func",
+            short_sha="abc",
+            message="fix bug",
+            ts=datetime(2025, 1, 2, tzinfo=UTC),
+        ),
+    ]
+    changes = build_symbol_changes("my_func", actions)
+    assert len(changes) == 2
+    assert all(c.version == UNRELEASED_VERSION for c in changes)
+    assert changes[0].description == "fix bug"
+    assert changes[1].description == "Made public"
+
+
+def test_build_symbol_changes_with_releases():
+    actions = [
+        MakePublicAction(
+            name="parse", group="config", ts=datetime(2025, 1, 1, tzinfo=UTC)
+        ),
+        ReleaseAction(
+            name="1.0.0", old_version="0.0.0", ts=datetime(2025, 1, 5, tzinfo=UTC)
+        ),
+        FixAction(
+            name="parse",
+            short_sha="def",
+            message="fix parse",
+            ts=datetime(2025, 1, 10, tzinfo=UTC),
+        ),
+    ]
+    changes = build_symbol_changes("parse", actions)
+    assert len(changes) == 2
+    versions = [c.version for c in changes]
+    assert "1.0.0" in versions
+    assert UNRELEASED_VERSION in versions
+
+
+def test_build_symbol_changes_deprecated_action():
+    actions = [
+        DeprecatedAction(
+            name="old_func",
+            target=StabilityTarget.symbol,
+            group="config",
+            replacement="new_func",
+            ts=datetime(2025, 1, 1, tzinfo=UTC),
+        ),
+    ]
+    changes = build_symbol_changes("old_func", actions)
+    assert len(changes) == 1
+    assert "new_func" in changes[0].description
+
+
+def test_build_symbol_changes_rename_action():
+    actions = [
+        RenameAction(
+            name="new_name",
+            group="config",
+            old_name="old_name",
+            ts=datetime(2025, 1, 1, tzinfo=UTC),
+        ),
+    ]
+    changes = build_symbol_changes("new_name", actions)
+    assert len(changes) == 1
+    assert "old_name" in changes[0].description
+
+
+def test_render_changes_section():
+    changes = [
+        SymbolChange(
+            version="1.1.0",
+            description="Added param",
+            ts=datetime(2025, 2, 1, tzinfo=UTC),
+        ),
+        SymbolChange(
+            version="1.0.0",
+            description="Made public",
+            ts=datetime(2025, 1, 1, tzinfo=UTC),
+        ),
+    ]
+    content = render_changes_section(changes, "my_func")
+    assert "| 1.1.0 | Added param |" in content
+    assert "| 1.0.0 | Made public |" in content
+
+
+class ParseExample(BaseModel):
+    example_name: str = "basic"
+    example_description_md: str = "Parse a string"
+    data: str = "hello"
+
+
+def test_render_example_section_function():
+    func = _func_dump("parse")
+    example = ParseExample(
+        example_name="basic", example_description_md="Test parse", data="test"
+    )
+    content = render_example_section(example, func, "my_pkg")
+    assert "### Example: basic" in content
+    assert "Test parse" in content
+    assert "result = parse(data=" in content
+
+
+def test_render_example_section_class():
+    cls = _class_dump("Settings")
+    example = ParseExample(example_name="default", data="cfg")
+    content = render_example_section(example, cls, "my_pkg")
+    assert "### Example: default" in content
+    assert "instance = Settings(data=" in content

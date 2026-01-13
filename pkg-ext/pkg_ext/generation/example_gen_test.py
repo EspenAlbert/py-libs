@@ -112,7 +112,7 @@ def test_generate_group_examples_file():
         ],
     )
     result = generate_group_examples_file(group, "my_pkg")
-    assert "class Example(Entity):" in result
+    assert "class Example(BaseModel):" in result
     assert "example_name: str" in result
     assert "class LoadExample(Example):" in result
     assert "DO_NOT_EDIT: pkg-ext header" in result

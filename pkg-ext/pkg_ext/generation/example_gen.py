@@ -5,7 +5,7 @@ from __future__ import annotations
 from zero_3rdparty.humps import pascalize
 from zero_3rdparty.sections import CommentConfig, slug, wrap_section
 
-from pkg_ext.config import Stability
+from pkg_ext.config import PKG_EXT_TOOL_NAME, Stability
 from pkg_ext.models.api_dump import (
     ClassDump,
     ClassFieldInfo,
@@ -17,8 +17,14 @@ from pkg_ext.models.api_dump import (
 )
 from pkg_ext.pkg_state import PkgExtState
 
-TOOL_NAME = "pkg-ext"
 PY_CONFIG = CommentConfig("#")
+
+EXAMPLE_NAME_FIELD = "example_name"
+EXAMPLE_DESCRIPTION_FIELD = "example_description_md"
+EXAMPLE_EXPECTED_FIELD = "expected"
+EXAMPLE_BASE_FIELDS = frozenset(
+    {EXAMPLE_NAME_FIELD, EXAMPLE_DESCRIPTION_FIELD, EXAMPLE_EXPECTED_FIELD}
+)
 
 
 def _type_str(type_annotation: str | None) -> str:
@@ -81,21 +87,21 @@ def generate_group_examples_file(group: GroupDump, pkg_import_name: str) -> str:
 
 from typing import Any
 
-from model_lib.model_base import Entity
+from pydantic import BaseModel
 
 
-class Example(Entity):
-    example_name: str
-    example_description_md: str = ""'''
+class Example(BaseModel):
+    {EXAMPLE_NAME_FIELD}: str
+    {EXAMPLE_DESCRIPTION_FIELD}: str = ""'''
 
-    header_section = wrap_section(header, "header", TOOL_NAME, PY_CONFIG)
+    header_section = wrap_section(header, "header", PKG_EXT_TOOL_NAME, PY_CONFIG)
 
     sections = [header_section, ""]
     for symbol in group.symbols:
         if class_code := _symbol_example_class(symbol):
             section_id = f"class_{slug(symbol.name)}"
             sections.extend(
-                (wrap_section(class_code, section_id, TOOL_NAME, PY_CONFIG), "")
+                (wrap_section(class_code, section_id, PKG_EXT_TOOL_NAME, PY_CONFIG), "")
             )
 
     return "\n".join(sections)

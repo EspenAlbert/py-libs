@@ -16,14 +16,14 @@ from zero_3rdparty.file_utils import iter_paths_and_relative
 from pkg_ext import api_dumper
 from pkg_ext.changelog import (
     ReleaseAction,
-    add_git_changes,
     changelog_filepath,
     dump_changelog_actions,
-    parse_changelog,
     parse_changelog_file_path,
-    write_changelog_md,
 )
 from pkg_ext.changelog.actions import archive_old_actions
+from pkg_ext.changelog.committer import add_git_changes
+from pkg_ext.changelog.parser import parse_changelog
+from pkg_ext.changelog.write_changelog_md import write_changelog_md
 from pkg_ext.context import pkg_ctx
 from pkg_ext.errors import NoHumanRequiredError
 from pkg_ext.file_parser import parse_code_symbols, parse_symbols

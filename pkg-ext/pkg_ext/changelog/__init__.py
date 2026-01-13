@@ -1,4 +1,10 @@
 # Changelog management domain
+#
+# Note: parser.py and write_changelog_md.py are intentionally NOT imported here
+# to avoid circular imports. They depend on pkg_ext.context and pkg_ext.pkg_state
+# which in turn import from this package. Import them directly when needed:
+#   from pkg_ext.changelog.parser import parse_changelog
+#   from pkg_ext.changelog.write_changelog_md import write_changelog_md
 
 from .actions import (
     AdditionalChangeAction,
@@ -23,9 +29,6 @@ from .actions import (
     parse_changelog_actions,
     parse_changelog_file_path,
 )
-from .committer import add_git_changes
-from .parser import parse_changelog
-from .write_changelog_md import write_changelog_md
 
 __all__ = [
     "AdditionalChangeAction",
@@ -44,12 +47,9 @@ __all__ = [
     "ReleaseAction",
     "RenameAction",
     "StabilityTarget",
-    "add_git_changes",
     "changelog_filepath",
     "default_changelog_path",
     "dump_changelog_actions",
-    "parse_changelog",
     "parse_changelog_actions",
     "parse_changelog_file_path",
-    "write_changelog_md",
 ]

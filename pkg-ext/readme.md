@@ -153,15 +153,12 @@ Run after merge on default branch. Bumps version, creates tag, cleans old change
 pkg-ext post-merge --push --pr 123
 ```
 
-#### `generate-api`
-Full workflow: analyze changes, prompt for decisions, generate files.
+#### `dump-groups`
+Regenerate `.groups.yaml` with merged config data (for debugging group assignments).
 
 ```bash
-pkg-ext generate-api --bump --tag --push
+pkg-ext dump-groups
 ```
-
-Options:
-- `--dump-groups` - Regenerate `.groups.yaml` with merged config data
 
 #### `release-notes`
 Extract changelog section for a specific tag.

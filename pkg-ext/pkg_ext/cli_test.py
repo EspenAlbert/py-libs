@@ -55,7 +55,7 @@ def prepare_test(
                     if path.is_file():
                         path.unlink()
     settings = PkgSettings(
-        repo_root=execution_e2e_dir, pkg_directory=execution_e2e_pkg_path
+        repo_root=execution_e2e_dir, pkg_directory=execution_e2e_pkg_path, dev_mode=True
     )
     if step_number > 1:
         # rename the old changelog path
@@ -79,18 +79,22 @@ def _run_command(
     settings: PkgSettings,
     *,
     git_since: GitSince = GitSince.NO_GIT_CHANGES,
-    extra_cli_args: str = "",
     extra_global_cli_args: str = "",
 ):
     execution_e2e_dir = settings.repo_root
     pkg_path_relative = str(settings.pkg_directory.relative_to(execution_e2e_dir))
     if extra_global_cli_args:
         extra_global_cli_args = ensure_suffix(extra_global_cli_args, " ")
-    command = f"{extra_global_cli_args}--skip-open --repo-root {execution_e2e_dir} --pkg-path {pkg_path_relative} generate-api --git-since {git_since} --bump"
-    if extra_cli_args:
-        command = f"{command} {extra_cli_args}"
-    logger.info(f"running command: {command}")
-    result = run(command)
+    base_args = f"{extra_global_cli_args}--skip-open --repo-root {execution_e2e_dir} --pkg-path {pkg_path_relative}"
+    # Run pre-change for interactive prompts
+    pre_change_cmd = f"{base_args} pre-change --git-since {git_since}"
+    logger.info(f"running command: {pre_change_cmd}")
+    result = run(pre_change_cmd)
+    assert result.exit_code == 0
+    # Run pre-commit for file generation (bot mode)
+    pre_commit_cmd = f"{base_args} pre-commit --git-since {git_since} --skip-docs"
+    logger.info(f"running command: {pre_commit_cmd}")
+    result = run(pre_commit_cmd)
     assert result.exit_code == 0
 
 
@@ -105,14 +109,12 @@ def run_e2e(
     step_number: int = 1,
     skip_regressions: bool = False,
     copy_ignore_globs: list[str] | None = None,
-    extra_cli_args: str = "",
     extra_global_cli_args: str = "",
 ) -> PkgSettings:
     settings = prepare_test(paths, monkeypatch, groups, step_number, copy_ignore_globs)
     _run_command(
         settings,
         git_since=git_since,
-        extra_cli_args=extra_cli_args,
         extra_global_cli_args=extra_global_cli_args,
     )
     actual_changelog_path = default_changelog_path(settings.changelog_dir)
@@ -134,9 +136,13 @@ def run_e2e(
     regression_check(
         CHANGELOG_YAML_FILENAME, actual_changelog_path.read_text(), extension=".yaml"
     )
-    regression_check.check_path(settings.public_groups_path)
+    # In dev mode, groups and changelog have -dev suffix
+    groups_path = settings.public_groups_path
+    if not groups_path.exists():
+        groups_path = settings.state_dir / ".groups.yaml"  # fallback for fixtures
+    regression_check.check_path(groups_path)
     regression_check.check_path(settings.init_path)
-    assert changelog_md.exists(), "no changelog generated!"
+    # CHANGELOG.md only exists after post-merge; pre-commit writes CHANGELOG-dev.md
     if changelog_md.exists():
         regression_check.check_path(changelog_md)
     for group in groups:
@@ -269,6 +275,5 @@ def test_04_git_fix(e2e_dirs, file_regression_e2e, monkeypatch):
             groups,
             git_since=GitSince.LAST_GIT_TAG,
             step_number=2,
-            extra_cli_args="--tag --pr 2",
             extra_global_cli_args="--tag-prefix v",
         )

@@ -20,8 +20,6 @@ from pkg_ext.changelog import (
 )
 from pkg_ext.changelog.write_changelog_md import read_changelog_section
 from pkg_ext.cli.options import (
-    option_bump_version,
-    option_create_tag,
     option_git_changes_since,
     option_pr,
     option_push,
@@ -182,44 +180,14 @@ def post_merge(
 
 
 @app.command()
-def generate_api(
-    ctx: typer.Context,
-    git_changes_since: GitSince = option_git_changes_since,
-    bump_version: bool = option_bump_version,
-    create_tag: bool = option_create_tag,
-    push: bool = option_push,
-    explicit_pr: int = option_pr,
-    dump_groups: bool = typer.Option(
-        False, "--dump-groups", help="Regenerate .groups.yaml with merged config data"
-    ),
-):
+def dump_groups(ctx: typer.Context):
+    """Regenerate .groups.yaml with merged config data."""
     settings: PkgSettings = ctx.obj
-    if dump_groups:
-        groups = settings.parse_computed_public_groups(PublicGroups)
-        config = load_project_config(settings.repo_root)
-        groups.merge_config(config)
-        groups.write()
-        logger.info(f"Wrote groups to {groups.storage_path}")
-        return
-    api_input = GenerateApiInput(
-        settings=settings,
-        git_changes_since=git_changes_since,
-        bump_version=bump_version,
-        create_tag=create_tag,
-        push=push,
-        explicit_pr=explicit_pr,
-    )
-    if pkg_ctx := generate_api_workflow(api_input):
-        if api_input.create_tag:
-            post_merge_commit_workflow(
-                repo_path=settings.repo_root,
-                changelog_dir_path=pkg_ctx.settings.changelog_dir,
-                pr_number=explicit_pr or pkg_ctx.git_changes.current_pr,
-                tag_prefix=settings.tag_prefix,
-                old_version=pkg_ctx.run_state.old_version,
-                new_version=pkg_ctx.run_state.new_version,
-                push=push,
-            )
+    groups = settings.parse_computed_public_groups(PublicGroups)
+    config = load_project_config(settings.repo_root)
+    groups.merge_config(config)
+    groups.write()
+    logger.info(f"Wrote groups to {groups.storage_path}")
 
 
 def find_release_action(changelog_dir: Path, version: str) -> ReleaseAction:
@@ -381,7 +349,7 @@ def _create_api_dump(settings: PkgSettings) -> api_dumper.PublicApiDump:
     pkg_ctx = _create_stability_ctx(settings)
     groups = settings.parse_computed_public_groups(PublicGroups)
     version = str(read_current_version(pkg_ctx))
-    refs = {ref.local_id: ref for ref in pkg_ctx.code_state.all_refs}
+    refs = {ref.local_id: ref for ref in pkg_ctx.code_state.import_id_refs.values()}
     return api_dumper.dump_public_api(
         pkg_ctx.tool_state, groups, refs, settings.pkg_import_name, version
     )
@@ -391,7 +359,7 @@ def _generate_examples_for_groups(
     settings: PkgSettings,
     groups: list[api_dumper.GroupDump],
 ) -> int:
-    py_config = get_comment_config(".py")
+    py_config = get_comment_config("file.py")
     count = 0
     for group_dump in groups:
         if not group_dump.symbols:
@@ -421,7 +389,7 @@ def _generate_tests_for_groups(
     settings: PkgSettings,
     groups: list[api_dumper.GroupDump],
 ) -> int:
-    py_config = get_comment_config(".py")
+    py_config = get_comment_config("file.py")
     count = 0
     for group_dump in groups:
         testable_symbols = [
@@ -512,7 +480,7 @@ def _generate_docs_for_pkg(
     pkg_ctx = _create_stability_ctx(settings)
     groups = settings.parse_computed_public_groups(PublicGroups)
     version = str(read_current_version(pkg_ctx))
-    refs = {ref.local_id: ref for ref in pkg_ctx.code_state.all_refs}
+    refs = {ref.local_id: ref for ref in pkg_ctx.code_state.import_id_refs.values()}
     api_dump = api_dumper.dump_public_api(
         pkg_ctx.tool_state, groups, refs, settings.pkg_import_name, version
     )

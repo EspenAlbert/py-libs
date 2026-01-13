@@ -30,6 +30,7 @@ def is_test_file(path: Path) -> bool:
     return (
         path.name.startswith("test_")
         or path.name.endswith("_test.py")
+        or path.name.endswith("_examples.py")
         or path.name == "conftest.py"
     )
 

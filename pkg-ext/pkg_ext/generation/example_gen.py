@@ -19,10 +19,6 @@ from pkg_ext.pkg_state import PkgExtState
 
 PY_CONFIG = CommentConfig("#")
 
-STDLIB_MODULES = frozenset(
-    {"pathlib", "datetime", "decimal", "uuid", "typing", "collections"}
-)
-
 EXAMPLE_NAME_FIELD = "example_name"
 EXAMPLE_DESCRIPTION_FIELD = "example_description_md"
 EXAMPLE_EXPECTED_FIELD = "expected"
@@ -76,7 +72,8 @@ def _generate_type_imports(group: GroupDump) -> tuple[list[str], list[str]]:
     for module in sorted(module_to_types):
         types_str = ", ".join(sorted(module_to_types[module]))
         import_line = f"from {module} import {types_str}"
-        if module in STDLIB_MODULES or "." not in module:
+        # Single-segment modules (no dots) are stdlib, multi-segment are package imports
+        if "." not in module:
             stdlib_imports.append(import_line)
         else:
             pkg_imports.append(import_line)
@@ -133,9 +130,28 @@ def _symbol_example_class(symbol: SymbolDump) -> str | None:
     return None
 
 
-def generate_group_examples_file(group: GroupDump, pkg_import_name: str) -> str:
-    """Generate standalone {group}_examples.py content."""
-    stdlib_imports, pkg_imports = _generate_type_imports(group)
+def generate_group_examples_file(
+    group: GroupDump,
+    pkg_import_name: str,
+    include_symbols: list[str] | None = None,
+) -> str:
+    """Generate standalone {group}_examples.py content.
+
+    Args:
+        include_symbols: If provided, only generate examples for these symbols.
+                         If None, generate for all symbols.
+    """
+    symbols = group.symbols
+    if include_symbols is not None:
+        include_set = set(include_symbols)
+        symbols = [s for s in symbols if s.name in include_set]
+
+    filtered_group = GroupDump(
+        name=group.name,
+        stability=group.stability,
+        symbols=symbols,
+    )
+    stdlib_imports, pkg_imports = _generate_type_imports(filtered_group)
 
     stdlib_block = "\n".join(stdlib_imports)
     if stdlib_block:
@@ -159,7 +175,7 @@ class Example(BaseModel):
     header_section = wrap_section(header, "header", PKG_EXT_TOOL_NAME, PY_CONFIG)
 
     sections = [header_section, ""]
-    for symbol in group.symbols:
+    for symbol in symbols:
         if class_code := _symbol_example_class(symbol):
             section_id = f"class_{slug(symbol.name)}"
             sections.extend(

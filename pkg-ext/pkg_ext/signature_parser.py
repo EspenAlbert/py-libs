@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import dataclasses
 import inspect
+import types
+import typing
 from contextlib import suppress
-from typing import Any, Callable, ClassVar, get_origin, get_type_hints
+from typing import Any, Callable, ClassVar, Union, get_origin, get_type_hints
 
 from pkg_ext.models.api_dump import (
     CallableSignature,
@@ -23,10 +25,35 @@ _PARAM_KIND_MAP = {
 
 
 def _annotation_str(annotation: Any) -> str | None:
+    """Convert annotation to string using simple names, not full module paths."""
     if annotation is inspect.Parameter.empty:
         return None
+    if annotation is None or annotation is type(None):
+        return "None"
     if isinstance(annotation, type):
         return annotation.__name__
+
+    # Handle Union types (X | Y or Union[X, Y])
+    origin = get_origin(annotation)
+    # Python 3.10+ uses types.UnionType for X | Y syntax
+    if isinstance(annotation, types.UnionType):
+        args = typing.get_args(annotation)
+        arg_strs = [_annotation_str(arg) for arg in args]
+        return " | ".join(a for a in arg_strs if a)
+
+    if origin is not None:
+        args = typing.get_args(annotation)
+        if origin is Union:
+            # Union type - join args with |
+            arg_strs = [_annotation_str(arg) for arg in args]
+            return " | ".join(a for a in arg_strs if a)
+        # Generic type like list[str], dict[str, int]
+        origin_name = origin.__name__ if hasattr(origin, "__name__") else str(origin)
+        if args:
+            arg_strs = [_annotation_str(arg) for arg in args]
+            return f"{origin_name}[{', '.join(a for a in arg_strs if a)}]"
+        return origin_name
+
     return str(annotation)
 
 

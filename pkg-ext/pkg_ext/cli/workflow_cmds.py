@@ -1,7 +1,6 @@
 """Git workflow commands: pre_change, pre_commit, post_merge."""
 
 import logging
-import subprocess
 from pathlib import Path
 
 import typer
@@ -9,7 +8,7 @@ from git import InvalidGitRepositoryError, Repo
 from zero_3rdparty.file_utils import ensure_parents_write_text
 from zero_3rdparty.sections import get_comment_config, parse_sections, replace_sections
 
-from pkg_ext import api_dumper
+from pkg_ext import api_dumper, py_format
 from pkg_ext.changelog import parse_changelog_actions
 from pkg_ext.cli.options import (
     option_git_changes_since,
@@ -31,7 +30,7 @@ from pkg_ext.cli.workflows import (
     sync_files,
     update_changelog_entries,
 )
-from pkg_ext.config import PKG_EXT_TOOL_NAME, load_project_config
+from pkg_ext.config import PKG_EXT_TOOL_NAME, ProjectConfig, load_project_config
 from pkg_ext.generation import docs, example_gen, test_gen
 from pkg_ext.git_usage import GitSince, head_merge_pr
 from pkg_ext.models import PublicGroups
@@ -86,15 +85,22 @@ def check_generated_files_dirty(settings: PkgSettings) -> list[str]:
 def generate_examples_for_groups(
     settings: PkgSettings,
     groups: list[api_dumper.GroupDump],
+    config: ProjectConfig | None = None,
 ) -> int:
     py_config = get_comment_config("file.py")
+    config = config or load_project_config(settings.repo_root)
     generated_paths: list[Path] = []
     for group_dump in groups:
         if not group_dump.symbols:
             continue
+        symbol_names = [s.name for s in group_dump.symbols]
+        include_symbols = config.filter_example_symbols(group_dump.name, symbol_names)
+        if not include_symbols:
+            logger.debug(f"Skipping examples for {group_dump.name}: no symbols enabled")
+            continue
         path = settings.examples_file_path(group_dump.name)
         new_content = example_gen.generate_group_examples_file(
-            group_dump, settings.pkg_import_name
+            group_dump, settings.pkg_import_name, include_symbols
         )
         if path.exists():
             existing = path.read_text()
@@ -110,12 +116,7 @@ def generate_examples_for_groups(
             ensure_parents_write_text(path, new_content)
         logger.info(f"Generated examples: {path}")
         generated_paths.append(path)
-    if generated_paths and settings.format_command:
-        subprocess.run(
-            [*settings.format_command, *[str(p) for p in generated_paths]],
-            check=False,
-            capture_output=True,
-        )
+    py_format.format_python_files(generated_paths, settings.format_command)
     return len(generated_paths)
 
 
@@ -124,7 +125,7 @@ def generate_tests_for_groups(
     groups: list[api_dumper.GroupDump],
 ) -> int:
     py_config = get_comment_config("file.py")
-    count = 0
+    generated_paths: list[Path] = []
     for group_dump in groups:
         testable_symbols = [
             s
@@ -151,8 +152,9 @@ def generate_tests_for_groups(
         else:
             ensure_parents_write_text(path, new_content)
         logger.info(f"Generated tests: {path}")
-        count += 1
-    return count
+        generated_paths.append(path)
+    py_format.format_python_files(generated_paths, settings.format_command)
+    return len(generated_paths)
 
 
 def generate_docs_for_pkg(

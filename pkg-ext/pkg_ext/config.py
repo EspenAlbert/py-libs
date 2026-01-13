@@ -42,6 +42,17 @@ class GroupConfig(Entity):
     dependencies: list[str] = Field(default_factory=list)
     docs_exclude: list[str] = Field(default_factory=list)
     docstring: str = ""
+    examples_enabled: bool | None = None  # None = inherit from project
+    examples_include: list[str] = Field(default_factory=list)
+    examples_exclude: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_examples_mutually_exclusive(self) -> Self:
+        if self.examples_include and self.examples_exclude:
+            raise ValueError(
+                "examples_include and examples_exclude are mutually exclusive"
+            )
+        return self
 
 
 def _detect_cycle(groups: dict[str, GroupConfig]) -> list[str] | None:
@@ -87,7 +98,39 @@ class ProjectConfig(Entity):
     ignored_symbols: tuple[str, ...] = ()
     mkdocs_skip_sections: tuple[str, ...] = ()
     format_command: tuple[str, ...] = DEFAULT_FORMAT_COMMAND
+    examples_enabled: bool = False
     groups: dict[str, GroupConfig] = Field(default_factory=dict)
+
+    def is_examples_enabled(self, group_name: str) -> bool:
+        group_cfg = self.groups.get(group_name)
+        if group_cfg and group_cfg.examples_enabled is not None:
+            return group_cfg.examples_enabled
+        return self.examples_enabled
+
+    def filter_example_symbols(
+        self, group_name: str, symbol_names: list[str]
+    ) -> list[str]:
+        if not self.is_examples_enabled(group_name):
+            return []
+        group_cfg = self.groups.get(group_name)
+        if not group_cfg:
+            return symbol_names
+        symbol_set = set(symbol_names)
+        if group_cfg.examples_include:
+            unknown = set(group_cfg.examples_include) - symbol_set
+            if unknown:
+                raise ValueError(
+                    f"Group '{group_name}' examples_include has unknown symbols: {sorted(unknown)}"
+                )
+            return [n for n in symbol_names if n in group_cfg.examples_include]
+        if group_cfg.examples_exclude:
+            unknown = set(group_cfg.examples_exclude) - symbol_set
+            if unknown:
+                raise ValueError(
+                    f"Group '{group_name}' examples_exclude has unknown symbols: {sorted(unknown)}"
+                )
+            return [n for n in symbol_names if n not in group_cfg.examples_exclude]
+        return symbol_names
 
     @model_validator(mode="after")
     def validate_dependencies(self) -> Self:

@@ -57,6 +57,62 @@ def test_group_config_defaults():
     assert cfg.dependencies == []
     assert cfg.docs_exclude == []
     assert cfg.docstring == ""
+    assert cfg.examples_enabled is None
+    assert cfg.examples_include == []
+    assert cfg.examples_exclude == []
+
+
+def test_examples_include_exclude_mutually_exclusive():
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        GroupConfig(examples_include=["a"], examples_exclude=["b"])
+
+
+def test_filter_example_symbols():
+    config = ProjectConfig(
+        examples_enabled=True,
+        groups={
+            "disabled": GroupConfig(examples_enabled=False),
+            "include_only": GroupConfig(examples_include=["func_a", "func_b"]),
+            "exclude_some": GroupConfig(examples_exclude=["func_c"]),
+        },
+    )
+    symbols = ["func_a", "func_b", "func_c"]
+    assert config.filter_example_symbols("disabled", symbols) == []
+    assert config.filter_example_symbols("include_only", symbols) == [
+        "func_a",
+        "func_b",
+    ]
+    assert config.filter_example_symbols("exclude_some", symbols) == [
+        "func_a",
+        "func_b",
+    ]
+    assert config.filter_example_symbols("unknown_group", symbols) == symbols
+
+
+def test_filter_example_symbols_inherits_project_default():
+    config = ProjectConfig(examples_enabled=False)
+    assert config.filter_example_symbols("any_group", ["a", "b"]) == []
+
+    config_enabled = ProjectConfig(
+        examples_enabled=False, groups={"enabled": GroupConfig(examples_enabled=True)}
+    )
+    assert config_enabled.filter_example_symbols("enabled", ["a"]) == ["a"]
+
+
+def test_filter_example_symbols_unknown_raises():
+    config = ProjectConfig(
+        examples_enabled=True,
+        groups={"g": GroupConfig(examples_include=["unknown_func"])},
+    )
+    with pytest.raises(ValueError, match="unknown symbols.*unknown_func"):
+        config.filter_example_symbols("g", ["real_func"])
+
+    config_exclude = ProjectConfig(
+        examples_enabled=True,
+        groups={"g": GroupConfig(examples_exclude=["typo_func"])},
+    )
+    with pytest.raises(ValueError, match="unknown symbols.*typo_func"):
+        config_exclude.filter_example_symbols("g", ["real_func"])
 
 
 pyproject_valid_deps = """\

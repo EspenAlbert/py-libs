@@ -540,6 +540,82 @@ def pre_change(
     )
 
 
+def _generate_docs_for_pkg(
+    settings: PkgSettings,
+    output_dir: Path | None = None,
+    filter_group: str | None = None,
+) -> int:
+    """Generate docs for package. Returns file count."""
+    pkg_ctx = _create_stability_ctx(settings)
+    groups = settings.parse_computed_public_groups(PublicGroups)
+    version = str(read_current_version(pkg_ctx))
+    refs = {ref.local_id: ref for ref in pkg_ctx.code_state.all_refs}
+    api_dump = api_dumper.dump_public_api(
+        pkg_ctx.tool_state, groups, refs, settings.pkg_import_name, version
+    )
+    config = load_project_config(settings.state_dir)
+    changelog_actions = parse_changelog_actions(settings.changelog_dir)
+    docs_dir = output_dir or settings.docs_dir
+
+    example_symbols: dict[str, set[str]] = {}
+    groups_to_process = (
+        [api_dump.get_group(filter_group)] if filter_group else api_dump.groups
+    )
+    for group_dump in groups_to_process:
+        loaded = docs.load_examples_for_group(settings.pkg_import_name, group_dump.name)
+        example_symbols[group_dump.name] = set(loaded.keys())
+
+    output = docs.generate_docs(
+        api_dump=api_dump,
+        config=config,
+        example_symbols=example_symbols,
+        changelog_actions=changelog_actions,
+        docs_dir=docs_dir,
+        pkg_src_dir=settings.repo_root,
+        load_examples=True,
+    )
+    if filter_group:
+        dir_name = docs.group_dir_name(api_dump.get_group(filter_group))
+        output.path_contents = {
+            k: v for k, v in output.path_contents.items() if k.startswith(dir_name)
+        }
+    docs.copy_readme_as_index(settings.state_dir, docs_dir, settings.pkg_import_name)
+    count = docs.write_docs_files(output, docs_dir)
+    nav = docs.generate_mkdocs_nav(api_dump, settings.pkg_import_name)
+    docs.write_mkdocs_yml(
+        settings.mkdocs_yml, settings.pkg_import_name, nav, config.mkdocs_skip_sections
+    )
+    return count
+
+
+@app.command()
+def pre_commit(
+    ctx: typer.Context,
+    git_changes_since: GitSince = option_git_changes_since,
+    skip_docs: bool = typer.Option(False, "--skip-docs", help="Skip doc regeneration"),
+):
+    """Update changelog and regenerate docs (bot mode, no prompts)."""
+    settings: PkgSettings = ctx.obj
+    settings.force_bot()
+
+    api_input = GenerateApiInput(
+        settings=settings,
+        git_changes_since=git_changes_since,
+        bump_version=False,
+        create_tag=False,
+        push=False,
+    )
+    if not generate_api_workflow(api_input):
+        raise typer.Exit(1)
+
+    if skip_docs:
+        logger.info("Skipped docs regeneration")
+        return
+
+    count = _generate_docs_for_pkg(settings)
+    logger.info(f"Regenerated {count} doc files")
+
+
 @app.command()
 def gen_examples(
     ctx: typer.Context,
@@ -580,45 +656,6 @@ def gen_docs(
 ):
     """Generate documentation from public API."""
     settings: PkgSettings = ctx.obj
-    pkg_ctx = _create_stability_ctx(settings)
-    groups = settings.parse_computed_public_groups(PublicGroups)
-    version = str(read_current_version(pkg_ctx))
-    refs = {ref.local_id: ref for ref in pkg_ctx.code_state.all_refs}
-    api_dump = api_dumper.dump_public_api(
-        pkg_ctx.tool_state, groups, refs, settings.pkg_import_name, version
-    )
-
-    config = load_project_config(settings.state_dir)
+    count = _generate_docs_for_pkg(settings, output_dir=output_dir, filter_group=group)
     docs_dir = output_dir or settings.docs_dir
-    pkg_src_dir = settings.repo_root
-    changelog_actions = parse_changelog_actions(settings.changelog_dir)
-
-    example_symbols: dict[str, set[str]] = {}
-    groups_to_process = [api_dump.get_group(group)] if group else api_dump.groups
-    for group_dump in groups_to_process:
-        loaded = docs.load_examples_for_group(settings.pkg_import_name, group_dump.name)
-        example_symbols[group_dump.name] = set(loaded.keys())
-
-    output = docs.generate_docs(
-        api_dump=api_dump,
-        config=config,
-        example_symbols=example_symbols,
-        changelog_actions=changelog_actions,
-        docs_dir=docs_dir,
-        pkg_src_dir=pkg_src_dir,
-        load_examples=True,
-    )
-
-    if group:
-        dir_name = docs.group_dir_name(api_dump.get_group(group))
-        output.path_contents = {
-            k: v for k, v in output.path_contents.items() if k.startswith(dir_name)
-        }
-
-    docs.copy_readme_as_index(settings.state_dir, docs_dir, settings.pkg_import_name)
-    count = docs.write_docs_files(output, docs_dir)
-    nav = docs.generate_mkdocs_nav(api_dump, settings.pkg_import_name)
-    docs.write_mkdocs_yml(
-        settings.mkdocs_yml, settings.pkg_import_name, nav, config.mkdocs_skip_sections
-    )
     logger.info(f"Generated {count} doc files in {docs_dir}")

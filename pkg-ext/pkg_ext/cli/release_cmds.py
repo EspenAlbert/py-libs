@@ -6,8 +6,9 @@ from pathlib import Path
 import typer
 from zero_3rdparty.file_utils import ensure_parents_write_text
 
-from pkg_ext.changelog import ReleaseAction, parse_changelog_actions
+from pkg_ext.changelog import MakePublicAction, ReleaseAction, parse_changelog_actions
 from pkg_ext.changelog.write_changelog_md import read_changelog_section
+from pkg_ext.cli.workflows import parse_pkg_code_state
 from pkg_ext.config import load_project_config
 from pkg_ext.models import PublicGroups
 from pkg_ext.settings import PkgSettings
@@ -44,10 +45,32 @@ def release_notes(
 
 
 def dump_groups(ctx: typer.Context):
-    """Regenerate .groups.yaml with merged config data."""
+    """Regenerate .groups.yaml with merged config data and reconcile with changelog."""
     settings: PkgSettings = ctx.obj
     groups = settings.parse_computed_public_groups(PublicGroups)
     config = load_project_config(settings.repo_root)
     groups.merge_config(config)
+
+    # Reconcile changelog MakePublicAction entries with code to find missing refs
+    changelog_actions = parse_changelog_actions(settings.changelog_dir)
+    code_state = parse_pkg_code_state(settings)
+    named_refs = code_state.named_refs
+
+    for action in changelog_actions:
+        if not isinstance(action, MakePublicAction):
+            continue
+        # Check if this ref is already in owned_refs for this group
+        group = groups.get_or_create_group(action.group)
+        # Find ref in code by name
+        if ref_state := named_refs.get(action.name):
+            symbol = ref_state.symbol
+            # Add to owned_refs if not already there
+            if symbol.local_id not in group.owned_refs:
+                group.owned_refs.add(symbol.local_id)
+                group.owned_modules.add(symbol.module_path)
+                logger.info(
+                    f"Added missing ref {symbol.local_id} to group {action.group}"
+                )
+
     groups.write()
     logger.info(f"Wrote groups to {groups.storage_path}")

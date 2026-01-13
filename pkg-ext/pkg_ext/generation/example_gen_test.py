@@ -43,7 +43,7 @@ def test_generate_function_example_class():
         ),
     )
     result = generate_function_example_class(func)
-    assert "class ParseConfigExample(Example):" in result
+    assert "class ParseConfigExample(Example[Any]):" in result
     assert "path: Path = ..." in result
     assert "timeout: int | None = ..." in result
 
@@ -84,7 +84,7 @@ def test_generate_class_example_class():
         ],
     )
     result = generate_class_example_class(cls)
-    assert "class UserConfigExample(Example):" in result
+    assert "class UserConfigExample(Example[UserConfig]):" in result
     assert "name: str = ..." in result
     assert "age: int | None = ..." in result
     assert "CLASS_VAR" not in result
@@ -112,9 +112,10 @@ def test_generate_group_examples_file():
         ],
     )
     result = generate_group_examples_file(group, "my_pkg")
-    assert "class Example(BaseModel):" in result
+    assert "class Example(BaseModel, Generic[T]):" in result
     assert "example_name: str" in result
-    assert "class LoadExample(Example):" in result
+    assert "expected: Callable" in result
+    assert "class LoadExample(Example[Any]):" in result
     assert "DO_NOT_EDIT: pkg-ext header" in result
     assert "OK_EDIT: pkg-ext header" in result
     assert "DO_NOT_EDIT: pkg-ext class_load" in result

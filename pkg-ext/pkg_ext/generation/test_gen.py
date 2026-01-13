@@ -25,7 +25,6 @@ def _generate_func_test(func: FunctionDump, group_name: str) -> str:
     example_class = _example_class_name(func.name)
     var_name = f"{func.name}_examples"
 
-    # Build the function call args from signature parameters
     params = [
         p
         for p in func.signature.parameters
@@ -34,11 +33,15 @@ def _generate_func_test(func: FunctionDump, group_name: str) -> str:
     args = ", ".join(f"{p.name}=example.{p.name}" for p in params)
 
     return f"""\
-{var_name} = [e for e in vars(examples_module).values() if isinstance(e, examples_module.{example_class})]
+{var_name} = [
+    e for e in vars(examples_module).values() if isinstance(e, examples_module.{example_class})
+]
+
 
 @pytest.mark.parametrize("example", {var_name}, ids=[e.example_name for e in {var_name}])
 def test_{func.name}(example: examples_module.{example_class}):
-    result = {func.name}({args})"""
+    result = {func.name}({args})
+    example.expected(example, result)"""
 
 
 def _generate_class_test(cls: ClassDump, group_name: str) -> str:
@@ -47,11 +50,15 @@ def _generate_class_test(cls: ClassDump, group_name: str) -> str:
     var_name = f"{slug(cls.name)}_examples"
 
     return f"""\
-{var_name} = [e for e in vars(examples_module).values() if isinstance(e, examples_module.{example_class})]
+{var_name} = [
+    e for e in vars(examples_module).values() if isinstance(e, examples_module.{example_class})
+]
+
 
 @pytest.mark.parametrize("example", {var_name}, ids=[e.example_name for e in {var_name}])
 def test_{slug(cls.name)}(example: examples_module.{example_class}):
-    instance = {cls.name}(**example.model_dump(exclude={EXAMPLE_EXCLUDE_FIELDS}))"""
+    instance = {cls.name}(**example.model_dump(exclude={EXAMPLE_EXCLUDE_FIELDS}))
+    example.expected(example, instance)"""
 
 
 def _generate_symbol_test(

@@ -31,7 +31,7 @@ def test_generate_func_test():
         ),
     )
     result = test_gen._generate_func_test(func, "config")
-    assert "parse_config_examples = [e for e in vars(examples_module)" in result
+    assert "parse_config_examples = [" in result
     assert "isinstance(e, examples_module.ParseConfigExample)" in result
     assert '@pytest.mark.parametrize("example", parse_config_examples' in result
     assert "ids=[e.example_name for e in parse_config_examples]" in result
@@ -39,6 +39,7 @@ def test_generate_func_test():
         "def test_parse_config(example: examples_module.ParseConfigExample):" in result
     )
     assert "result = parse_config(path=example.path, timeout=example.timeout)" in result
+    assert "example.expected(example, result)" in result
 
 
 def test_generate_func_test_skips_special_params():
@@ -74,7 +75,7 @@ def test_generate_class_test():
         ],
     )
     result = test_gen._generate_class_test(cls, "config")
-    assert "userconfig_examples = [e for e in vars(examples_module)" in result
+    assert "userconfig_examples = [" in result
     assert "isinstance(e, examples_module.UserConfigExample)" in result
     assert '@pytest.mark.parametrize("example", userconfig_examples' in result
     assert "def test_userconfig(example: examples_module.UserConfigExample):" in result
@@ -82,6 +83,7 @@ def test_generate_class_test():
         'UserConfig(**example.model_dump(exclude={"example_name", "example_description_md"}))'
         in result
     )
+    assert "example.expected(example, instance)" in result
 
 
 def test_generate_group_test_file():

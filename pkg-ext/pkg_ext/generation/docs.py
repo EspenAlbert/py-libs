@@ -349,11 +349,12 @@ def calculate_source_link(
     symbol_doc_path: Path,
     module_path: str,
     pkg_src_dir: Path,
+    pkg_import_name: str,
     line_number: int | None,
 ) -> str:
     """Calculate relative path from doc file to source file."""
     rel_module = module_path.replace(".", "/") + ".py"
-    source_file = pkg_src_dir / rel_module
+    source_file = pkg_src_dir / pkg_import_name / rel_module
     rel_path = source_file.relative_to(symbol_doc_path.parent, walk_up=True)
     if line_number:
         return f"{rel_path}#L{line_number}"
@@ -375,7 +376,11 @@ def render_symbol_page(
     type_label = symbol.type.value
 
     source_link = calculate_source_link(
-        symbol_doc_path, symbol.module_path, pkg_src_dir, symbol.line_number
+        symbol_doc_path,
+        symbol.module_path,
+        pkg_src_dir,
+        pkg_import_name,
+        symbol.line_number,
     )
     stability = render_stability_badge(symbol, group)
     sig = format_signature(symbol)

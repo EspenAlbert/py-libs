@@ -278,7 +278,7 @@ def test_render_stability_badge():
 def test_calculate_source_link():
     doc_path = Path("/repo/docs/config/my_settings.md")
     repo_root = Path("/repo")
-    link = calculate_source_link(doc_path, "pkg_ext.config", repo_root, 42)
+    link = calculate_source_link(doc_path, "config", repo_root, "pkg_ext", 42)
     assert link == "../../pkg_ext/config.py#L42"
 
 

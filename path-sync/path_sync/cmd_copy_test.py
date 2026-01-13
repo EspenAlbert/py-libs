@@ -105,7 +105,7 @@ def test_sync_with_sections_replaces_managed(tmp_path):
     src_content = """\
 # === DO_NOT_EDIT: path-sync standard ===
 new recipe
-# === OK_EDIT ==="""
+# === OK_EDIT: path-sync standard ==="""
     (src_root / "file.sh").write_text(src_content)
 
     dest_file = dest_root / "file.sh"
@@ -113,7 +113,7 @@ new recipe
         """\
 # === DO_NOT_EDIT: path-sync standard ===
 old recipe
-# === OK_EDIT ===
+# === OK_EDIT: path-sync standard ===
 # my custom stuff""",
         dest_file,
         CONFIG_NAME,
@@ -141,7 +141,7 @@ def test_sync_with_sections_skip(tmp_path):
     src_content = """\
 # === DO_NOT_EDIT: path-sync standard ===
 source
-# === OK_EDIT ==="""
+# === OK_EDIT: path-sync standard ==="""
     (src_root / "file.sh").write_text(src_content)
 
     dest_file = dest_root / "file.sh"
@@ -149,7 +149,7 @@ source
         """\
 # === DO_NOT_EDIT: path-sync standard ===
 keep this
-# === OK_EDIT ===""",
+# === OK_EDIT: path-sync standard ===""",
         dest_file,
         CONFIG_NAME,
     )

@@ -15,7 +15,7 @@ dependencies = [
     "pyyaml>=6.0",
     "typer>=0.16.0",
     "gitpython>=3.1.0",
-    "zero-3rdparty>=1.0.0b8",
+    "zero-3rdparty>=0.100.0",
 ]
 
 [build-system]

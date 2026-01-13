@@ -20,20 +20,20 @@ def _setup_baseline(repo_path, filename: str, content: str) -> None:
 
 def test_modify_ok_edit_passes(tmp_repo):
     baseline = f"""{HEADER}
-# === OK_EDIT ===
+# === OK_EDIT: path-sync header ===
 user content
 # === DO_NOT_EDIT: path-sync standard ===
 protected
-# === OK_EDIT ===
+# === OK_EDIT: path-sync standard ===
 """
     _setup_baseline(tmp_repo, "test.py", baseline)
 
     current = f"""{HEADER}
-# === OK_EDIT ===
+# === OK_EDIT: path-sync header ===
 modified user content
 # === DO_NOT_EDIT: path-sync standard ===
 protected
-# === OK_EDIT ===
+# === OK_EDIT: path-sync standard ===
 """
     (tmp_repo / "test.py").write_text(current)
 
@@ -45,14 +45,14 @@ def test_modify_do_not_edit_fails(tmp_repo):
     baseline = f"""{HEADER}
 # === DO_NOT_EDIT: path-sync standard ===
 protected content
-# === OK_EDIT ===
+# === OK_EDIT: path-sync standard ===
 """
     _setup_baseline(tmp_repo, "test.py", baseline)
 
     current = f"""{HEADER}
 # === DO_NOT_EDIT: path-sync standard ===
 MODIFIED protected content
-# === OK_EDIT ===
+# === OK_EDIT: path-sync standard ===
 """
     (tmp_repo / "test.py").write_text(current)
 
@@ -64,14 +64,14 @@ def test_skip_section_passes(tmp_repo):
     baseline = f"""{HEADER}
 # === DO_NOT_EDIT: path-sync coverage ===
 protected
-# === OK_EDIT ===
+# === OK_EDIT: path-sync coverage ===
 """
     _setup_baseline(tmp_repo, "test.py", baseline)
 
     current = f"""{HEADER}
 # === DO_NOT_EDIT: path-sync coverage ===
 MODIFIED
-# === OK_EDIT ===
+# === OK_EDIT: path-sync coverage ===
 """
     (tmp_repo / "test.py").write_text(current)
 
@@ -85,7 +85,7 @@ def test_section_removed_fails(tmp_repo):
     baseline = f"""{HEADER}
 # === DO_NOT_EDIT: path-sync standard ===
 protected
-# === OK_EDIT ===
+# === OK_EDIT: path-sync standard ===
 """
     _setup_baseline(tmp_repo, "test.py", baseline)
 

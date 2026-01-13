@@ -9,17 +9,17 @@ JUSTFILE = Path("justfile")
 JUSTFILE_CONTENT = """\
 # path-sync copy -n python-template
 
-# === OK_EDIT ===
+# === OK_EDIT: path-sync header ===
 # Custom variables
 
 # === DO_NOT_EDIT: path-sync standard ===
 pre-push: lint test
-# === OK_EDIT ===
+# === OK_EDIT: path-sync standard ===
 
 # === DO_NOT_EDIT: path-sync coverage ===
 cov:
   uv run pytest --cov
-# === OK_EDIT ===
+# === OK_EDIT: path-sync coverage ===
 """
 
 
@@ -40,8 +40,8 @@ def test_parse_sections_nested_error():
     content = """\
 # === DO_NOT_EDIT: path-sync outer ===
 # === DO_NOT_EDIT: path-sync inner ===
-# === OK_EDIT ===
-# === OK_EDIT ===
+# === OK_EDIT: path-sync inner ===
+# === OK_EDIT: path-sync outer ===
 """
     with pytest.raises(ValueError, match="Nested section"):
         sections.parse_sections(content, JUSTFILE)
@@ -54,8 +54,8 @@ def test_parse_sections_unclosed_error():
 
 
 def test_parse_sections_standalone_ok_edit():
-    content = "# === OK_EDIT ===\nsome content\n# === OK_EDIT ==="
-    assert sections.parse_sections(content, JUSTFILE) == []
+    content = "# === OK_EDIT: path-sync header ===\nsome content\n# === OK_EDIT: path-sync footer ==="
+    assert not sections.parse_sections(content, JUSTFILE)
 
 
 def test_has_sections():
@@ -67,7 +67,7 @@ def test_wrap_in_default_section():
     result = sections.wrap_in_default_section("content here", JUSTFILE)
     assert "DO_NOT_EDIT: path-sync default" in result
     assert "content here" in result
-    assert result.endswith("# === OK_EDIT ===")
+    assert result.endswith("# === OK_EDIT: path-sync default ===")
 
 
 def test_extract_sections():
@@ -82,7 +82,7 @@ def test_replace_sections_updates_content():
     dest = """\
 # === DO_NOT_EDIT: path-sync standard ===
 old content
-# === OK_EDIT ==="""
+# === OK_EDIT: path-sync standard ==="""
     result = sections.replace_sections(dest, {"standard": "new content"}, JUSTFILE)
     assert "new content" in result
     assert "old content" not in result
@@ -93,7 +93,7 @@ def test_replace_sections_preserves_ok_edit():
 # custom header
 # === DO_NOT_EDIT: path-sync standard ===
 old
-# === OK_EDIT ===
+# === OK_EDIT: path-sync standard ===
 # my custom stuff"""
     result = sections.replace_sections(dest, {"standard": "new"}, JUSTFILE)
     assert "# custom header" in result
@@ -104,7 +104,7 @@ def test_replace_sections_skip():
     dest = """\
 # === DO_NOT_EDIT: path-sync standard ===
 keep this
-# === OK_EDIT ==="""
+# === OK_EDIT: path-sync standard ==="""
     result = sections.replace_sections(
         dest, {"standard": "replaced"}, JUSTFILE, skip_sections=["standard"]
     )
@@ -123,7 +123,7 @@ def test_replace_sections_keeps_dest_only():
     dest = """\
 # === DO_NOT_EDIT: path-sync custom ===
 my custom section
-# === OK_EDIT ==="""
+# === OK_EDIT: path-sync custom ==="""
     result = sections.replace_sections(dest, {}, JUSTFILE)
     assert "my custom section" in result
     assert "DO_NOT_EDIT: path-sync custom" in result
@@ -134,7 +134,7 @@ def test_markdown_sections():
     content = """\
 <!-- === DO_NOT_EDIT: path-sync heading === -->
 # Title
-<!-- === OK_EDIT === -->
+<!-- === OK_EDIT: path-sync heading === -->
 """
     assert sections.has_sections(content, md_path)
     result = sections.extract_sections(content, md_path)

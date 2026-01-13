@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from functools import total_ordering
-from pydoc import locate
 
 from model_lib.model_base import Entity
 from pydantic import Field, model_validator
@@ -58,7 +57,6 @@ class RefSymbol(Entity):
                 )
             case SymbolType.EXCEPTION if not self.name.endswith("Error"):
                 raise ValueError(f"Exception {self.name} should end with 'Error'")
-        self.docstring = locate(self.local_id).__doc__ or ""
         return self
 
     @property

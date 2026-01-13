@@ -52,3 +52,6 @@ option_skip_dirty_check = typer.Option(
 option_dev_mode = typer.Option(
     False, "--dev", help="Write to -dev file (gitignored for local comparison)"
 )
+option_skip_fix_commits = typer.Option(
+    False, "--skip-fix-commits", help="Skip prompts for fix commits in git history"
+)

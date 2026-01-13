@@ -42,7 +42,7 @@ def dump_function(symbol: Callable, ref: RefSymbol) -> FunctionDump:
     return FunctionDump(
         name=ref.name,
         module_path=ref.module_path,
-        docstring=ref.docstring,
+        docstring=symbol.__doc__ or "",
         signature=parse_signature(symbol),
         line_number=_get_line_number(symbol),
     )
@@ -52,7 +52,7 @@ def dump_class(cls: type, ref: RefSymbol) -> ClassDump:
     return ClassDump(
         name=ref.name,
         module_path=ref.module_path,
-        docstring=ref.docstring,
+        docstring=cls.__doc__ or "",
         direct_bases=parse_direct_bases(cls),
         init_signature=parse_signature(cls.__init__),
         fields=parse_class_fields(cls),
@@ -64,7 +64,7 @@ def dump_exception(cls: type, ref: RefSymbol) -> ExceptionDump:
     return ExceptionDump(
         name=ref.name,
         module_path=ref.module_path,
-        docstring=ref.docstring,
+        docstring=cls.__doc__ or "",
         direct_bases=parse_direct_bases(cls),
         init_signature=parse_signature(cls.__init__),
         line_number=_get_line_number(cls),
@@ -76,7 +76,7 @@ def dump_type_alias(alias: Any, ref: RefSymbol) -> TypeAliasDump:
     return TypeAliasDump(
         name=ref.name,
         module_path=ref.module_path,
-        docstring=ref.docstring,
+        docstring=getattr(alias, "__doc__", "") or "",
         alias_target=alias_target,
         line_number=_get_line_number(alias),
     )
@@ -86,7 +86,7 @@ def dump_global_var(value: Any, ref: RefSymbol) -> GlobalVarDump:
     return GlobalVarDump(
         name=ref.name,
         module_path=ref.module_path,
-        docstring=ref.docstring,
+        docstring="",  # Global vars don't have docstrings
         value_repr=repr(value) if value is not None else None,
     )
 

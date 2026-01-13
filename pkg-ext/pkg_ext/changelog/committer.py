@@ -10,10 +10,11 @@ from pkg_ext.context import pkg_ctx
 from pkg_ext.errors import NoPublicGroupMatch
 from pkg_ext.git_usage.state import GitCommit
 from pkg_ext.interactive import (
+    SKIPPED,
     CommitFixAction,
     select_commit_fix,
     select_commit_rephrased,
-    select_group_name,
+    select_group_name_or_skip,
 )
 from pkg_ext.models import PublicGroups, as_module_path
 
@@ -105,7 +106,15 @@ def fix_changelog_action(commit: GitCommit, ctx: pkg_ctx) -> FixAction | None:
     groups = tool_state.groups
     group = infer_group(groups, diffs)
     prompt_text = f"commit({commit_sha}): {commit_message}"
-    public_group = select_group_name(prompt_text, groups, default=group)
+    public_group = select_group_name_or_skip(prompt_text, groups, default=group)
+    if public_group == SKIPPED:
+        return FixAction(
+            name="",
+            short_sha=commit_sha,
+            message=commit_message,
+            ignored=True,
+            author=commit.author,
+        )
     group = public_group.name
 
     prompt_text = f"commit({commit_sha}): {commit_message}"

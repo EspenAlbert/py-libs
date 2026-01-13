@@ -18,6 +18,7 @@ from pkg_ext.cli.options import (
     option_skip_clean,
     option_skip_dirty_check,
     option_skip_docs,
+    option_skip_fix_commits,
 )
 from pkg_ext.cli.workflows import (
     GenerateApiInput,
@@ -249,6 +250,7 @@ def pre_change(
     ctx: typer.Context,
     group: str | None = option_group,
     git_changes_since: GitSince = option_git_changes_since,
+    skip_fix_commits: bool = option_skip_fix_commits,
 ):
     """Handle new symbols then generate examples and tests."""
     settings: PkgSettings = ctx.obj
@@ -258,6 +260,7 @@ def pre_change(
         bump_version=False,
         create_tag=False,
         push=False,
+        skip_fix_commits=skip_fix_commits,
     )
     if not update_changelog_entries(api_input):
         return

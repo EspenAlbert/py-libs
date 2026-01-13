@@ -1,3 +1,4 @@
+from ast import Str
 import logging
 from pathlib import Path
 
@@ -75,6 +76,20 @@ def select_group_name(
     prompt_text: str, groups: PublicGroups, default: str = ""
 ) -> PublicGroup:
     choices = as_choices(groups, default)
+    return select_list_choice(prompt_text, choices)
+
+SKIPPED = "SKIPPED"
+_SKIP_CHOICE: ChoiceTyped[str] = ChoiceTyped(
+    name="[skip]", value=SKIPPED, description="Skip this commit"
+)
+
+
+def select_group_name_or_skip(
+    prompt_text: str, groups: PublicGroups, default: str = ""
+) -> PublicGroup | str:
+    choices: list[ChoiceTyped[PublicGroup | str]] = [_SKIP_CHOICE] + as_choices(
+        groups, default
+    )  # type: ignore
     return select_list_choice(prompt_text, choices)
 
 
@@ -155,6 +170,7 @@ __all__ = [
     "select_commit_rephrased",
     "select_group",
     "select_group_name",
+    "select_group_name_or_skip",
     "select_multiple_ref_state",
     "select_multiple_refs",
     "select_ref",

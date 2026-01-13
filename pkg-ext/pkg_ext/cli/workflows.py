@@ -53,6 +53,7 @@ class GenerateApiInput(Entity):
     create_tag: bool
     push: bool
     explicit_pr: int = 0
+    skip_fix_commits: bool = False
 
     @model_validator(mode="after")
     def checks(self) -> Self:
@@ -132,7 +133,8 @@ def update_changelog_entries(api_input: GenerateApiInput) -> pkg_ctx | None:
             with ctx:
                 handle_removed_refs(ctx)
                 handle_added_refs(ctx)
-                add_git_changes(ctx)
+                if not api_input.skip_fix_commits:
+                    add_git_changes(ctx)
         except KeyboardInterrupt:
             logger.warning(
                 f"Interrupted while handling added references, only {ctx.settings.changelog_dir} updated"

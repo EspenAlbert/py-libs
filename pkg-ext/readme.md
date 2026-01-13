@@ -144,34 +144,52 @@ pkg-ext [OPTIONS] COMMAND
 | `--skip-open` | Skip opening files in editor |
 | `--tag-prefix` | Git tag prefix (e.g., `v` for `v1.0.0`) |
 
-### Commands
+### Workflow Commands
+
+| Command | When | Interactive | Writes |
+|---------|------|-------------|--------|
+| `pre-change` | After adding/removing symbols | Yes | Examples, tests |
+| `pre-commit` | Before commit / CI validation | No | `-dev` files, docs |
+| `post-merge` | After merge to main | No | Real files, tag |
+
+#### `pre-change`
+
+Prompts for new symbols (expose or hide) and removed symbols (delete or alias). Generates `{group}_examples.py` and `{group}_test.py` scaffolds.
+
+```bash
+pkg-ext pre-change           # All groups
+pkg-ext pre-change -g config # Single group
+```
+
+#### `pre-commit`
+
+Runs in bot mode (fails if pending prompts). Updates `.groups-dev.yaml`, `CHANGELOG-dev.md`, and docs.
+
+```bash
+pkg-ext pre-commit              # With docs
+pkg-ext pre-commit --skip-docs  # Skip docs for faster iteration
+```
 
 #### `post-merge`
-Run after merge on default branch. Bumps version, creates tag, cleans old changelog entries.
+
+Run after merge on default branch. Bumps version, creates git tag, cleans old changelog entries.
 
 ```bash
 pkg-ext post-merge --push --pr 123
-```
-
-#### `dump-groups`
-Regenerate `.groups.yaml` with merged config data (for debugging group assignments).
-
-```bash
-pkg-ext dump-groups
-```
-
-#### `release-notes`
-Extract changelog section for a specific tag.
-
-```bash
-pkg-ext release-notes --tag v1.2.0
 ```
 
 ### Stability Commands
 
 Manage stability at group, symbol, and argument levels. All stability state is tracked in `.changelog/` as the single source of truth.
 
+**Target format:** `{group}` or `{group}.{symbol}` or `{group}.{symbol}.{arg}`
+
+**Constraints:**
+- Arg-level stability changes require the parent group to be GA
+- Commands validate that the target exists before creating an action
+
 #### `exp` - Mark as experimental
+
 ```bash
 pkg-ext exp --target config              # Mark entire group
 pkg-ext exp --target config.parse        # Mark symbol in group
@@ -179,22 +197,36 @@ pkg-ext exp --target config.parse.timeout  # Mark argument on symbol
 ```
 
 #### `ga` - Graduate to GA
+
 ```bash
 pkg-ext ga --target config               # Graduate group to stable
 pkg-ext ga --target config.parse         # Graduate symbol
 ```
 
 #### `dep` - Mark as deprecated
+
 ```bash
 pkg-ext dep --target config --replacement new_config
 pkg-ext dep --target config.parse.callback --replacement on_done
 ```
 
-**Target format:** `{group}` or `{group}.{symbol}` or `{group}.{symbol}.{arg}`
+### Utility Commands
 
-**Constraints:**
-- Arg-level stability changes require the parent group to be GA
-- Commands validate that the target exists before creating an action
+#### `dump-groups`
+
+Regenerate `.groups.yaml` with merged config data (for debugging group assignments).
+
+```bash
+pkg-ext dump-groups
+```
+
+#### `release-notes`
+
+Extract changelog section for a specific tag.
+
+```bash
+pkg-ext release-notes --tag v1.2.0
+```
 
 ## Configuration
 
@@ -383,15 +415,7 @@ ts: '2025-01-02T10:00:02+00:00'
 
 ## Developer Workflow
 
-### Commands Overview
-
-| Command | When | Interactive | Writes |
-|---------|------|-------------|--------|
-| `pre-change` | After adding/removing symbols | Yes | Examples, tests |
-| `pre-commit` | Before commit / CI validation | No | `-dev` files, docs |
-| `post-merge` | After merge to main | No | Real files, tag |
-
-### Typical Development Cycle
+### Development Cycle
 
 1. Create branch, make code changes
 2. Run `pkg-ext pre-change` - prompts for new/removed symbols, generates scaffolds
@@ -400,34 +424,6 @@ ts: '2025-01-02T10:00:02+00:00'
 5. Commit and push
 6. CI runs `pkg-ext pre-commit` - validates all decisions, regenerates docs
 7. After merge, CI runs `pkg-ext post-merge` - bumps version, writes real files, creates tag
-
-### Command Details
-
-#### `pre-change`
-
-```bash
-pkg-ext pre-change           # All groups
-pkg-ext pre-change -g config # Single group
-```
-
-Prompts for new symbols (expose or hide) and removed symbols (delete or alias). Generates `{group}_examples.py` and `{group}_test.py` scaffolds.
-
-#### `pre-commit`
-
-```bash
-pkg-ext pre-commit              # With docs
-pkg-ext pre-commit --skip-docs  # Faster, skip docs
-```
-
-Runs in bot mode (fails if pending prompts). Updates `.groups-dev.yaml`, `CHANGELOG-dev.md`, and docs.
-
-#### `post-merge`
-
-```bash
-pkg-ext post-merge --push --pr 123
-```
-
-Bumps version, creates git tag, cleans old changelog entries.
 
 ### Stability Workflow
 
@@ -445,7 +441,7 @@ Bumps version, creates git tag, cleans old changelog entries.
 pkg-ext pre-commit
 ```
 
-**pre-commit framework** (`.pre-commit-config.yaml`):
+**[pre-commit](https://pre-commit.com/) framework** (`.pre-commit-config.yaml`):
 
 ```yaml
 repos:

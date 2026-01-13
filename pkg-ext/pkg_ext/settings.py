@@ -28,6 +28,9 @@ class PkgSettings(BaseSettings):
     PUBLIC_GROUPS_STORAGE_FILENAME: ClassVar[str] = ".groups.yaml"
     CHANGELOG_FILENAME: ClassVar[str] = "CHANGELOG.md"
     CHANGELOG_DIR_NAME: ClassVar[str] = ".changelog"
+    INIT_FILENAME: ClassVar[str] = "__init__.py"
+    WARNINGS_FILENAME: ClassVar[str] = "_warnings.py"
+    DOCS_DIR_NAME: ClassVar[str] = "docs"
 
     after_file_write_hooks: tuple[str, ...] | None = Field(default=None)
     changelog_cleanup_count: int = Field(
@@ -82,7 +85,7 @@ class PkgSettings(BaseSettings):
 
     @property
     def init_path(self) -> Path:
-        return self.pkg_directory / "__init__.py"
+        return self.pkg_directory / self.INIT_FILENAME
 
     @property
     def pkg_import_name(self) -> str:
@@ -112,7 +115,7 @@ class PkgSettings(BaseSettings):
 
     @property
     def warnings_file_path(self) -> Path:
-        return self.pkg_directory / "_warnings.py"
+        return self.pkg_directory / self.WARNINGS_FILENAME
 
     def examples_file_path(self, group_name: str) -> Path:
         return self.pkg_directory / f"{group_name}_examples.py"
@@ -120,9 +123,12 @@ class PkgSettings(BaseSettings):
     def test_file_path(self, group_name: str) -> Path:
         return self.pkg_directory / f"{group_name}_test.py"
 
+    def group_module_path(self, group_name: str) -> Path:
+        return self.pkg_directory / f"{group_name}.py"
+
     @property
     def docs_dir(self) -> Path:
-        return self.state_dir / "docs"
+        return self.state_dir / self.DOCS_DIR_NAME
 
     @property
     def mkdocs_yml(self) -> Path:

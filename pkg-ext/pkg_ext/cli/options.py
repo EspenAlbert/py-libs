@@ -46,6 +46,9 @@ option_skip_docs = typer.Option(False, "--skip-docs", help="Skip doc regeneratio
 option_skip_clean = typer.Option(
     False, "--skip-clean", help="Skip cleaning old entries"
 )
+option_skip_dirty_check = typer.Option(
+    False, "--skip-dirty-check", help="Skip dirty file check (for tests)"
+)
 option_dev_mode = typer.Option(
     False, "--dev", help="Write to -dev file (gitignored for local comparison)"
 )

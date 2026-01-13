@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 
 import typer
+from git import InvalidGitRepositoryError, Repo
 from zero_3rdparty.file_utils import ensure_parents_write_text
 from zero_3rdparty.sections import get_comment_config, parse_sections, replace_sections
 
@@ -15,6 +16,7 @@ from pkg_ext.cli.options import (
     option_pr,
     option_push,
     option_skip_clean,
+    option_skip_dirty_check,
     option_skip_docs,
 )
 from pkg_ext.cli.workflows import (
@@ -36,6 +38,48 @@ from pkg_ext.settings import PkgSettings
 from pkg_ext.version_bump import read_current_version
 
 logger = logging.getLogger(__name__)
+
+
+def get_generated_file_paths(settings: PkgSettings) -> list[Path]:
+    """Return paths of all generated files (relative to repo root)."""
+    repo_root = settings.repo_root
+    paths = [
+        settings.public_groups_path.relative_to(repo_root),
+        settings.changelog_md.relative_to(repo_root),
+        settings.init_path.relative_to(repo_root),
+    ]
+    if settings.warnings_file_path.exists():
+        paths.append(settings.warnings_file_path.relative_to(repo_root))
+    groups = settings.parse_computed_public_groups(PublicGroups)
+    for group in groups.groups_no_root:
+        group_path = settings.group_module_path(group.name)
+        paths.append(group_path.relative_to(repo_root))
+    docs_dir = settings.docs_dir
+    if docs_dir.exists():
+        for md_file in docs_dir.rglob("*.md"):
+            paths.append(md_file.relative_to(repo_root))
+    return paths
+
+
+def check_generated_files_dirty(settings: PkgSettings) -> list[str]:
+    """Check if generated files are modified (unstaged) or untracked."""
+    try:
+        repo = Repo(settings.repo_root)
+    except InvalidGitRepositoryError:
+        logger.debug("Not a git repo, skipping dirty check")
+        return []
+    generated_paths = {str(p) for p in get_generated_file_paths(settings)}
+    modified = [
+        f"{item.a_path} (modified)"
+        for item in repo.index.diff(None)
+        if item.a_path in generated_paths
+    ]
+    untracked = [
+        f"{path} (untracked)"
+        for path in repo.untracked_files
+        if path in generated_paths
+    ]
+    return modified + untracked
 
 
 def generate_examples_for_groups(
@@ -216,6 +260,7 @@ def pre_commit(
     ctx: typer.Context,
     git_changes_since: GitSince = option_git_changes_since,
     skip_docs: bool = option_skip_docs,
+    skip_dirty_check: bool = option_skip_dirty_check,
 ):
     """Update changelog and regenerate docs (bot mode, writes to -dev files)."""
     settings: PkgSettings = ctx.obj
@@ -234,7 +279,15 @@ def pre_commit(
 
     if skip_docs:
         logger.info("Skipped docs regeneration")
-        return
+    else:
+        count = generate_docs_for_pkg(settings)
+        logger.info(f"Regenerated {count} doc files")
 
-    count = generate_docs_for_pkg(settings)
-    logger.info(f"Regenerated {count} doc files")
+    if skip_dirty_check:
+        return
+    if dirty_files := check_generated_files_dirty(settings):
+        logger.error("Generated files have unstaged changes:")
+        for f in dirty_files:
+            logger.error(f"  {f}")
+        logger.error("Run `git add` on these files before committing.")
+        raise typer.Exit(1)

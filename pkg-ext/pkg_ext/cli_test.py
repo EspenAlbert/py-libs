@@ -92,7 +92,9 @@ def _run_command(
     result = run(pre_change_cmd)
     assert result.exit_code == 0
     # Run pre-commit for file generation (bot mode)
-    pre_commit_cmd = f"{base_args} pre-commit --git-since {git_since} --skip-docs"
+    pre_commit_cmd = (
+        f"{base_args} pre-commit --git-since {git_since} --skip-docs --skip-dirty-check"
+    )
     logger.info(f"running command: {pre_commit_cmd}")
     result = run(pre_commit_cmd)
     assert result.exit_code == 0

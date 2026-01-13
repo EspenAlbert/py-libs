@@ -13,6 +13,7 @@ from model_lib.model_base import Entity
 from pydantic import model_validator
 from zero_3rdparty.file_utils import iter_paths_and_relative
 
+from pkg_ext import api_dumper
 from pkg_ext.changelog import (
     ReleaseAction,
     add_git_changes,
@@ -28,13 +29,14 @@ from pkg_ext.errors import NoHumanRequiredError
 from pkg_ext.file_parser import parse_code_symbols, parse_symbols
 from pkg_ext.generation import update_pyproject_toml, write_groups, write_init
 from pkg_ext.git_usage import (
+    GitChanges,
     GitChangesInput,
     GitSince,
     find_git_changes,
     find_pr_info_raw,
     git_commit,
 )
-from pkg_ext.models import PkgCodeState
+from pkg_ext.models import PkgCodeState, PublicGroups
 from pkg_ext.reference_handling import handle_added_refs, handle_removed_refs
 from pkg_ext.settings import PkgSettings
 from pkg_ext.version_bump import bump_version, read_current_version
@@ -201,4 +203,26 @@ def clean_old_entries(settings: PkgSettings):
         settings.changelog_dir,
         settings.changelog_cleanup_count,
         settings.changelog_keep_count,
+    )
+
+
+def create_stability_ctx(settings: PkgSettings) -> pkg_ctx:
+    code_state = parse_pkg_code_state(settings)
+    tool_state, extra_actions = parse_changelog(settings, code_state)
+    return pkg_ctx(
+        settings=settings,
+        tool_state=tool_state,
+        code_state=code_state,
+        git_changes=GitChanges.empty(),
+        _actions=extra_actions,
+    )
+
+
+def create_api_dump(settings: PkgSettings):
+    pkg_ctx = create_stability_ctx(settings)
+    groups = settings.parse_computed_public_groups(PublicGroups)
+    version = str(read_current_version(pkg_ctx))
+    refs = {ref.local_id: ref for ref in pkg_ctx.code_state.import_id_refs.values()}
+    return api_dumper.dump_public_api(
+        pkg_ctx.tool_state, groups, refs, settings.pkg_import_name, version
     )

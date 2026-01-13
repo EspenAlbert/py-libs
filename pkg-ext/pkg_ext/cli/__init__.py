@@ -1,6 +1,6 @@
 # CLI interface domain
 
-from pkg_ext.cli.commands import app
+from pkg_ext.cli.base_commands import app
 
 
 def main():

@@ -9,7 +9,6 @@ from pkg_ext.git_usage import GitSince
 
 
 def get_default_editor() -> str:
-    """Get default editor from user config with fallback to EDITOR env var."""
     user_config = load_user_config()
     return user_config.editor or getenv("EDITOR", "code")
 
@@ -21,16 +20,32 @@ option_git_changes_since = typer.Option(
 )
 
 option_bump_version = typer.Option(
-    False,
-    "--bump",
-    help="Use the changelog actions to bump the version",
+    False, "--bump", help="Use the changelog actions to bump the version"
 )
 
 option_create_tag = typer.Option(
-    False,
-    "--tag",
-    "--commit",
-    help="Add a git commit and tag for the bumped version",
+    False, "--tag", "--commit", help="Add a git commit and tag for the bumped version"
 )
 option_push = typer.Option(False, "--push", help="Push commit and tag")
 option_pr = typer.Option(0, "--pr", help="Use this if the HEAD commit is not a merge")
+
+option_group = typer.Option(
+    None, "-g", "--group", help="Generate for specific group only"
+)
+option_target = typer.Option(
+    ..., "--target", "-t", help="Target: group | group.symbol | group.symbol.arg"
+)
+option_replacement = typer.Option(
+    None, "--replacement", "-r", help="Replacement suggestion"
+)
+option_output_file = typer.Option(None, "-o", "--output", help="Output file path")
+option_output_dir = typer.Option(
+    None, "-o", "--output-dir", help="Output directory (default: docs/)"
+)
+option_skip_docs = typer.Option(False, "--skip-docs", help="Skip doc regeneration")
+option_skip_clean = typer.Option(
+    False, "--skip-clean", help="Skip cleaning old entries"
+)
+option_dev_mode = typer.Option(
+    False, "--dev", help="Write to -dev file (gitignored for local comparison)"
+)

@@ -3,11 +3,16 @@ from datetime import UTC, datetime
 from zero_3rdparty.sections import parse_sections
 
 from pkg_ext.changelog.actions import FixAction, MakePublicAction
-from pkg_ext.config import ROOT_GROUP_NAME, GroupConfig, ProjectConfig, Stability
+from pkg_ext.config import (
+    PKG_EXT_TOOL_NAME,
+    ROOT_GROUP_NAME,
+    GroupConfig,
+    ProjectConfig,
+    Stability,
+)
 from pkg_ext.generation.docs import (
     MD_CONFIG,
     ROOT_DIR,
-    TOOL_NAME,
     GeneratedDocsOutput,
     SymbolContext,
     build_symbol_context,
@@ -93,7 +98,7 @@ def test_render_group_index_has_valid_sections():
     contexts = [SymbolContext(symbol=s) for s in group.symbols]
     content = render_group_index(group, contexts, GroupConfig())
 
-    sections = parse_sections(content, TOOL_NAME, MD_CONFIG)
+    sections = parse_sections(content, PKG_EXT_TOOL_NAME, MD_CONFIG)
     section_ids = {s.id for s in sections}
     assert "header" in section_ids
     assert "symbols" in section_ids

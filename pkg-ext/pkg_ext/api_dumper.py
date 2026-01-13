@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from datetime import UTC, datetime
 from pydoc import locate
 from typing import Any, Callable
@@ -29,12 +30,21 @@ def _resolve_symbol(ref: RefSymbol, pkg_import_name: str) -> Any:
     return locate(full_path)
 
 
+def _get_line_number(obj: Any) -> int | None:
+    try:
+        _, line = inspect.getsourcelines(obj)
+        return line
+    except (OSError, TypeError):
+        return None
+
+
 def dump_function(symbol: Callable, ref: RefSymbol) -> FunctionDump:
     return FunctionDump(
         name=ref.name,
         module_path=ref.module_path,
         docstring=ref.docstring,
         signature=parse_signature(symbol),
+        line_number=_get_line_number(symbol),
     )
 
 
@@ -46,6 +56,7 @@ def dump_class(cls: type, ref: RefSymbol) -> ClassDump:
         direct_bases=parse_direct_bases(cls),
         init_signature=parse_signature(cls.__init__),
         fields=parse_class_fields(cls),
+        line_number=_get_line_number(cls),
     )
 
 
@@ -56,6 +67,7 @@ def dump_exception(cls: type, ref: RefSymbol) -> ExceptionDump:
         docstring=ref.docstring,
         direct_bases=parse_direct_bases(cls),
         init_signature=parse_signature(cls.__init__),
+        line_number=_get_line_number(cls),
     )
 
 
@@ -66,6 +78,7 @@ def dump_type_alias(alias: Any, ref: RefSymbol) -> TypeAliasDump:
         module_path=ref.module_path,
         docstring=ref.docstring,
         alias_target=alias_target,
+        line_number=_get_line_number(alias),
     )
 
 

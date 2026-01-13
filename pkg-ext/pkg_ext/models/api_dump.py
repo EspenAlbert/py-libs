@@ -53,6 +53,7 @@ class SymbolDumpBase(Entity):
     docstring: str = ""
     stability: Stability | None = None
     since_version: str | None = None
+    line_number: int | None = None
 
 
 class FunctionDump(SymbolDumpBase):

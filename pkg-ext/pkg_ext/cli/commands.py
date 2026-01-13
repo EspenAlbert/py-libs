@@ -40,8 +40,9 @@ from pkg_ext.cli.workflows import (
     parse_pkg_code_state,
     post_merge_commit_workflow,
     sync_files,
+    update_changelog_entries,
 )
-from pkg_ext.config import load_project_config
+from pkg_ext.config import PKG_EXT_TOOL_NAME, load_project_config
 from pkg_ext.context import pkg_ctx as PkgCtx
 from pkg_ext.generation import docs, example_gen, test_gen
 from pkg_ext.git_usage import GitChanges, GitSince, head_merge_pr
@@ -413,52 +414,23 @@ def dep(
     logger.info(f"Created deprecated action in {pkg_ctx.changelog_path}")
 
 
-@app.command()
-def dump_api(
-    ctx: typer.Context,
-    output: Path | None = typer.Option(None, "-o", "--output", help="Output file path"),
-    dev: bool = typer.Option(
-        False, "--dev", help="Write to -dev file (gitignored for local comparison)"
-    ),
-):
-    """Dump public API to YAML for diffing and breaking change detection."""
-    settings: PkgSettings = ctx.obj
+def _create_api_dump(settings: PkgSettings) -> api_dumper.PublicApiDump:
     pkg_ctx = _create_stability_ctx(settings)
     groups = settings.parse_computed_public_groups(PublicGroups)
     version = str(read_current_version(pkg_ctx))
     refs = {ref.local_id: ref for ref in pkg_ctx.code_state.all_refs}
-    api_dump = api_dumper.dump_public_api(
+    return api_dumper.dump_public_api(
         pkg_ctx.tool_state, groups, refs, settings.pkg_import_name, version
     )
-    if output is None:
-        stem = f"{settings.pkg_import_name}.api"
-        if dev:
-            stem = f"{stem}-dev"
-        output = settings.state_dir / f"{stem}.yaml"
-    yaml_text = dump(api_dump.model_dump(exclude_none=True), "yaml")
-    ensure_parents_write_text(output, yaml_text)
-    logger.info(f"API dump written to {output}")
 
 
-@app.command()
-def gen_examples(
-    ctx: typer.Context,
-    group: str | None = typer.Option(
-        None, "-g", "--group", help="Generate for specific group only"
-    ),
-):
-    """Generate example files for public API functions."""
-    settings: PkgSettings = ctx.obj
-    pkg_ctx = _create_stability_ctx(settings)
-    groups = settings.parse_computed_public_groups(PublicGroups)
-    version = str(read_current_version(pkg_ctx))
-    refs = {ref.local_id: ref for ref in pkg_ctx.code_state.all_refs}
-    api_dump = api_dumper.dump_public_api(
-        pkg_ctx.tool_state, groups, refs, settings.pkg_import_name, version
-    )
+def _generate_examples_for_groups(
+    settings: PkgSettings,
+    groups: list[api_dumper.GroupDump],
+) -> int:
     py_config = get_comment_config(".py")
-    groups_to_process = [api_dump.get_group(group)] if group else api_dump.groups
-    for group_dump in groups_to_process:
+    count = 0
+    for group_dump in groups:
         if not group_dump.symbols:
             continue
         path = settings.examples_file_path(group_dump.name)
@@ -469,36 +441,26 @@ def gen_examples(
             existing = path.read_text()
             src_sections = {
                 s.id: s.content
-                for s in parse_sections(new_content, example_gen.TOOL_NAME, py_config)
+                for s in parse_sections(new_content, PKG_EXT_TOOL_NAME, py_config)
             }
             merged = replace_sections(
-                existing, src_sections, example_gen.TOOL_NAME, py_config
+                existing, src_sections, PKG_EXT_TOOL_NAME, py_config
             )
             path.write_text(merged)
         else:
             ensure_parents_write_text(path, new_content)
         logger.info(f"Generated examples: {path}")
+        count += 1
+    return count
 
 
-@app.command()
-def gen_tests(
-    ctx: typer.Context,
-    group: str | None = typer.Option(
-        None, "-g", "--group", help="Generate for specific group only"
-    ),
-):
-    """Generate parameterized test files from examples."""
-    settings: PkgSettings = ctx.obj
-    pkg_ctx = _create_stability_ctx(settings)
-    groups = settings.parse_computed_public_groups(PublicGroups)
-    version = str(read_current_version(pkg_ctx))
-    refs = {ref.local_id: ref for ref in pkg_ctx.code_state.all_refs}
-    api_dump = api_dumper.dump_public_api(
-        pkg_ctx.tool_state, groups, refs, settings.pkg_import_name, version
-    )
+def _generate_tests_for_groups(
+    settings: PkgSettings,
+    groups: list[api_dumper.GroupDump],
+) -> int:
     py_config = get_comment_config(".py")
-    groups_to_process = [api_dump.get_group(group)] if group else api_dump.groups
-    for group_dump in groups_to_process:
+    count = 0
+    for group_dump in groups:
         testable_symbols = [
             s
             for s in group_dump.symbols
@@ -524,6 +486,86 @@ def gen_tests(
         else:
             ensure_parents_write_text(path, new_content)
         logger.info(f"Generated tests: {path}")
+        count += 1
+    return count
+
+
+@app.command()
+def dump_api(
+    ctx: typer.Context,
+    output: Path | None = typer.Option(None, "-o", "--output", help="Output file path"),
+    dev: bool = typer.Option(
+        False, "--dev", help="Write to -dev file (gitignored for local comparison)"
+    ),
+):
+    """Dump public API to YAML for diffing and breaking change detection."""
+    settings: PkgSettings = ctx.obj
+    api_dump = _create_api_dump(settings)
+    if output is None:
+        stem = f"{settings.pkg_import_name}.api"
+        if dev:
+            stem = f"{stem}-dev"
+        output = settings.state_dir / f"{stem}.yaml"
+    yaml_text = dump(api_dump.model_dump(exclude_none=True), "yaml")
+    ensure_parents_write_text(output, yaml_text)
+    logger.info(f"API dump written to {output}")
+
+
+@app.command()
+def pre_change(
+    ctx: typer.Context,
+    group: str | None = typer.Option(
+        None, "-g", "--group", help="Generate for specific group only"
+    ),
+    git_changes_since: GitSince = option_git_changes_since,
+):
+    """Handle new symbols then generate examples and tests."""
+    settings: PkgSettings = ctx.obj
+    api_input = GenerateApiInput(
+        settings=settings,
+        git_changes_since=git_changes_since,
+        bump_version=False,
+        create_tag=False,
+        push=False,
+    )
+    if not update_changelog_entries(api_input):
+        return
+    api_dump = _create_api_dump(settings)
+    groups = [api_dump.get_group(group)] if group else api_dump.groups
+    examples_count = _generate_examples_for_groups(settings, groups)
+    tests_count = _generate_tests_for_groups(settings, groups)
+    total = examples_count + tests_count
+    logger.info(
+        f"Generated {total} files ({examples_count} examples, {tests_count} tests)"
+    )
+
+
+@app.command()
+def gen_examples(
+    ctx: typer.Context,
+    group: str | None = typer.Option(
+        None, "-g", "--group", help="Generate for specific group only"
+    ),
+):
+    """Generate example files for public API functions."""
+    settings: PkgSettings = ctx.obj
+    api_dump = _create_api_dump(settings)
+    groups = [api_dump.get_group(group)] if group else api_dump.groups
+    _generate_examples_for_groups(settings, groups)
+
+
+@app.command()
+def gen_tests(
+    ctx: typer.Context,
+    group: str | None = typer.Option(
+        None, "-g", "--group", help="Generate for specific group only"
+    ),
+):
+    """Generate parameterized test files from examples."""
+    settings: PkgSettings = ctx.obj
+    api_dump = _create_api_dump(settings)
+    groups = [api_dump.get_group(group)] if group else api_dump.groups
+    _generate_tests_for_groups(settings, groups)
 
 
 @app.command(name="docs")

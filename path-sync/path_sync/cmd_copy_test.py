@@ -7,7 +7,7 @@ from path_sync.cmd_copy import (
     _sync_path,
 )
 from path_sync.header import add_header, has_header
-from path_sync.models import Destination, PathMapping
+from path_sync.models import Destination, PathMapping, SyncMode
 
 CONFIG_NAME = "test-config"
 
@@ -210,3 +210,77 @@ def test_source_with_header_no_duplicate(tmp_path):
     )
     assert f"path-sync copy -n {CONFIG_NAME}" in result
     assert "original-config" not in result
+
+
+def test_file_mode_replace_no_header(tmp_path):
+    src_root = tmp_path / "src"
+    dest_root = tmp_path / "dest"
+    src_root.mkdir()
+    dest_root.mkdir()
+
+    (src_root / "LICENSE").write_text("MIT License")
+    (dest_root / "LICENSE").write_text("old license")
+
+    mapping = PathMapping(src_path="LICENSE", sync_mode=SyncMode.REPLACE)
+    changes, _ = _sync_path(
+        mapping, src_root, dest_root, _make_dest(), CONFIG_NAME, False, False
+    )
+
+    assert changes == 1
+    result = (dest_root / "LICENSE").read_text()
+    assert result == "MIT License"
+    assert not has_header(result)
+
+
+def test_file_mode_replace_skips_unchanged(tmp_path):
+    src_root = tmp_path / "src"
+    dest_root = tmp_path / "dest"
+    src_root.mkdir()
+    dest_root.mkdir()
+
+    (src_root / "LICENSE").write_text("MIT License")
+    (dest_root / "LICENSE").write_text("MIT License")
+
+    mapping = PathMapping(src_path="LICENSE", sync_mode=SyncMode.REPLACE)
+    changes, _ = _sync_path(
+        mapping, src_root, dest_root, _make_dest(), CONFIG_NAME, False, False
+    )
+
+    assert changes == 0
+
+
+def test_file_mode_scaffold_creates_new(tmp_path):
+    src_root = tmp_path / "src"
+    dest_root = tmp_path / "dest"
+    src_root.mkdir()
+    dest_root.mkdir()
+
+    (src_root / ".gitignore").write_text("*.pyc")
+
+    mapping = PathMapping(src_path=".gitignore", sync_mode=SyncMode.SCAFFOLD)
+    changes, _ = _sync_path(
+        mapping, src_root, dest_root, _make_dest(), CONFIG_NAME, False, False
+    )
+
+    assert changes == 1
+    result = (dest_root / ".gitignore").read_text()
+    assert result == "*.pyc"
+    assert not has_header(result)
+
+
+def test_file_mode_scaffold_skips_existing(tmp_path):
+    src_root = tmp_path / "src"
+    dest_root = tmp_path / "dest"
+    src_root.mkdir()
+    dest_root.mkdir()
+
+    (src_root / ".gitignore").write_text("new content")
+    (dest_root / ".gitignore").write_text("user customized")
+
+    mapping = PathMapping(src_path=".gitignore", sync_mode=SyncMode.SCAFFOLD)
+    changes, _ = _sync_path(
+        mapping, src_root, dest_root, _make_dest(), CONFIG_NAME, False, False
+    )
+
+    assert changes == 0
+    assert (dest_root / ".gitignore").read_text() == "user customized"

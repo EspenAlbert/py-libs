@@ -16,6 +16,7 @@ from path_sync.models import (
     Destination,
     PathMapping,
     SrcConfig,
+    SyncMode,
     find_repo_root,
     resolve_config_path,
 )
@@ -318,6 +319,7 @@ def _sync_path(
     src_pattern = src_root / mapping.src_path
     changes = 0
     synced: set[Path] = set()
+    sync_mode = mapping.sync_mode
 
     if "*" in mapping.src_path:
         glob_prefix = mapping.src_path.split("*")[0].rstrip("/")
@@ -331,12 +333,13 @@ def _sync_path(
                 rel = src_path.relative_to(src_root / glob_prefix)
                 dest_path = dest_root / dest_base / rel
                 dest_key = str(Path(dest_base) / rel)
-                changes += _copy_with_header(
+                changes += _copy_file(
                     src_path,
                     dest_path,
                     dest,
                     dest_key,
                     config_name,
+                    sync_mode,
                     dry_run,
                     force_overwrite,
                 )
@@ -348,12 +351,13 @@ def _sync_path(
                 rel = src_file.relative_to(src_pattern)
                 dest_path = dest_root / dest_base / rel
                 dest_key = str(Path(dest_base) / rel)
-                changes += _copy_with_header(
+                changes += _copy_file(
                     src_file,
                     dest_path,
                     dest,
                     dest_key,
                     config_name,
+                    sync_mode,
                     dry_run,
                     force_overwrite,
                 )
@@ -361,12 +365,13 @@ def _sync_path(
     elif src_pattern.is_file():
         dest_base = mapping.resolved_dest_path()
         dest_path = dest_root / dest_base
-        changes += _copy_with_header(
+        changes += _copy_file(
             src_pattern,
             dest_path,
             dest,
             dest_base,
             config_name,
+            sync_mode,
             dry_run,
             force_overwrite,
         )
@@ -377,43 +382,78 @@ def _sync_path(
     return changes, synced
 
 
-def _copy_with_header(
+def _copy_file(
     src: Path,
     dest_path: Path,
     dest: Destination,
     dest_key: str,
     config_name: str,
+    sync_mode: SyncMode,
     dry_run: bool,
     force_overwrite: bool = False,
 ) -> int:
     src_content = header.remove_header(src.read_text())
-    skip_list = dest.skip_sections.get(dest_key, [])
 
+    match sync_mode:
+        case SyncMode.SCAFFOLD:
+            return _handle_scaffold(src_content, dest_path, dry_run)
+        case SyncMode.REPLACE:
+            return _handle_replace(src_content, dest_path, dry_run)
+        case SyncMode.SYNC:
+            skip_list = dest.skip_sections.get(dest_key, [])
+            return _handle_sync(
+                src_content, dest_path, skip_list, config_name, dry_run, force_overwrite
+            )
+
+
+def _handle_scaffold(content: str, dest_path: Path, dry_run: bool) -> int:
+    if dest_path.exists():
+        return 0
+    return _write_file(dest_path, content, dry_run)
+
+
+def _handle_replace(content: str, dest_path: Path, dry_run: bool) -> int:
+    if dest_path.exists() and dest_path.read_text() == content:
+        return 0
+    return _write_file(dest_path, content, dry_run)
+
+
+def _handle_sync(
+    src_content: str,
+    dest_path: Path,
+    skip_list: list[str],
+    config_name: str,
+    dry_run: bool,
+    force_overwrite: bool,
+) -> int:
     if sections.has_sections(src_content, dest_path):
-        return _copy_with_sections(
+        return _handle_sync_sections(
             src_content, dest_path, skip_list, config_name, dry_run, force_overwrite
         )
 
     if dest_path.exists():
         existing = dest_path.read_text()
-        has_header = header.has_header(existing)
-        if not has_header and not force_overwrite:
+        has_hdr = header.has_header(existing)
+        if not has_hdr and not force_overwrite:
             logger.info(f"Skipping {dest_path} (header removed - opted out)")
             return 0
-        if header.remove_header(existing) == src_content and has_header:
+        if header.remove_header(existing) == src_content and has_hdr:
             return 0
 
     new_content = header.add_header(src_content, dest_path, config_name)
+    return _write_file(dest_path, new_content, dry_run)
+
+
+def _write_file(dest_path: Path, content: str, dry_run: bool) -> int:
     if dry_run:
         logger.info(f"[DRY RUN] Would write: {dest_path}")
         return 1
-
-    ensure_parents_write_text(dest_path, new_content)
+    ensure_parents_write_text(dest_path, content)
     logger.info(f"Wrote: {dest_path}")
     return 1
 
 
-def _copy_with_sections(
+def _handle_sync_sections(
     src_content: str,
     dest_path: Path,
     skip_list: list[str],
@@ -440,13 +480,7 @@ def _copy_with_sections(
     if dest_path.exists() and dest_path.read_text() == new_content:
         return 0
 
-    if dry_run:
-        logger.info(f"[DRY RUN] Would write: {dest_path}")
-        return 1
-
-    ensure_parents_write_text(dest_path, new_content)
-    logger.info(f"Wrote: {dest_path}")
-    return 1
+    return _write_file(dest_path, new_content, dry_run)
 
 
 def _cleanup_orphans(

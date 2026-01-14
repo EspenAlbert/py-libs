@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import glob as glob_mod
+from enum import StrEnum
 from pathlib import Path
 from typing import ClassVar
 
@@ -9,9 +10,16 @@ from pydantic import BaseModel, Field
 LOG_FORMAT = "%(asctime)s %(levelname)s %(message)s"
 
 
+class SyncMode(StrEnum):
+    SYNC = "sync"
+    REPLACE = "replace"
+    SCAFFOLD = "scaffold"
+
+
 class PathMapping(BaseModel):
     src_path: str
     dest_path: str = ""
+    sync_mode: SyncMode = SyncMode.SYNC
 
     def resolved_dest_path(self) -> str:
         return self.dest_path or self.src_path

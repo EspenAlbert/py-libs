@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import logging
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
@@ -563,13 +564,22 @@ def generate_docs(
     return GeneratedDocsOutput(path_contents=path_contents)
 
 
+def _strip_docs_prefix(content: str) -> str:
+    """Transform links like [name](docs/sections/index.md) to [name](sections/index.md)."""
+    return re.sub(r"\]\(docs/([^)]+)\)", r"](\1)", content)
+
+
 def copy_readme_as_index(state_dir: Path, docs_dir: Path, pkg_name: str) -> Path:
-    """Copy readme.md to docs/index.md or generate minimal one."""
+    """Copy readme.md to docs/index.md or generate minimal one.
+
+    Transforms docs/ prefixed links to work in MkDocs context.
+    """
     index_path = docs_dir / "index.md"
     for name in ("readme.md", "README.md", "Readme.md"):
         readme = state_dir / name
         if readme.exists():
-            file_utils.ensure_parents_write_text(index_path, readme.read_text())
+            content = _strip_docs_prefix(readme.read_text())
+            file_utils.ensure_parents_write_text(index_path, content)
             return index_path
     file_utils.ensure_parents_write_text(index_path, f"# {pkg_name}\n")
     return index_path

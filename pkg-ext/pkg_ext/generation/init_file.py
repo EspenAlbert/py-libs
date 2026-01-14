@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from zero_3rdparty.iter_utils import flat_map
 
 from pkg_ext.context import pkg_ctx
@@ -6,7 +8,7 @@ from pkg_ext.models import PublicGroup, SymbolRefId
 from pkg_ext.warnings_gen import get_warning_class_names
 
 
-def write_init(ctx: pkg_ctx, version: str):
+def write_init(ctx: pkg_ctx, version: str) -> Path:
     settings = ctx.settings
     code = ctx.code_state
     tool_state = ctx.tool_state
@@ -56,3 +58,4 @@ def write_init(ctx: pkg_ctx, version: str):
         "]",
     ]
     settings.init_path.write_text("\n".join(init_lines) + "\n")
+    return settings.init_path

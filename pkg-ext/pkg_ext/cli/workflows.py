@@ -13,7 +13,7 @@ from model_lib.model_base import Entity
 from pydantic import model_validator
 from zero_3rdparty.file_utils import iter_paths_and_relative
 
-from pkg_ext import api_dumper
+from pkg_ext import api_dumper, py_format
 from pkg_ext.changelog import (
     ReleaseAction,
     changelog_filepath,
@@ -148,12 +148,18 @@ def sync_files(api_input: GenerateApiInput, ctx: pkg_ctx):
     version_new = bump_version(ctx, version_old)
     ctx.add_versions(str(version_old), str(version_new))
     version_str = str(version_new) if api_input.bump_version else str(version_old)
-    write_warnings_module(ctx.settings, ctx.tool_state)
-    write_groups(ctx)
-    write_init(ctx, version_str)
+    settings = api_input.settings
+
+    generated_py_paths: list[Path] = []
+    if warnings_path := write_warnings_module(settings, ctx.tool_state):
+        generated_py_paths.append(warnings_path)
+    generated_py_paths.extend(write_groups(ctx))
+    generated_py_paths.append(write_init(ctx, version_str))
+
+    py_format.format_python_files(generated_py_paths, settings.format_command)
+
     update_pyproject_toml(ctx, version_str)
     write_changelog_md(ctx)
-    settings = api_input.settings
     if hooks := settings.after_file_write_hooks:
         for hook in hooks:
             substituted = hook.format(pkg_path=settings.pkg_directory)

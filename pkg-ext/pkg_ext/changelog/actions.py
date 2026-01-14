@@ -80,14 +80,22 @@ class ChangelogActionBase(Entity):
     def bump_type(self) -> BumpType:
         return BumpType.UNDEFINED
 
+    # Fields that should appear first in YAML output, in order
+    _YAML_FIELD_ORDER: ClassVar[tuple[str, ...]] = ("name", "ts", "type")
+
     @property
     def file_content(self) -> str:
         data = self.model_dump(exclude_unset=True, exclude_none=True, exclude={"pr"})
         data.setdefault("ts", self.ts)
-        data["type"] = (
-            self.type
-        )  # ensure type is always included for discriminated union
-        return dump(data, format="yaml")
+        data["type"] = self.type  # pyright: ignore[reportAttributeAccessIssue]
+        # Ensure consistent field order: base fields first, then remaining sorted
+        ordered: dict[str, object] = {}
+        for key in self._YAML_FIELD_ORDER:
+            if key in data:
+                ordered[key] = data.pop(key)
+        for key in sorted(data.keys()):
+            ordered[key] = data[key]
+        return dump(ordered, format="yaml")
 
     @property
     def stable_sort_key(self) -> tuple[str, ...]:
@@ -312,6 +320,7 @@ def parse_changelog_file_path(path: Path) -> list[ChangelogAction]:
         if not action_raw.strip():
             continue
         raw_data = parse_yaml_str(action_raw)
+        assert isinstance(raw_data, dict)
         raw_data["pr"] = pr_number
         actions.append(_changelog_action_adapter.validate_python(raw_data))
     return actions

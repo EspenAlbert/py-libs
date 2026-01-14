@@ -6,6 +6,7 @@ dependencies = [
   "ask-shell",
   "GitPython",
   "model-lib[toml]",
+  "tomlkit>=0.13",
 ]
 
 [build-system]

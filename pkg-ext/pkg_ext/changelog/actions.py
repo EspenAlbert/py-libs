@@ -89,10 +89,21 @@ class ChangelogActionBase(Entity):
         )  # ensure type is always included for discriminated union
         return dump(data, format="yaml")
 
+    @property
+    def stable_sort_key(self) -> tuple[str, ...]:
+        """Return a stable sort key for deterministic ordering within same timestamp.
+
+        Subclasses should override to include their unique identifiers.
+        Used as secondary tiebreaker when timestamps are equal.
+        """
+        return (self.type, self.name)  # pyright: ignore[reportAttributeAccessIssue]
+
     def __lt__(self, other) -> bool:
         if not isinstance(other, ChangelogActionBase):
             raise TypeError
-        return (self.ts, self.name) < (other.ts, other.name)
+        # Primary: timestamp (chronological order for release association)
+        # Secondary: stable_sort_key (deterministic within same timestamp)
+        return (self.ts, self.stable_sort_key) < (other.ts, other.stable_sort_key)
 
 
 class MakePublicAction(ChangelogActionBase):
@@ -104,6 +115,10 @@ class MakePublicAction(ChangelogActionBase):
     def bump_type(self) -> BumpType:
         return BumpType.MINOR
 
+    @property
+    def stable_sort_key(self) -> tuple[str, ...]:
+        return (self.type, self.group, self.name)
+
 
 class KeepPrivateAction(ChangelogActionBase):
     type: Literal["keep_private"] = "keep_private"
@@ -112,6 +127,10 @@ class KeepPrivateAction(ChangelogActionBase):
     @property
     def bump_type(self) -> BumpType:
         return BumpType.UNDEFINED
+
+    @property
+    def stable_sort_key(self) -> tuple[str, ...]:
+        return (self.type, self.full_path, self.name)
 
 
 class FixAction(ChangelogActionBase):
@@ -126,6 +145,10 @@ class FixAction(ChangelogActionBase):
     def bump_type(self) -> BumpType:
         return BumpType.PATCH
 
+    @property
+    def stable_sort_key(self) -> tuple[str, ...]:
+        return (self.type, self.short_sha, self.name)
+
 
 class DeleteAction(ChangelogActionBase):
     type: Literal["delete"] = "delete"
@@ -134,6 +157,10 @@ class DeleteAction(ChangelogActionBase):
     @property
     def bump_type(self) -> BumpType:
         return BumpType.MAJOR
+
+    @property
+    def stable_sort_key(self) -> tuple[str, ...]:
+        return (self.type, self.group, self.name)
 
 
 class RenameAction(ChangelogActionBase):
@@ -145,6 +172,10 @@ class RenameAction(ChangelogActionBase):
     def bump_type(self) -> BumpType:
         return BumpType.MAJOR
 
+    @property
+    def stable_sort_key(self) -> tuple[str, ...]:
+        return (self.type, self.group, self.old_name, self.name)
+
 
 class BreakingChangeAction(ChangelogActionBase):
     type: Literal["breaking_change"] = "breaking_change"
@@ -154,6 +185,10 @@ class BreakingChangeAction(ChangelogActionBase):
     @property
     def bump_type(self) -> BumpType:
         return BumpType.MAJOR
+
+    @property
+    def stable_sort_key(self) -> tuple[str, ...]:
+        return (self.type, self.group, self.name)
 
 
 class AdditionalChangeAction(ChangelogActionBase):
@@ -165,15 +200,27 @@ class AdditionalChangeAction(ChangelogActionBase):
     def bump_type(self) -> BumpType:
         return BumpType.PATCH
 
+    @property
+    def stable_sort_key(self) -> tuple[str, ...]:
+        return (self.type, self.group, self.name)
+
 
 class GroupModuleAction(ChangelogActionBase):
     type: Literal["group_module"] = "group_module"
     module_path: str
 
+    @property
+    def stable_sort_key(self) -> tuple[str, ...]:
+        return (self.type, self.module_path, self.name)
+
 
 class ReleaseAction(ChangelogActionBase):
     type: Literal["release"] = "release"
     old_version: str
+
+    @property
+    def stable_sort_key(self) -> tuple[str, ...]:
+        return (self.type, self.old_version, self.name)
 
 
 class StabilityActionMixin(Entity):
@@ -203,6 +250,10 @@ class ExperimentalAction(StabilityActionMixin, ChangelogActionBase):
     def bump_type(self) -> BumpType:
         return BumpType.PATCH
 
+    @property
+    def stable_sort_key(self) -> tuple[str, ...]:
+        return (self.type, self.target, self.group or "", self.parent or "", self.name)
+
 
 class GAAction(StabilityActionMixin, ChangelogActionBase):
     type: Literal["ga"] = "ga"
@@ -210,6 +261,10 @@ class GAAction(StabilityActionMixin, ChangelogActionBase):
     @property
     def bump_type(self) -> BumpType:
         return BumpType.PATCH
+
+    @property
+    def stable_sort_key(self) -> tuple[str, ...]:
+        return (self.type, self.target, self.group or "", self.parent or "", self.name)
 
 
 class DeprecatedAction(StabilityActionMixin, ChangelogActionBase):
@@ -219,6 +274,10 @@ class DeprecatedAction(StabilityActionMixin, ChangelogActionBase):
     @property
     def bump_type(self) -> BumpType:
         return BumpType.PATCH
+
+    @property
+    def stable_sort_key(self) -> tuple[str, ...]:
+        return (self.type, self.target, self.group or "", self.parent or "", self.name)
 
 
 ChangelogAction = Annotated[

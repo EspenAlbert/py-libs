@@ -1,4 +1,3 @@
-from ast import Str
 import logging
 from pathlib import Path
 
@@ -77,6 +76,7 @@ def select_group_name(
 ) -> PublicGroup:
     choices = as_choices(groups, default)
     return select_list_choice(prompt_text, choices)
+
 
 SKIPPED = "SKIPPED"
 _SKIP_CHOICE: ChoiceTyped[str] = ChoiceTyped(

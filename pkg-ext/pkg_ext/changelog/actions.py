@@ -189,6 +189,8 @@ class BreakingChangeAction(ChangelogActionBase):
     type: Literal["breaking_change"] = "breaking_change"
     group: str
     details: str
+    change_kind: str | None = None
+    auto_generated: bool = False
 
     @property
     def bump_type(self) -> BumpType:
@@ -196,13 +198,15 @@ class BreakingChangeAction(ChangelogActionBase):
 
     @property
     def stable_sort_key(self) -> tuple[str, ...]:
-        return (self.type, self.group, self.name)
+        return (self.type, self.group, self.name, self.change_kind or "")
 
 
 class AdditionalChangeAction(ChangelogActionBase):
     type: Literal["additional_change"] = "additional_change"
     group: str
     details: str
+    change_kind: str | None = None
+    auto_generated: bool = False
 
     @property
     def bump_type(self) -> BumpType:
@@ -210,7 +214,7 @@ class AdditionalChangeAction(ChangelogActionBase):
 
     @property
     def stable_sort_key(self) -> tuple[str, ...]:
-        return (self.type, self.group, self.name)
+        return (self.type, self.group, self.name, self.change_kind or "")
 
 
 class GroupModuleAction(ChangelogActionBase):
@@ -288,6 +292,20 @@ class DeprecatedAction(StabilityActionMixin, ChangelogActionBase):
         return (self.type, self.target, self.group or "", self.parent or "", self.name)
 
 
+class MaxBumpTypeAction(ChangelogActionBase):
+    type: Literal["max_bump_type"] = "max_bump_type"
+    max_bump: BumpType
+    reason: str
+
+    @property
+    def bump_type(self) -> BumpType:
+        return BumpType.UNDEFINED
+
+    @property
+    def stable_sort_key(self) -> tuple[str, ...]:
+        return (self.type, self.max_bump, self.name)
+
+
 ChangelogAction = Annotated[
     Union[
         MakePublicAction,
@@ -302,6 +320,7 @@ ChangelogAction = Annotated[
         ExperimentalAction,
         GAAction,
         DeprecatedAction,
+        MaxBumpTypeAction,
     ],
     Field(discriminator="type"),
 ]

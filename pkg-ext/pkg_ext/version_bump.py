@@ -10,6 +10,7 @@ from model_lib.serialize.parse import parse_dict
 
 from pkg_ext.changelog import (
     BumpType,
+    MaxBumpTypeAction,
 )
 from pkg_ext.context import pkg_ctx
 
@@ -109,6 +110,16 @@ def _extract_version(text: str) -> str:
     return ""
 
 
+def cap_bump_type(bump: BumpType, max_bump: BumpType) -> BumpType:
+    """Cap bump type at specified maximum (PATCH < MINOR < MAJOR)."""
+    bump_order = [BumpType.PATCH, BumpType.MINOR, BumpType.MAJOR]
+    if bump not in bump_order or max_bump not in bump_order:
+        return bump
+    max_index = bump_order.index(max_bump)
+    bump_index = bump_order.index(bump)
+    return bump_order[min(max_index, bump_index)]
+
+
 def bump_version(
     ctx: pkg_ctx,
     old_version: PkgVersion,
@@ -117,10 +128,17 @@ def bump_version(
 
     When keep_prerelease is enabled and the current version has a prerelease suffix,
     bump the prerelease number instead of the major/minor/patch version.
+
+    If a MaxBumpTypeAction is present, the calculated bump is capped at that maximum.
     """
     actions = ctx.pr_changelog_actions()
     bumps = [action.bump_type for action in actions]
     bump = BumpType.max_bump_type(bumps)
+    max_bump_action = next(
+        (a for a in actions if isinstance(a, MaxBumpTypeAction)), None
+    )
+    if max_bump_action:
+        bump = cap_bump_type(bump, max_bump_action.max_bump)
     if prerelease_bump := old_version.prerelease_bump_type:
         if ctx.settings.keep_prerelease:
             bump = prerelease_bump
@@ -149,6 +167,7 @@ def read_current_version(ctx: pkg_ctx):
 
 __all__ = [
     "bump_version",
+    "cap_bump_type",
     "read_current_version",
     "PkgVersion",
 ]

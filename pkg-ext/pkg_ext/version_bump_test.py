@@ -1,7 +1,7 @@
 import pytest
 from zero_3rdparty.file_utils import ensure_parents_write_text
 
-from pkg_ext.changelog import BumpType
+from pkg_ext.changelog import BumpType, MaxBumpTypeAction
 from pkg_ext.changelog.actions import (
     BreakingChangeAction,
     FixAction,
@@ -14,7 +14,12 @@ from pkg_ext.context import pkg_ctx
 from pkg_ext.git_usage.state import GitChanges
 from pkg_ext.models import PkgCodeState
 from pkg_ext.settings import PkgSettings
-from pkg_ext.version_bump import PkgVersion, bump_version, read_current_version
+from pkg_ext.version_bump import (
+    PkgVersion,
+    bump_version,
+    cap_bump_type,
+    read_current_version,
+)
 
 
 @pytest.fixture()
@@ -125,3 +130,49 @@ def test_bump_version_keep_prerelease(
     with pkg_ctx_keep_prerelease:
         result = bump_version(pkg_ctx_keep_prerelease, PkgVersion.parse(old_version))
         assert str(result) == new_version
+
+
+_cap_bump_type_cases = [
+    (BumpType.MAJOR, BumpType.MINOR, BumpType.MINOR),
+    (BumpType.MAJOR, BumpType.PATCH, BumpType.PATCH),
+    (BumpType.MINOR, BumpType.PATCH, BumpType.PATCH),
+    (BumpType.MINOR, BumpType.MINOR, BumpType.MINOR),
+    (BumpType.PATCH, BumpType.MAJOR, BumpType.PATCH),
+    (BumpType.PATCH, BumpType.MINOR, BumpType.PATCH),
+]
+
+
+@pytest.mark.parametrize(
+    "calculated,max_bump,expected",
+    _cap_bump_type_cases,
+    ids=[f"{calc}->{max_b}=>{exp}" for calc, max_b, exp in _cap_bump_type_cases],
+)
+def test_cap_bump_type(calculated, max_bump, expected):
+    assert cap_bump_type(calculated, max_bump) == expected
+
+
+def test_cap_bump_type_non_standard_bump_passes_through():
+    assert cap_bump_type(BumpType.RC, BumpType.MINOR) == BumpType.RC
+    assert cap_bump_type(BumpType.UNDEFINED, BumpType.PATCH) == BumpType.UNDEFINED
+
+
+def test_bump_version_with_max_bump_action(pkg_ctx_instance):
+    actions = [
+        BreakingChangeAction(name="func", group="grp", details="breaking"),
+        MaxBumpTypeAction(name="cap", max_bump=BumpType.MINOR, reason="pre-1.0"),
+    ]
+    pkg_ctx_instance._actions = actions
+    with pkg_ctx_instance:
+        result = bump_version(pkg_ctx_instance, PkgVersion.parse("0.1.0"))
+        assert str(result) == "0.2.0"
+
+
+def test_bump_version_max_bump_respects_lower_calculated(pkg_ctx_instance):
+    actions = [
+        FixAction(name="fix", short_sha="abc", message="fix"),
+        MaxBumpTypeAction(name="cap", max_bump=BumpType.MAJOR, reason="allow major"),
+    ]
+    pkg_ctx_instance._actions = actions
+    with pkg_ctx_instance:
+        result = bump_version(pkg_ctx_instance, PkgVersion.parse("1.0.0"))
+        assert str(result) == "1.0.1"

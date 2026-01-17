@@ -10,8 +10,9 @@ from typing import Self
 from ask_shell._internal._run import run_and_wait
 from ask_shell._internal.interactive import raise_on_question
 from model_lib.model_base import Entity
+from model_lib.serialize import dump
 from pydantic import model_validator
-from zero_3rdparty.file_utils import iter_paths_and_relative
+from zero_3rdparty.file_utils import ensure_parents_write_text, iter_paths_and_relative
 
 from pkg_ext import api_dumper, py_format
 from pkg_ext.changelog import (
@@ -234,3 +235,25 @@ def create_api_dump(settings: PkgSettings):
     return api_dumper.dump_public_api(
         pkg_ctx.tool_state, groups, refs, settings.pkg_import_name, version
     )
+
+
+def write_api_dump(settings: PkgSettings, dev_mode: bool = False) -> Path:
+    api_dump = create_api_dump(settings)
+    stem = f"{settings.pkg_import_name}.api"
+    if dev_mode:
+        stem = f"{stem}-dev"
+    output = settings.state_dir / f"{stem}.yaml"
+    yaml_text = dump(api_dump.model_dump(exclude_none=True), "yaml")
+    ensure_parents_write_text(output, yaml_text)
+    logger.info(f"API dump written to {output}")
+    return output
+
+
+def run_api_diff(settings: PkgSettings) -> list:
+    """Compare baseline vs dev dump. Returns empty list if no baseline (first release)."""
+    baseline = settings.state_dir / f"{settings.pkg_import_name}.api.yaml"
+    if not baseline.exists():
+        logger.info("No API baseline found, skipping diff (first release)")
+        return []
+    # TODO(G2): Implement actual diff logic comparing baseline vs dev dump
+    return []

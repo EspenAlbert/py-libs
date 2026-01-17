@@ -284,7 +284,7 @@ These files are created/updated when running `pre-commit` during development:
 | `.changelog/{pr}.yaml` | Changelog actions for this PR | Yes |
 | `.groups-dev.yaml` | Group assignments (dev copy) | No |
 | `CHANGELOG-dev.md` | Human-readable changelog (dev copy) | No |
-| `{pkg}.api.yaml` | API dump for breaking change detection | No |
+| `{pkg}.api-dev.yaml` | API dump for dev comparison (gitignored) | No |
 | `{pkg}/__init__.py` | Package exports (VERSION unchanged) | No |
 | `{pkg}/{group}.py` | Group re-export modules | No |
 | `{pkg}/_warnings.py` | Stability warning decorators | No |

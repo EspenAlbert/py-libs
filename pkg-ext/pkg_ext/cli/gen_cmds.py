@@ -18,7 +18,7 @@ from pkg_ext.cli.workflow_cmds import (
     generate_examples_for_groups,
     generate_tests_for_groups,
 )
-from pkg_ext.cli.workflows import create_api_dump
+from pkg_ext.cli.workflows import create_api_dump, write_api_dump
 from pkg_ext.settings import PkgSettings
 
 logger = logging.getLogger(__name__)
@@ -31,15 +31,13 @@ def dump_api(
 ):
     """Dump public API to YAML for diffing and breaking change detection."""
     settings: PkgSettings = ctx.obj
-    api_dump = create_api_dump(settings)
     if output is None:
-        stem = f"{settings.pkg_import_name}.api"
-        if dev:
-            stem = f"{stem}-dev"
-        output = settings.state_dir / f"{stem}.yaml"
-    yaml_text = dump(api_dump.model_dump(exclude_none=True), "yaml")
-    ensure_parents_write_text(output, yaml_text)
-    logger.info(f"API dump written to {output}")
+        write_api_dump(settings, dev_mode=dev)
+    else:
+        api_dump = create_api_dump(settings)
+        yaml_text = dump(api_dump.model_dump(exclude_none=True), "yaml")
+        ensure_parents_write_text(output, yaml_text)
+        logger.info(f"API dump written to {output}")
 
 
 def gen_examples(

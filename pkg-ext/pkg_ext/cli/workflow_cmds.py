@@ -28,8 +28,10 @@ from pkg_ext.cli.workflows import (
     create_stability_ctx,
     generate_api_workflow,
     post_merge_commit_workflow,
+    run_api_diff,
     sync_files,
     update_changelog_entries,
+    write_api_dump,
 )
 from pkg_ext.config import PKG_EXT_TOOL_NAME, ProjectConfig, load_project_config
 from pkg_ext.generation import docs, example_gen, test_gen
@@ -233,6 +235,7 @@ def post_merge(
     )
     pkg_ctx = create_ctx(api_input)
     sync_files(api_input, pkg_ctx)
+    write_api_dump(settings, dev_mode=False)
     post_merge_commit_workflow(
         repo_path=settings.repo_root,
         changelog_dir_path=pkg_ctx.settings.changelog_dir,
@@ -300,6 +303,9 @@ def pre_commit(
     else:
         count = generate_docs_for_pkg(settings)
         logger.info(f"Regenerated {count} doc files")
+
+    write_api_dump(settings, dev_mode=True)
+    run_api_diff(settings)
 
     if skip_dirty_check:
         return

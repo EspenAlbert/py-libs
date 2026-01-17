@@ -49,13 +49,16 @@ def dump_function(symbol: Callable, ref: RefSymbol) -> FunctionDump:
 
 
 def dump_class(cls: type, ref: RefSymbol) -> ClassDump:
+    fields = parse_class_fields(cls)
+    # Skip init_signature when fields present (dataclass/pydantic - init params match fields)
+    init_sig = None if fields else parse_signature(cls.__init__)
     return ClassDump(
         name=ref.name,
         module_path=ref.module_path,
         docstring=cls.__doc__ or "",
         direct_bases=parse_direct_bases(cls),
-        init_signature=parse_signature(cls.__init__),
-        fields=parse_class_fields(cls),
+        init_signature=init_sig,
+        fields=fields,
         line_number=_get_line_number(cls),
     )
 

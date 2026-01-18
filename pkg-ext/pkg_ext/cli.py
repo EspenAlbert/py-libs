@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from ask_shell._internal.typer_command import configure_logging
 
-from pkg_ext.cli.commands import app
+from pkg_ext.cli import app
 
 
 def main():

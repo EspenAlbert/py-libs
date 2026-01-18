@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from functools import cache, total_ordering
 from pathlib import Path
 from typing import Annotated, ClassVar, Iterable, Literal, Self, Union
@@ -425,7 +426,7 @@ def default_changelog_path(changelog_dir: Path) -> Path:
     return changelog_filepath(changelog_dir, GitChanges.DEFAULT_PR_NUMBER)
 
 
-def dump_changelog_actions(path: Path, actions: list[ChangelogAction]) -> Path:
+def dump_changelog_actions(path: Path, actions: Sequence[ChangelogAction]) -> Path:
     assert actions, "no actions to dump"
     yaml_content = ACTION_FILE_SPLIT.join(
         action.file_content for action in sorted(actions)

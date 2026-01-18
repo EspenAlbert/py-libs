@@ -2,6 +2,7 @@
 
 import logging
 from pathlib import Path
+from typing import cast
 
 import typer
 from git import InvalidGitRepositoryError, Repo
@@ -36,7 +37,7 @@ from pkg_ext.cli.workflows import (
     write_api_dump,
 )
 from pkg_ext.config import PKG_EXT_TOOL_NAME, ProjectConfig, load_project_config
-from pkg_ext.generation import docs, example_gen, test_gen
+from pkg_ext.generation import docs, docs_mkdocs, example_gen, test_gen
 from pkg_ext.git_usage import GitSince, find_pr_info_or_none, head_merge_pr
 from pkg_ext.models import PublicGroups
 from pkg_ext.settings import PkgSettings
@@ -144,7 +145,9 @@ def generate_tests_for_groups(
         if not testable:
             continue
         filtered = api_dumper.GroupDump(
-            name=filtered.name, stability=filtered.stability, symbols=testable
+            name=filtered.name,
+            stability=filtered.stability,
+            symbols=cast(list[api_dumper.SymbolDump], testable),
         )
         path = settings.test_file_path(filtered.name)
         new_content = test_gen.generate_group_test_file(
@@ -208,10 +211,12 @@ def generate_docs_for_pkg(
         output.path_contents = {
             k: v for k, v in output.path_contents.items() if k.startswith(dir_name)
         }
-    docs.copy_readme_as_index(settings.state_dir, docs_dir, settings.pkg_import_name)
-    count = docs.write_docs_files(output, docs_dir)
-    nav = docs.generate_mkdocs_nav(api_dump, settings.pkg_import_name)
-    docs.write_mkdocs_yml(
+    docs_mkdocs.copy_readme_as_index(
+        settings.state_dir, docs_dir, settings.pkg_import_name
+    )
+    count = docs_mkdocs.write_docs_files(output, docs_dir)
+    nav = docs_mkdocs.generate_mkdocs_nav(api_dump, settings.pkg_import_name)
+    docs_mkdocs.write_mkdocs_yml(
         settings.mkdocs_yml, settings.pkg_import_name, nav, config.mkdocs_skip_sections
     )
     return count

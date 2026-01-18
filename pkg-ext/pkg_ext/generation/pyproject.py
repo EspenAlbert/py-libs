@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 import tomlkit
 
 from pkg_ext.context import pkg_ctx
@@ -8,5 +10,6 @@ def update_pyproject_toml(ctx: pkg_ctx, new_version: str):
     if not path.exists():
         return
     doc = tomlkit.loads(path.read_text())
-    doc["project"]["version"] = new_version
+    project = cast(dict[str, Any], doc["project"])
+    project["version"] = new_version
     path.write_text(tomlkit.dumps(doc))

@@ -1,0 +1,119 @@
+"""Version tracking and changelog integration for docs generation."""
+
+from collections.abc import Sequence
+from datetime import datetime
+
+from model_lib import utc_datetime
+from model_lib.model_base import Event
+
+from pkg_ext.changelog.actions import (
+    AdditionalChangeAction,
+    BreakingChangeAction,
+    ChangelogAction,
+    DeprecatedAction,
+    FixAction,
+    MakePublicAction,
+    ReleaseAction,
+    RenameAction,
+)
+
+MEANINGFUL_CHANGE_ACTIONS: tuple[type, ...] = (
+    FixAction,
+    BreakingChangeAction,
+    AdditionalChangeAction,
+    RenameAction,
+    DeprecatedAction,
+)
+
+UNRELEASED_VERSION = "unreleased"
+
+
+class SymbolChange(Event):
+    version: str
+    description: str
+    ts: utc_datetime
+
+
+def find_release_version(
+    ts: datetime, changelog_actions: Sequence[ChangelogAction]
+) -> str | None:
+    for action in sorted(changelog_actions):
+        if isinstance(action, ReleaseAction) and action.ts > ts:
+            return action.name
+    return None
+
+
+def get_symbol_since_version(
+    symbol_name: str, changelog_actions: Sequence[ChangelogAction]
+) -> str | None:
+    for action in sorted(changelog_actions):
+        if isinstance(action, MakePublicAction) and action.name == symbol_name:
+            if version := find_release_version(action.ts, changelog_actions):
+                return version
+            return UNRELEASED_VERSION
+    return None
+
+
+def get_field_since_version(
+    symbol_name: str,
+    field_name: str,
+    changelog_actions: Sequence[ChangelogAction],
+) -> str | None:
+    for action in sorted(changelog_actions):
+        if (
+            isinstance(action, AdditionalChangeAction)
+            and action.name == symbol_name
+            and action.field_name == field_name
+        ):
+            if version := find_release_version(action.ts, changelog_actions):
+                return version
+            return UNRELEASED_VERSION
+    return get_symbol_since_version(symbol_name, changelog_actions)
+
+
+def _action_description(action: ChangelogAction) -> str:
+    match action:
+        case MakePublicAction():
+            return "Made public"
+        case FixAction():
+            return action.changelog_message or action.message
+        case BreakingChangeAction():
+            return action.details
+        case AdditionalChangeAction():
+            return action.details
+        case RenameAction():
+            return f"Renamed from `{action.old_name}`"
+        case DeprecatedAction():
+            if action.replacement:
+                return f"Deprecated, use `{action.replacement}` instead"
+            return "Deprecated"
+    return ""
+
+
+def build_symbol_changes(
+    symbol_name: str, changelog_actions: Sequence[ChangelogAction]
+) -> list[SymbolChange]:
+    current_version = UNRELEASED_VERSION
+    changes: list[SymbolChange] = []
+    for action in sorted(changelog_actions):
+        if isinstance(action, ReleaseAction):
+            current_version = action.name
+            continue
+        if action.name != symbol_name:
+            continue
+        if isinstance(action, MakePublicAction):
+            changes.append(
+                SymbolChange(
+                    version=current_version, description="Made public", ts=action.ts
+                )
+            )
+        elif isinstance(action, MEANINGFUL_CHANGE_ACTIONS):
+            if desc := _action_description(action):
+                changes.append(
+                    SymbolChange(
+                        version=current_version, description=desc, ts=action.ts
+                    )
+                )
+    return sorted(
+        changes, key=lambda c: (c.version != UNRELEASED_VERSION, c.ts), reverse=True
+    )

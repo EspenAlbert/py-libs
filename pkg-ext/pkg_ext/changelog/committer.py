@@ -16,7 +16,7 @@ from pkg_ext.interactive import (
     select_commit_rephrased,
     select_group_name_or_skip,
 )
-from pkg_ext.models import PublicGroups, as_module_path
+from pkg_ext.models import PublicGroup, PublicGroups, as_module_path
 
 
 def py_diff(old: str, new: str) -> str:
@@ -115,6 +115,7 @@ def fix_changelog_action(commit: GitCommit, ctx: pkg_ctx) -> FixAction | None:
             ignored=True,
             author=commit.author,
         )
+    assert isinstance(public_group, PublicGroup)
     group = public_group.name
 
     prompt_text = f"commit({commit_sha}): {commit_message}"

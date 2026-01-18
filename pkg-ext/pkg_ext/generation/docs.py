@@ -336,6 +336,68 @@ def render_env_var_table(symbol: ClassDump) -> str:
     return f"{header}\n" + "\n".join(rows)
 
 
+def should_show_field_table(fields: list[ClassFieldInfo]) -> bool:
+    """Return True if table provides value beyond signature (has deprecated/description)."""
+    return any((f.deprecated or f.description) for f in fields if not f.is_computed)
+
+
+def render_field_table(fields: list[ClassFieldInfo]) -> str:
+    """Render markdown table with conditional columns based on field metadata."""
+    visible = [f for f in fields if not f.is_computed]
+    if not visible:
+        return ""
+
+    has_deprecated = any(f.deprecated for f in visible)
+    has_description = any(f.description for f in visible)
+
+    cols = ["Field", "Type", "Default"]
+    if has_deprecated:
+        cols.append("Deprecated")
+    if has_description:
+        cols.append("Description")
+
+    header = "| " + " | ".join(cols) + " |"
+    separator = "|" + "|".join("---" for _ in cols) + "|"
+
+    rows = []
+    for f in visible:
+        default = f"`{f.default.value_repr}`" if f.default else "-"
+        row = [f.name, f"`{f.type_annotation}`" if f.type_annotation else "-", default]
+        if has_deprecated:
+            row.append(f.deprecated or "-")
+        if has_description:
+            row.append((f.description or "-").replace("|", "\\|"))
+        rows.append("| " + " | ".join(row) + " |")
+
+    return "\n".join([header, separator, *rows])
+
+
+def render_inline_symbol(ctx: SymbolContext) -> str:
+    """Render inline symbol with signature and optional field table."""
+    symbol = ctx.symbol
+    type_label = symbol.type.value
+    sig = format_signature(symbol)
+
+    lines = [
+        f"### {type_label}: `{symbol.name}`",
+        "",
+        "```python",
+        sig,
+        "```",
+    ]
+
+    if (
+        isinstance(symbol, ClassDump)
+        and symbol.fields
+        and should_show_field_table(symbol.fields)
+    ):
+        table = render_field_table(symbol.fields)
+        if table:
+            lines.extend(["", table])
+
+    return "\n".join(lines)
+
+
 def render_stability_badge(symbol: SymbolDump, group: GroupDump) -> str:
     """Render stability badge if non-GA."""
     stability = symbol.stability or group.stability
@@ -484,8 +546,7 @@ def render_group_index(
     for ctx in sorted_contexts:
         if not ctx.is_complex:
             section_id = f"{slug(ctx.symbol.name)}_def"
-            type_label = ctx.symbol.type.value
-            inline_content = f"### {type_label}: `{ctx.symbol.name}`"
+            inline_content = render_inline_symbol(ctx)
             inline_sections.append(
                 wrap_section(inline_content, section_id, PKG_EXT_TOOL_NAME, MD_CONFIG)
             )

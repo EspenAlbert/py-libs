@@ -37,8 +37,11 @@ from pkg_ext.generation.docs import (
     render_changes_section,
     render_env_var_table,
     render_example_section,
+    render_field_table,
     render_group_index,
+    render_inline_symbol,
     render_stability_badge,
+    should_show_field_table,
 )
 from pkg_ext.models.api_dump import (
     CallableSignature,
@@ -473,3 +476,111 @@ def test_write_docs_files_idempotent(tmp_path: Path, project_config: ProjectConf
     content2 = (docs_dir / "config/index.md").read_text()
     assert count1 == count2 == 1
     assert content1 == content2
+
+
+def _class_with_fields(
+    name: str,
+    deprecated: str | None = None,
+    description: str | None = None,
+) -> ClassDump:
+    return ClassDump(
+        name=name,
+        module_path="mod",
+        fields=[
+            ClassFieldInfo(
+                name="timeout",
+                type_annotation="int",
+                default=ParamDefault(value_repr="30"),
+            ),
+            ClassFieldInfo(
+                name="strict",
+                type_annotation="bool",
+                default=ParamDefault(value_repr="False"),
+                deprecated=deprecated,
+                description=description,
+            ),
+        ],
+    )
+
+
+def test_should_show_field_table_no_metadata():
+    cls = _class_with_fields("Config")
+    assert not should_show_field_table(cls.fields)
+
+
+def test_should_show_field_table_with_deprecated():
+    cls = _class_with_fields("Config", deprecated="Use validation_mode instead")
+    assert should_show_field_table(cls.fields)
+
+
+def test_should_show_field_table_with_description():
+    cls = _class_with_fields("Config", description="Enable strict mode")
+    assert should_show_field_table(cls.fields)
+
+
+def test_render_field_table_with_deprecated():
+    cls = _class_with_fields("Config", deprecated="Use validation_mode instead")
+    table = render_field_table(cls.fields)
+    assert "| Field | Type | Default | Deprecated |" in table
+    assert "| timeout | `int` | `30` | - |" in table
+    assert "Use validation_mode instead" in table
+
+
+def test_render_field_table_with_description():
+    cls = _class_with_fields("Config", description="Enable strict mode")
+    table = render_field_table(cls.fields)
+    assert "| Field | Type | Default | Description |" in table
+    assert "Enable strict mode" in table
+
+
+def test_render_field_table_escapes_pipes():
+    cls = ClassDump(
+        name="Config",
+        module_path="mod",
+        fields=[
+            ClassFieldInfo(
+                name="pattern",
+                type_annotation="str",
+                description="Use | for OR",
+            ),
+        ],
+    )
+    table = render_field_table(cls.fields)
+    assert "Use \\| for OR" in table
+
+
+def test_render_inline_symbol_function():
+    func = _func_dump("load")
+    ctx = SymbolContext(symbol=func)
+    content = render_inline_symbol(ctx)
+    assert "### function: `load`" in content
+    assert "```python" in content
+    assert "def load(" in content
+
+
+def test_render_inline_symbol_class_no_table():
+    cls = _class_with_fields("CopyOptions")
+    ctx = SymbolContext(symbol=cls)
+    content = render_inline_symbol(ctx)
+    assert "### class: `CopyOptions`" in content
+    assert "```python" in content
+    assert "class CopyOptions:" in content
+    assert "timeout: int = 30" in content
+    assert "| Field |" not in content  # No table when no metadata
+
+
+def test_render_inline_symbol_class_with_table():
+    cls = _class_with_fields("Config", deprecated="Use new_strict")
+    ctx = SymbolContext(symbol=cls)
+    content = render_inline_symbol(ctx)
+    assert "### class: `Config`" in content
+    assert "| Field | Type | Default | Deprecated |" in content
+
+
+def test_render_group_index_includes_signatures():
+    cls = _class_with_fields("SimpleClass")
+    group = GroupDump(name="utils", symbols=[cls])
+    contexts = [SymbolContext(symbol=cls)]
+    content = render_group_index(group, contexts, GroupConfig())
+    assert "class SimpleClass:" in content
+    assert "timeout: int = 30" in content

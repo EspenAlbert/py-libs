@@ -25,16 +25,16 @@ logger = logging.getLogger(__name__)
 
 
 def dump_as_toml_str(
-    instance: object, indent: int = 4, multiline_strings: bool = False, **kwargs
+    instance: object, multiline_strings: bool = False, **kwargs
 ) -> str:
     compact = dump_as_toml_str_compact(
-        instance, indent=indent, multiline_strings=multiline_strings, **kwargs
+        instance, multiline_strings=multiline_strings, **kwargs
     )
     return add_line_breaks(compact)
 
 
 def dump_as_toml_str_compact(
-    instance: object, indent=2, multiline_strings: bool = False, **kwargs
+    instance: object, multiline_strings: bool = False, **kwargs
 ) -> str:
     # dumps to json and parse 1st to support custom types
     # and since an error will have a side effect on the instance creating a _TomlObject
@@ -42,9 +42,7 @@ def dump_as_toml_str_compact(
         raw: list | dict = dump_as_list(instance)  # type: ignore
     else:
         raw: dict = dump_as_dict(instance)  # type: ignore
-    return dump_toml_str(
-        raw, indent=indent, multiline_strings=multiline_strings, **kwargs
-    )
+    return dump_toml_str(raw, multiline_strings=multiline_strings, **kwargs)
 
 
 _payload_dumpers: dict[FileFormat | str, Callable[[Any], str]] = {

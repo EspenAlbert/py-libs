@@ -1,4 +1,4 @@
-"""Git workflow commands: pre_change, pre_commit, post_merge."""
+"""Git workflow commands: pre_change, pre_commit, post_merge, chore."""
 
 import logging
 from pathlib import Path
@@ -10,7 +10,13 @@ from zero_3rdparty.file_utils import ensure_parents_write_text
 from zero_3rdparty.sections import get_comment_config, parse_sections, replace_sections
 
 from pkg_ext import api_dumper, py_format
-from pkg_ext.changelog import parse_changelog_actions
+from pkg_ext.changelog import (
+    ChoreAction,
+    changelog_filepath,
+    dump_changelog_actions,
+    parse_changelog_actions,
+    parse_changelog_file_path,
+)
 from pkg_ext.cli.options import (
     option_full,
     option_git_changes_since,
@@ -226,6 +232,11 @@ def post_merge(
     explicit_pr: int = option_pr,
     push: bool = option_push,
     skip_clean_old_entries: bool = option_skip_clean,
+    force_reason: str = typer.Option(
+        "",
+        "--force-reason",
+        help="Force release with this reason (creates ChoreAction if no changelog entries)",
+    ),
 ):
     settings: PkgSettings = ctx.obj
     settings.force_bot()
@@ -242,6 +253,24 @@ def post_merge(
     pkg_ctx = create_ctx(api_input)
     sync_files(api_input, pkg_ctx)
     write_api_dump(settings, dev_mode=False)
+
+    has_version_bump = pkg_ctx.run_state.old_version != pkg_ctx.run_state.new_version
+    if not has_version_bump:
+        if force_reason:
+            _create_chore_action(settings, pr, force_reason)
+            pkg_ctx = create_ctx(api_input)
+            sync_files(api_input, pkg_ctx)
+            logger.info(f"Forced release with chore: {force_reason}")
+        else:
+            logger.info(
+                f"No changelog entries for PR {pr}, skipping release "
+                f"(version stays at {pkg_ctx.run_state.old_version}). "
+                "Use --force-reason to release anyway."
+            )
+            count = generate_docs_for_pkg(settings)
+            logger.info(f"Regenerated {count} doc files (no release)")
+            return
+
     # Create ReleaseAction first so docs generation has correct since_version
     create_release_action(
         changelog_dir_path=pkg_ctx.settings.changelog_dir,
@@ -345,3 +374,42 @@ def pre_commit(
             logger.error(f"  {f}")
         logger.error("Run `git add` on these files before committing.")
         raise typer.Exit(1)
+
+
+def _create_chore_action(settings: PkgSettings, pr_number: int, description: str):
+    """Create or append a ChoreAction to the changelog file for the PR."""
+    changelog_path = changelog_filepath(settings.changelog_dir, pr_number)
+    existing = (
+        parse_changelog_file_path(changelog_path) if changelog_path.exists() else []
+    )
+    action = ChoreAction(description=description)
+    dump_changelog_actions(changelog_path, existing + [action])
+    logger.info(f"Created chore action in {changelog_path.name}: {description}")
+
+
+def chore(
+    ctx: typer.Context,
+    description: str = typer.Option(
+        ...,
+        "--description",
+        "-d",
+        help="Description of internal changes (e.g., 'CI improvements', 'Dependency updates')",
+    ),
+    pr_number: int = typer.Option(
+        0,
+        "--pr",
+        help="PR number (auto-detected from current branch if not provided)",
+    ),
+):
+    """Create a ChoreAction for internal changes that warrant a release."""
+    settings: PkgSettings = ctx.obj
+    pr = pr_number or _get_current_pr_number(settings)
+    if not pr:
+        logger.error("Could not detect PR number. Use --pr to specify it.")
+        raise typer.Exit(1)
+    _create_chore_action(settings, pr, description)
+
+
+def _get_current_pr_number(settings: PkgSettings) -> int:
+    pr_info = find_pr_info_or_none(settings.repo_root)
+    return pr_info.pr_number if pr_info else 0

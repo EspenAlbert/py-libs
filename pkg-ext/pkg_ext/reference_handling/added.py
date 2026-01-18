@@ -148,16 +148,13 @@ def handle_added_refs(ctx: pkg_ctx) -> None:
             new_order[rel_path] = rel_path_refs[rel_path]
         return new_order
 
+    tracked_symbol_types = (SymbolType.FUNCTION, SymbolType.CLASS, SymbolType.EXCEPTION)
     with new_task(
         "New References expose/hide decisions",
         total=len(added_refs),
         log_updates=True,
     ) as task:
-        for symbol_type in (
-            SymbolType.FUNCTION,
-            SymbolType.CLASS,
-            SymbolType.EXCEPTION,
-        ):
+        for symbol_type in tracked_symbol_types:
             relevant_refs = [
                 ref for ref in added_refs.values() if ref.symbol.type == symbol_type
             ]
@@ -173,4 +170,5 @@ def handle_added_refs(ctx: pkg_ctx) -> None:
             task.update(advance=len(all_refs_decided))
     if added_refs:
         remaining_str = "\n".join(str(ref) for ref in added_refs.values())
-        logger.info(f"still has {len(added_refs)} remaining:\n{remaining_str}")
+        untracked_symbol_types = [symbol_type for symbol_type in SymbolType if symbol_type not in tracked_symbol_types]
+        logger.debug(f"still has {len(added_refs)}, untracked symbol types: {untracked_symbol_types} remaining:\n{remaining_str}")

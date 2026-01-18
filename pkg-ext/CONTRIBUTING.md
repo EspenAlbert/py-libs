@@ -49,6 +49,7 @@ pkg-ext post-merge --push --pr 123
 | `pre-change` | After adding/removing symbols | Interactive | `{group}_examples.py`, `{group}_test.py` |
 | `pre-commit` | Before commit / CI validation | Bot | `-dev` files, docs, API diff |
 | `post-merge` | After merge to main | Bot | Real files, VERSION bump, git tag |
+| `chore` | Internal changes needing release | Bot | `.changelog/{pr}.yaml` |
 | `diff-api` | Manual API comparison | Bot | Nothing (output only) |
 
 ### Command Details
@@ -74,11 +75,22 @@ pkg-ext pre-commit --skip-docs  # Faster iteration
 **`post-merge`** - Release mode:
 ```bash
 pkg-ext post-merge --push --pr 123
+pkg-ext post-merge --pr 123 --force-reason "CI improvements"
 ```
 - Bumps VERSION based on changelog actions
 - Creates git tag
 - Copies dev files to production files
 - Archives old changelog entries
+- Skips release when no changelog entries (use `--force-reason` to override)
+
+**`chore`** - Internal changes:
+```bash
+pkg-ext chore -d "CI improvements"
+pkg-ext chore -d "Dependency updates" --pr 4
+```
+- Creates a `ChoreAction` in `.changelog/{pr}.yaml`
+- Triggers a patch version bump
+- Use for internal changes (refactoring, CI, dependencies) that warrant a release
 
 ## Stability Management
 

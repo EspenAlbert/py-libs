@@ -163,7 +163,7 @@ def parse_code_symbols(
                         f"Skipping conftest usage {ref_usage} in {file.relative_path}"
                     )
                     continue
-                logger.warning(f"Reference {ref_usage} not found in parsed files")
+                logger.debug(f"Reference {ref_usage} not found in parsed files")
                 continue
             match file:
                 case PkgTestFile():

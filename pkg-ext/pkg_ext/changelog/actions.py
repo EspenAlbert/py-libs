@@ -318,7 +318,22 @@ class MaxBumpTypeAction(ChangelogActionBase):
 
     @property
     def stable_sort_key(self) -> tuple[str, ...]:
-        return (self.type, self.max_bump, self.name)
+        return (self.type, self.max_bump, self.reason)
+
+
+class ChoreAction(ChangelogActionBase):
+    """Internal changes that warrant a release but don't affect public API."""
+
+    type: Literal["chore"] = "chore"
+    description: str
+
+    @property
+    def bump_type(self) -> BumpType:
+        return BumpType.PATCH
+
+    @property
+    def stable_sort_key(self) -> tuple[str, ...]:
+        return (self.type, self.description)
 
 
 ChangelogAction = Annotated[
@@ -336,6 +351,7 @@ ChangelogAction = Annotated[
         GAAction,
         DeprecatedAction,
         MaxBumpTypeAction,
+        ChoreAction,
     ],
     Field(discriminator="type"),
 ]

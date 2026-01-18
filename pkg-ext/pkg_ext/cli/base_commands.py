@@ -110,11 +110,17 @@ from pkg_ext.cli.gen_cmds import (  # noqa: E402
 )
 from pkg_ext.cli.release_cmds import dump_groups, release_notes  # noqa: E402
 from pkg_ext.cli.stability_cmds import dep, exp, ga  # noqa: E402
-from pkg_ext.cli.workflow_cmds import post_merge, pre_change, pre_commit  # noqa: E402
+from pkg_ext.cli.workflow_cmds import (  # noqa: E402
+    chore,
+    post_merge,
+    pre_change,
+    pre_commit,
+)
 
 app.command()(post_merge)
 app.command()(pre_change)
 app.command()(pre_commit)
+app.command()(chore)
 app.command()(exp)
 app.command()(ga)
 app.command()(dep)

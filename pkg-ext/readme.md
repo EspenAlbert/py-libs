@@ -44,6 +44,7 @@ Stored in `.changelog/{pr_number}.yaml` files using Pydantic discriminated union
 | `ga` | Graduate to GA | Patch | `target`, `group`/`parent` |
 | `deprecated` | Mark as deprecated | Patch | `target`, `group`/`parent`, `replacement` |
 | `max_bump_type` | Cap version bump | None | `max_bump`, `reason` |
+| `chore` | Internal changes | Patch | `description` |
 
 All actions inherit common fields: `name`, `ts`, `author`, `pr`.
 
@@ -142,7 +143,21 @@ Run after merge on default branch. Bumps version, creates git tag, cleans old ch
 
 ```bash
 pkg-ext post-merge --push --pr 123
+pkg-ext post-merge --pr 123 --force-reason "CI improvements"  # Force release
 ```
+
+When no changelog entries exist for a PR, `post-merge` skips the release (no version bump, no tag). Use `--force-reason` to force a release by auto-creating a `ChoreAction`.
+
+#### `chore`
+
+Create a `ChoreAction` for internal changes that warrant a release but don't affect the public API.
+
+```bash
+pkg-ext chore -d "CI improvements"           # Auto-detect PR number
+pkg-ext chore -d "Dependency updates" --pr 4 # Explicit PR number
+```
+
+Use when merging PRs with internal changes (refactoring, CI updates, dependency bumps) that should trigger a patch release.
 
 ### Stability Commands
 

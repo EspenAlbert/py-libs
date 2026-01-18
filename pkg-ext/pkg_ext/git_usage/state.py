@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import StrEnum
-from functools import total_ordering
+from functools import lru_cache, total_ordering
 from pathlib import Path
 from typing import Any, ClassVar, Iterable, Self
 
@@ -211,6 +211,7 @@ def solve_since_sha(repo: Repo, repo_path: Path, since: GitSince, ref: str) -> C
         raise NotImplementedError
 
 
+@lru_cache(maxsize=4)
 def find_pr_info_raw(repo_path: Path) -> dict[str, Any]:
     result = run_and_wait(
         "gh pr view --json baseRefName,url,baseRefOid",

@@ -10,6 +10,7 @@ from pkg_ext.api_diff import (
     compare_params,
     format_diff_results,
     normalize_type,
+    reconcile_auto_actions,
     types_equal,
 )
 from pkg_ext.changelog.actions import AdditionalChangeAction, BreakingChangeAction
@@ -272,3 +273,47 @@ def test_diff_result_to_action_includes_field_name():
     action = diff.to_changelog_action()
     assert isinstance(action, AdditionalChangeAction)
     assert action.field_name == "new_field"
+
+
+def test_reconcile_preserves_timestamp_and_removes_stale():
+    old_ts = datetime(2025, 1, 1, tzinfo=UTC)
+    existing = [
+        BreakingChangeAction(
+            name="func",
+            group="core",
+            details="old details",
+            change_kind="param_removed",
+            auto_generated=True,
+            ts=old_ts,
+        ),
+        BreakingChangeAction(
+            name="stale",
+            group="core",
+            details="will be removed",
+            change_kind="param_removed",
+            auto_generated=True,
+        ),
+    ]
+    new_diff = [
+        DiffResult(
+            name="func",
+            group="core",
+            action_type="breaking_change",
+            change_kind=ChangeKind.PARAM_REMOVED,
+            details="new details",
+        ),
+        DiffResult(
+            name="new_func",
+            group="core",
+            action_type="additional_change",
+            change_kind=ChangeKind.DEFAULT_ADDED,
+            details="param default added",
+        ),
+    ]
+    result = reconcile_auto_actions(existing, new_diff)
+
+    assert len(result) == 2
+    assert result[0].ts == old_ts
+    assert result[0].details == "new details"
+    assert result[1].name == "new_func"
+    assert result[1].auto_generated

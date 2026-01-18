@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from typing import Literal
 
 from model_lib.model_base import Event
@@ -452,3 +453,25 @@ def format_diff_results(results: list[DiffResult]) -> str:
         f"Summary: {len(breaking)} breaking, {len(additional)} additional changes"
     )
     return "\n".join(lines)
+
+
+def _action_key(
+    action: BreakingChangeAction | AdditionalChangeAction,
+) -> tuple[str, str, str, str]:
+    return (action.name, action.group, action.type, action.change_kind or "")
+
+
+def reconcile_auto_actions(
+    existing: Sequence[BreakingChangeAction | AdditionalChangeAction],
+    new_diff: Sequence[DiffResult],
+) -> list[BreakingChangeAction | AdditionalChangeAction]:
+    existing_by_key = {_action_key(a): a for a in existing if a.auto_generated}
+    result: list[BreakingChangeAction | AdditionalChangeAction] = []
+    for diff in new_diff:
+        new_action = diff.to_changelog_action()
+        key = _action_key(new_action)
+        if old := existing_by_key.get(key):
+            result.append(old.model_copy(update={"details": diff.details}))
+        else:
+            result.append(new_action)
+    return result

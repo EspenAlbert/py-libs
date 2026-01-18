@@ -10,12 +10,14 @@ from typing import Self
 from ask_shell._internal._run import run_and_wait
 from ask_shell._internal.interactive import raise_on_question
 from model_lib.model_base import Entity
-from model_lib.serialize import dump
+from model_lib.serialize import dump, parse_model
 from pydantic import model_validator
 from zero_3rdparty.file_utils import ensure_parents_write_text, iter_paths_and_relative
 
-from pkg_ext import api_dumper, py_format
+from pkg_ext import api_diff, api_dumper, py_format
 from pkg_ext.changelog import (
+    AdditionalChangeAction,
+    BreakingChangeAction,
     ReleaseAction,
     changelog_filepath,
     dump_changelog_actions,
@@ -38,6 +40,7 @@ from pkg_ext.git_usage import (
     git_commit,
 )
 from pkg_ext.models import PkgCodeState, PublicGroups
+from pkg_ext.models.api_dump import PublicApiDump
 from pkg_ext.reference_handling import handle_added_refs, handle_removed_refs
 from pkg_ext.settings import PkgSettings
 from pkg_ext.version_bump import bump_version, read_current_version
@@ -243,21 +246,62 @@ def create_api_dump(settings: PkgSettings):
 
 def write_api_dump(settings: PkgSettings, dev_mode: bool = False) -> Path:
     api_dump = create_api_dump(settings)
-    stem = f"{settings.pkg_import_name}.api"
-    if dev_mode:
-        stem = f"{stem}-dev"
-    output = settings.state_dir / f"{stem}.yaml"
+    output = settings.api_dump_dev_path if dev_mode else settings.api_dump_baseline_path
     yaml_text = dump(api_dump.model_dump(exclude_none=True), "yaml")
     ensure_parents_write_text(output, yaml_text)
     logger.info(f"API dump written to {output}")
     return output
 
 
-def run_api_diff(settings: PkgSettings) -> list:
-    """Compare baseline vs dev dump. Returns empty list if no baseline (first release)."""
-    baseline = settings.state_dir / f"{settings.pkg_import_name}.api.yaml"
-    if not baseline.exists():
+def run_api_diff(
+    settings: PkgSettings, pr_number: int = 0
+) -> list[BreakingChangeAction | AdditionalChangeAction]:
+    baseline_path = settings.api_dump_baseline_path
+    dev_path = settings.api_dump_dev_path
+
+    if not baseline_path.exists():
         logger.info("No API baseline found, skipping diff (first release)")
         return []
-    # TODO(G2): Implement actual diff logic comparing baseline vs dev dump
-    return []
+    if not dev_path.exists():
+        logger.warning(f"Dev dump not found at {dev_path}, skipping diff")
+        return []
+
+    baseline = parse_model(baseline_path, t=PublicApiDump)
+    dev = parse_model(dev_path, t=PublicApiDump)
+    diff_results = api_diff.compare_api_dumps(baseline, dev)
+
+    if not diff_results:
+        logger.info("No API changes detected")
+        return []
+
+    if not pr_number:
+        logger.debug("No PR number, returning diff results without writing changelog")
+        return [d.to_changelog_action() for d in diff_results]
+
+    changelog_path = changelog_filepath(settings.changelog_dir, pr_number)
+    existing = (
+        parse_changelog_file_path(changelog_path) if changelog_path.exists() else []
+    )
+
+    interactive = [
+        a
+        for a in existing
+        if not isinstance(a, BreakingChangeAction | AdditionalChangeAction)
+        or not a.auto_generated
+    ]
+    auto_existing = [
+        a
+        for a in existing
+        if isinstance(a, BreakingChangeAction | AdditionalChangeAction)
+        and a.auto_generated
+    ]
+
+    reconciled = api_diff.reconcile_auto_actions(auto_existing, diff_results)
+
+    if interactive or reconciled:
+        dump_changelog_actions(changelog_path, interactive + reconciled)
+        logger.info(
+            f"API diff: {len(reconciled)} auto-generated changes in {changelog_path.name}"
+        )
+
+    return reconciled

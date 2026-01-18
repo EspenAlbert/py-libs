@@ -125,6 +125,14 @@ class PkgSettings(BaseSettings):
     def mkdocs_yml(self) -> Path:
         return self.state_dir / "mkdocs.yml"
 
+    @property
+    def api_dump_baseline_path(self) -> Path:
+        return self.state_dir / f"{self.pkg_import_name}.api.yaml"
+
+    @property
+    def api_dump_dev_path(self) -> Path:
+        return self.state_dir / f"{self.pkg_import_name}.api-dev.yaml"
+
     def force_bot(self) -> None:
         self.is_bot = True
         self.skip_open_in_editor = True

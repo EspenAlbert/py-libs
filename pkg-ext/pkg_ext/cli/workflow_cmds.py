@@ -37,7 +37,7 @@ from pkg_ext.cli.workflows import (
 )
 from pkg_ext.config import PKG_EXT_TOOL_NAME, ProjectConfig, load_project_config
 from pkg_ext.generation import docs, example_gen, test_gen
-from pkg_ext.git_usage import GitSince, head_merge_pr
+from pkg_ext.git_usage import GitSince, find_pr_info_or_none, head_merge_pr
 from pkg_ext.models import PublicGroups
 from pkg_ext.settings import PkgSettings
 from pkg_ext.version_bump import read_current_version
@@ -290,7 +290,6 @@ def pre_change(
 
     if not full:
         return
-    # Run pre-commit workflow (without bot mode or dirty check)
     settings.dev_mode = True
     sync_files(api_input, pkg_ctx)
     if skip_docs:
@@ -299,7 +298,8 @@ def pre_change(
         count = generate_docs_for_pkg(settings)
         logger.info(f"Regenerated {count} doc files")
     write_api_dump(settings, dev_mode=True)
-    run_api_diff(settings)
+    pr_info = find_pr_info_or_none(settings.repo_root)
+    run_api_diff(settings, pr_info.pr_number if pr_info else 0)
 
 
 def pre_commit(
@@ -330,7 +330,8 @@ def pre_commit(
         logger.info(f"Regenerated {count} doc files")
 
     write_api_dump(settings, dev_mode=True)
-    run_api_diff(settings)
+    pr_info = find_pr_info_or_none(settings.repo_root)
+    run_api_diff(settings, pr_info.pr_number if pr_info else 0)
 
     if skip_dirty_check:
         return

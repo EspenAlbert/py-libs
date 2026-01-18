@@ -87,11 +87,9 @@ def diff_api(
 ):
     """Show API changes between baseline and dev dump."""
     settings: PkgSettings = ctx.obj
-    pkg_name = settings.pkg_import_name
-    dev_path = settings.state_dir / f"{pkg_name}.api-dev.yaml"
-    baseline_path = settings.state_dir / f"{pkg_name}.api.yaml"
+    dev_path = settings.api_dump_dev_path
+    baseline_path = settings.api_dump_baseline_path
 
-    # Always create dev dump
     write_api_dump(settings, dev_mode=True)
     dev_dump = parse_model(dev_path, t=PublicApiDump)
 

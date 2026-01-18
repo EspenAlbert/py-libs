@@ -1,6 +1,6 @@
 # Git operations domain
 
-from .actions import git_commit
+from .actions import git_commit, git_show_file
 from .state import (
     GitChanges,
     GitChangesInput,
@@ -13,6 +13,7 @@ from .url import normalize_repo_url, read_remote_url, remove_credentials
 
 __all__ = [
     "git_commit",
+    "git_show_file",
     "GitChanges",
     "GitChangesInput",
     "GitSince",

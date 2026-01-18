@@ -411,3 +411,30 @@ def compare_api_dumps(
     for name in base_groups.keys() & dev_groups.keys():
         results.extend(compare_group(base_groups[name], dev_groups[name]))
     return results
+
+
+def format_diff_results(results: list[DiffResult]) -> str:
+    """Format diff results grouped by breaking/non-breaking."""
+    if not results:
+        return "No API changes detected."
+
+    breaking = [r for r in results if r.action_type == "breaking_change"]
+    additional = [r for r in results if r.action_type == "additional_change"]
+    lines: list[str] = []
+
+    if breaking:
+        lines.append(f"=== Breaking Changes ({len(breaking)}) ===")
+        for r in breaking:
+            lines.append(f"[{r.group}] {r.name}: {r.details}")
+        lines.append("")
+
+    if additional:
+        lines.append(f"=== Additional Changes ({len(additional)}) ===")
+        for r in additional:
+            lines.append(f"[{r.group}] {r.name}: {r.details}")
+        lines.append("")
+
+    lines.append(
+        f"Summary: {len(breaking)} breaking, {len(additional)} additional changes"
+    )
+    return "\n".join(lines)

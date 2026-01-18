@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from ask_shell._internal._run import run_and_wait
+from git import Git, GitCommandError
 
 _GIT_AUTHOR = (
     '--author="github-actions[bot] <github-actions[bot]@users.noreply.github.com>"'
@@ -22,3 +23,16 @@ def git_commit(
     if push:
         follow_tags = " --follow-tags" if tag else ""
         run_and_wait(f"git push{follow_tags}")
+
+
+def git_show_file(repo_path: Path, ref: str, file_path: Path) -> str | None:
+    """Read file content at a specific git ref. Returns None if not found."""
+    try:
+        rel_path = file_path.relative_to(repo_path)
+    except ValueError:
+        rel_path = file_path
+    git = Git(repo_path)
+    try:
+        return git.show(f"{ref}:{rel_path}")
+    except GitCommandError:
+        return None

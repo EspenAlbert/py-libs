@@ -102,6 +102,7 @@ def main(
 
 # Register commands from other modules (imports must be after app creation to avoid circular imports)
 from pkg_ext.cli.gen_cmds import (  # noqa: E402
+    diff_api,
     dump_api,
     gen_docs,
     gen_examples,
@@ -121,5 +122,6 @@ app.command()(gen_examples)
 app.command()(gen_tests)
 app.command(name="docs")(gen_docs)
 app.command()(dump_api)
+app.command()(diff_api)
 app.command()(release_notes)
 app.command()(dump_groups)

@@ -8,6 +8,7 @@ from pkg_ext.api_diff import (
     compare_api_dumps,
     compare_fields,
     compare_params,
+    format_diff_results,
     normalize_type,
     types_equal,
 )
@@ -222,3 +223,31 @@ def test_compare_api_dumps_none_baseline_returns_empty():
         dumped_at=datetime.now(UTC),
     )
     assert not compare_api_dumps(None, dev)
+
+
+def test_format_diff_results_empty():
+    assert format_diff_results([]) == "No API changes detected."
+
+
+def test_format_diff_results_grouped():
+    results = [
+        DiffResult(
+            name="func",
+            group="core",
+            action_type="breaking_change",
+            change_kind=ChangeKind.PARAM_REMOVED,
+            details="removed param 'x'",
+        ),
+        DiffResult(
+            name="helper",
+            group="utils",
+            action_type="additional_change",
+            change_kind=ChangeKind.DEFAULT_ADDED,
+            details="param 'y' default added: 10",
+        ),
+    ]
+    output = format_diff_results(results)
+    assert "Breaking Changes (1)" in output
+    assert "Additional Changes (1)" in output
+    assert "[core] func: removed param 'x'" in output
+    assert "1 breaking, 1 additional" in output

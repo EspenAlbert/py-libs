@@ -146,7 +146,6 @@ def generate_tests_for_groups(
             continue
         filtered = api_dumper.GroupDump(
             name=filtered.name,
-            stability=filtered.stability,
             symbols=cast(list[api_dumper.SymbolDump], testable),
         )
         path = settings.test_file_path(filtered.name)
@@ -183,7 +182,7 @@ def generate_docs_for_pkg(
     version = str(read_current_version(pkg_ctx))
     refs = {ref.local_id: ref for ref in pkg_ctx.code_state.import_id_refs.values()}
     api_dump = api_dumper.dump_public_api(
-        pkg_ctx.tool_state, groups, refs, settings.pkg_import_name, version
+        groups, refs, settings.pkg_import_name, version
     )
     config = load_project_config(settings.state_dir)
     changelog_actions = parse_changelog_actions(settings.changelog_dir)

@@ -8,7 +8,6 @@ from pkg_ext.config import (
     ROOT_GROUP_NAME,
     GroupConfig,
     ProjectConfig,
-    Stability,
 )
 from pkg_ext.generation.docs import (
     GeneratedDocsOutput,
@@ -141,7 +140,6 @@ def test_generate_docs_creates_index_and_complex_pages(project_config: ProjectCo
         groups=[
             GroupDump(
                 name="config",
-                stability=Stability.ga,
                 symbols=[
                     _func_dump("simple_func"),
                     _class_dump("EnvClass", env_var="MY_VAR"),

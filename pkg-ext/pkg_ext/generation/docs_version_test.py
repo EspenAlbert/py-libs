@@ -3,18 +3,22 @@ from datetime import UTC, datetime
 from pkg_ext.changelog.actions import (
     AdditionalChangeAction,
     DeprecatedAction,
+    ExperimentalAction,
     FixAction,
+    GAAction,
     MakePublicAction,
     ReleaseAction,
     RenameAction,
     StabilityTarget,
 )
+from pkg_ext.config import Stability
 from pkg_ext.generation.docs_version import (
     UNRELEASED_VERSION,
     build_symbol_changes,
     find_release_version,
     get_field_since_version,
     get_symbol_since_version,
+    get_symbol_stability,
 )
 
 
@@ -151,3 +155,16 @@ def test_build_symbol_changes_rename_action():
     changes = build_symbol_changes("new_name", actions)
     assert len(changes) == 1
     assert "old_name" in changes[0].description
+
+
+def test_get_symbol_stability_defaults_to_ga():
+    assert get_symbol_stability("f", "g", []) == Stability.ga
+
+
+def test_get_symbol_stability_from_actions():
+    actions = [
+        ExperimentalAction(name="f", target=StabilityTarget.symbol, group="g"),
+        GAAction(name="f", target=StabilityTarget.symbol, group="g"),
+        DeprecatedAction(name="f", target=StabilityTarget.symbol, group="g"),
+    ]
+    assert get_symbol_stability("f", "g", actions) == Stability.deprecated

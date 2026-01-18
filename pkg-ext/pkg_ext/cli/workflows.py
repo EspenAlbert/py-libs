@@ -239,9 +239,7 @@ def create_api_dump(settings: PkgSettings):
     groups = settings.parse_computed_public_groups(PublicGroups)
     version = str(read_current_version(pkg_ctx))
     refs = {ref.local_id: ref for ref in pkg_ctx.code_state.import_id_refs.values()}
-    return api_dumper.dump_public_api(
-        pkg_ctx.tool_state, groups, refs, settings.pkg_import_name, version
-    )
+    return api_dumper.dump_public_api(groups, refs, settings.pkg_import_name, version)
 
 
 def write_api_dump(settings: PkgSettings, dev_mode: bool = False) -> Path:

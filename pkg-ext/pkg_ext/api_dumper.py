@@ -18,7 +18,6 @@ from pkg_ext.models.api_dump import (
 )
 from pkg_ext.models.groups import PublicGroup, PublicGroups
 from pkg_ext.models.py_symbols import RefSymbol, SymbolType
-from pkg_ext.pkg_state import PkgExtState
 from pkg_ext.signature_parser import (
     parse_class_fields,
     parse_direct_bases,
@@ -150,7 +149,6 @@ def dump_group(
 
 
 def dump_public_api(
-    state: PkgExtState,
     groups: PublicGroups,
     refs: dict[str, RefSymbol],
     pkg_import_name: str,

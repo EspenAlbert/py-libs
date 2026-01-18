@@ -1,4 +1,3 @@
-from pkg_ext.config import Stability
 from pkg_ext.generation.example_gen import (
     generate_class_example_class,
     generate_function_example_class,
@@ -94,7 +93,6 @@ def test_generate_class_example_class():
 def test_generate_group_examples_file():
     group = GroupDump(
         name="config",
-        stability=Stability.ga,
         symbols=[
             FunctionDump(
                 name="load",
@@ -123,10 +121,8 @@ def test_generate_group_examples_file():
 
 
 def test_generate_group_examples_file_with_imports():
-    """Ensure type imports are generated from type_imports field."""
     group = GroupDump(
         name="sections",
-        stability=Stability.ga,
         symbols=[
             ClassDump(
                 name="CommentConfig",

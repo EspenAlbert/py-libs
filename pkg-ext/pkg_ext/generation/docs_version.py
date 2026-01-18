@@ -11,11 +11,15 @@ from pkg_ext.changelog.actions import (
     BreakingChangeAction,
     ChangelogAction,
     DeprecatedAction,
+    ExperimentalAction,
     FixAction,
+    GAAction,
     MakePublicAction,
     ReleaseAction,
     RenameAction,
+    StabilityTarget,
 )
+from pkg_ext.config import Stability
 
 MEANINGFUL_CHANGE_ACTIONS: tuple[type, ...] = (
     FixAction,
@@ -41,6 +45,35 @@ def find_release_version(
         if isinstance(action, ReleaseAction) and action.ts > ts:
             return action.name
     return None
+
+
+def get_symbol_stability(
+    symbol_name: str, group_name: str, changelog_actions: Sequence[ChangelogAction]
+) -> Stability:
+    last_stability: Stability = Stability.ga
+    for action in sorted(changelog_actions):
+        if isinstance(action, ExperimentalAction):
+            if _matches_symbol_or_group(action, symbol_name, group_name):
+                last_stability = Stability.experimental
+        elif isinstance(action, GAAction):
+            if _matches_symbol_or_group(action, symbol_name, group_name):
+                last_stability = Stability.ga
+        elif isinstance(action, DeprecatedAction):
+            if _matches_symbol_or_group(action, symbol_name, group_name):
+                last_stability = Stability.deprecated
+    return last_stability
+
+
+def _matches_symbol_or_group(
+    action: ExperimentalAction | GAAction | DeprecatedAction,
+    symbol_name: str,
+    group_name: str,
+) -> bool:
+    if action.target == StabilityTarget.group:
+        return action.name == group_name
+    if action.target == StabilityTarget.symbol:
+        return action.name == symbol_name and action.group == group_name
+    return False
 
 
 def get_symbol_since_version(

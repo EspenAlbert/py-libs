@@ -17,6 +17,7 @@ from pkg_ext.generation.docs_version import (
     SymbolChange,
     get_field_since_version,
     get_symbol_since_version,
+    get_symbol_stability,
 )
 from pkg_ext.generation.example_gen import (
     EXAMPLE_BASE_FIELDS,
@@ -216,8 +217,12 @@ def render_since_badge(version: str | None) -> str:
     return f"> **Since:** {version}" if version else ""
 
 
-def render_stability_badge(symbol: SymbolDump, group: GroupDump) -> str:
-    stability = symbol.stability or group.stability
+def render_stability_badge(
+    symbol_name: str,
+    group_name: str,
+    changelog_actions: Sequence[ChangelogAction],
+) -> str:
+    stability = get_symbol_stability(symbol_name, group_name, changelog_actions)
     if stability == Stability.experimental:
         return "> **Experimental**"
     if stability == Stability.deprecated:
@@ -293,7 +298,7 @@ def _render_symbol_main_section(
 ) -> str:
     section_id = f"{slug(symbol.name)}_def"
     type_label = symbol.type.value
-    stability = render_stability_badge(symbol, group)
+    stability = render_stability_badge(symbol.name, group.name, changelog_actions)
     since_badge = render_since_badge(
         get_symbol_since_version(symbol.name, changelog_actions)
     )

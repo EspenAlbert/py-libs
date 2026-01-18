@@ -1,4 +1,3 @@
-from pkg_ext.config import Stability
 from pkg_ext.generation import test_gen
 from pkg_ext.models.api_dump import (
     CallableSignature,
@@ -89,7 +88,6 @@ def test_generate_class_test():
 def test_generate_group_test_file():
     group = GroupDump(
         name="config",
-        stability=Stability.ga,
         symbols=[
             FunctionDump(
                 name="load",
@@ -124,7 +122,7 @@ def test_generate_group_test_file():
 
 
 def test_generate_group_test_file_empty_group():
-    group = GroupDump(name="empty", stability=Stability.ga, symbols=[])
+    group = GroupDump(name="empty", symbols=[])
     result = test_gen.generate_group_test_file(group, "my_pkg")
     assert "import pytest" in result
     assert "from my_pkg import empty_examples as examples_module" in result

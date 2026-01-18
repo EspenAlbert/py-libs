@@ -3,8 +3,12 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from pkg_ext.changelog.actions import MakePublicAction, ReleaseAction
-from pkg_ext.config import Stability
+from pkg_ext.changelog.actions import (
+    ExperimentalAction,
+    MakePublicAction,
+    ReleaseAction,
+    StabilityTarget,
+)
 from pkg_ext.generation.docs_render import (
     calculate_source_link,
     format_docstring,
@@ -26,7 +30,6 @@ from pkg_ext.models.api_dump import (
     FuncParamInfo,
     FunctionDump,
     GlobalVarDump,
-    GroupDump,
     ParamDefault,
     ParamKind,
     TypeAliasDump,
@@ -168,11 +171,9 @@ def test_render_field_table():
 
 
 def test_render_stability_badge():
-    func = _func_dump("f")
-    ga_group = GroupDump(name="g", stability=Stability.ga, symbols=[])
-    exp_group = GroupDump(name="g", stability=Stability.experimental, symbols=[])
-    assert render_stability_badge(func, ga_group) == ""
-    assert "Experimental" in render_stability_badge(func, exp_group)
+    assert render_stability_badge("f", "g", []) == ""
+    exp_action = ExperimentalAction(name="f", target=StabilityTarget.symbol, group="g")
+    assert "Experimental" in render_stability_badge("f", "g", [exp_action])
 
 
 def test_calculate_source_link():

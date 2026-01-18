@@ -126,26 +126,23 @@ def _action_description(action: ChangelogAction) -> str:
 def build_symbol_changes(
     symbol_name: str, changelog_actions: Sequence[ChangelogAction]
 ) -> list[SymbolChange]:
-    current_version = UNRELEASED_VERSION
     changes: list[SymbolChange] = []
     for action in sorted(changelog_actions):
         if isinstance(action, ReleaseAction):
-            current_version = action.name
             continue
         if action.name != symbol_name:
             continue
+        version = (
+            find_release_version(action.ts, changelog_actions) or UNRELEASED_VERSION
+        )
         if isinstance(action, MakePublicAction):
             changes.append(
-                SymbolChange(
-                    version=current_version, description="Made public", ts=action.ts
-                )
+                SymbolChange(version=version, description="Made public", ts=action.ts)
             )
         elif isinstance(action, MEANINGFUL_CHANGE_ACTIONS):
             if desc := _action_description(action):
                 changes.append(
-                    SymbolChange(
-                        version=current_version, description=desc, ts=action.ts
-                    )
+                    SymbolChange(version=version, description=desc, ts=action.ts)
                 )
     return sorted(
         changes, key=lambda c: (c.version != UNRELEASED_VERSION, c.ts), reverse=True

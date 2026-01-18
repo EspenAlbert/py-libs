@@ -221,4 +221,4 @@ def test_compare_api_dumps_none_baseline_returns_empty():
         groups=[],
         dumped_at=datetime.now(UTC),
     )
-    assert compare_api_dumps(None, dev) == []
+    assert not compare_api_dumps(None, dev)

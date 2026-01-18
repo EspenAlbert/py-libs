@@ -259,13 +259,14 @@ def test_04_git_fix(e2e_dirs, file_regression_e2e, monkeypatch):
     # Step 2: Run with git-since=last_git_tag to detect the fix commit
     # Prompts expected:
     # 1. File expose selection for chosen.py (empty = none)
-    # 2. select_group_name: "commit({sha}): {message}" -> select first group
-    # 3. select_commit_fix: "commit({sha}): {message}" -> select "include"
+    # 2. select_group_name_or_skip: "commit({sha}): {message}" -> DOWN to skip [skip], then select first group
+    # 3. select_commit_fix: "commit({sha}): {message}" -> select "include" (default)
     with _question_patcher({chosen_filepath.name: ""}, groups=groups) as patcher:
-        # Both prompts contain the commit message, need to match twice
+        # First prompt (select_group_name_or_skip): DOWN to skip [skip], then space to select first group
+        # Second prompt (select_commit_fix): space to select default (include)
         patcher.dynamic_responses.append(
             PromptMatch(
-                responses=[" ", " "],
+                responses=[f"{KeyInput.DOWN} ", " "],
                 substring=commit_message,
                 max_matches=2,
             ),

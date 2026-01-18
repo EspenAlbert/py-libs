@@ -135,7 +135,7 @@ def _compare_defaults(
         )
     if base_default and dev_default:
         if base_default.is_factory and dev_default.is_factory:
-            if base_default.value_repr == "..." and dev_default.value_repr == "...":
+            if base_default.value_repr == dev_default.value_repr == "...":
                 return None
         if base_default.value_repr != dev_default.value_repr:
             return _diff(
@@ -312,17 +312,15 @@ def compare_function(
 def _compare_bases(
     baseline: list[str], dev: list[str], symbol_name: str, group: str
 ) -> list[DiffResult]:
-    results: list[DiffResult] = []
-    for base in set(baseline) - set(dev):
-        results.append(
-            _diff(
-                symbol_name,
-                group,
-                ChangeKind.BASE_CLASS_REMOVED,
-                f"removed base class '{base}'",
-            )
+    return [
+        _diff(
+            symbol_name,
+            group,
+            ChangeKind.BASE_CLASS_REMOVED,
+            f"removed base class '{base}'",
         )
-    return results
+        for base in set(baseline) - set(dev)
+    ]
 
 
 def compare_class(baseline: ClassDump, dev: ClassDump, group: str) -> list[DiffResult]:

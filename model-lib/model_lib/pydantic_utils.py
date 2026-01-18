@@ -113,9 +113,9 @@ def ensure_timezone(value: datetime):
     return value
 
 
-utc_datetime: TypeAlias = Annotated[datetime, AfterValidator(ensure_timezone)]
+UtcDatetime: TypeAlias = Annotated[datetime, AfterValidator(ensure_timezone)]
 
-utc_datetime_ms: TypeAlias = Annotated[datetime, AfterValidator(as_ms_precision_utc)]
+UtcDatetimeMs: TypeAlias = Annotated[datetime, AfterValidator(as_ms_precision_utc)]
 
 StrBytesIntFloat: TypeAlias = Union[str, bytes, int, float]
 

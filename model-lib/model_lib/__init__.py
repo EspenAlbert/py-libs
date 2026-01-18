@@ -24,8 +24,8 @@ from model_lib.base_settings import (
 from model_lib.dump_functions import IgnoreFalsy
 from model_lib.pydantic_utils import (
     copy_and_validate,
-    utc_datetime,
-    utc_datetime_ms,
+    UtcDatetime,
+    UtcDatetimeMs,
     field_names,
 )
 from model_lib.serialize import (
@@ -89,6 +89,6 @@ __all__ = (
     "port_info",
     "register_dumper",
     "registered_types",
-    "utc_datetime_ms",
-    "utc_datetime",
+    "UtcDatetimeMs",
+    "UtcDatetime",
 )

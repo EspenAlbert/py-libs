@@ -8,6 +8,8 @@ from zero_3rdparty.iter_utils import ignore_falsy
 from model_lib import Event
 from model_lib.constants import FileFormat
 from model_lib.pydantic_utils import (
+    UtcDatetime,
+    UtcDatetimeMs,
     cls_defaults,
     cls_defaults_required_as,
     cls_local_defaults_required_as,
@@ -17,8 +19,6 @@ from model_lib.pydantic_utils import (
     has_path,
     parse_dt,
     parse_object_as,
-    utc_datetime,
-    utc_datetime_ms,
 )
 from model_lib.serialize import dump, parse_model
 
@@ -127,19 +127,19 @@ def test_has_path():
 
 
 class _TimeModel(Event):
-    utc: utc_datetime
-    utc_ms: utc_datetime_ms
+    utc: UtcDatetime
+    utc_ms: UtcDatetimeMs
     td: timedelta = Field(default_factory=lambda: timedelta(seconds=0))
 
 
-def test_utc_datetime():
+def test_UtcDatetime():
     dt_no_timezone = parse_dt("2023-08-16T16:42:14")
     assert dt_no_timezone.tzinfo is None
     model = _TimeModel(utc=dt_no_timezone, utc_ms=dt_no_timezone)
     assert model.utc.tzinfo == timezone.utc
 
 
-def test_utc_datetime_ms():
+def test_UtcDatetimeMs():
     dt_no_timezone = parse_dt("2023-08-16T16:42:14.123456")
     assert dt_no_timezone.microsecond % 1000 != 0
     model = _TimeModel(utc=dt_no_timezone, utc_ms=dt_no_timezone)

@@ -14,9 +14,8 @@ from shutil import which
 from threading import RLock
 from typing import Any, Callable, Literal, NamedTuple, Self, TypeVar
 
-from model_lib import parse_dict, parse_list, parse_model
+from model_lib import Entity, parse
 from model_lib.constants import FileFormat, FileFormatT
-from model_lib.model_base import Entity
 from pydantic import Field, model_validator
 from rich.console import Console
 from zero_3rdparty.closable_queue import ClosableQueue
@@ -474,10 +473,10 @@ class ShellRun:
         if not stream_content:
             raise EmptyOutputError(self, stream=stream)
         elif output_t is list:
-            return parse_list(stream_content, output_format)  # type: ignore
+            return parse.parse_list(stream_content, output_format)  # type: ignore
         elif output_t is dict:
-            return parse_dict(stream_content, output_format)  # type: ignore
-        return parse_model(stream_content, t=output_t, format=output_format)
+            return parse.parse_dict(stream_content, output_format)  # type: ignore
+        return parse.parse_model(stream_content, t=output_t, format=output_format)
 
     @property
     def stderr(self) -> str:

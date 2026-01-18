@@ -7,7 +7,7 @@ from pydoc import locate
 from threading import RLock
 from typing import Annotated, Any, Callable, ClassVar, Literal, Self, TypeAlias
 
-from model_lib.static_settings import StaticSettings
+from model_lib import StaticSettings
 from pydantic import BeforeValidator, ConfigDict, Field, model_validator
 from zero_3rdparty.datetime_utils import utc_now
 from zero_3rdparty.file_utils import clean_dir

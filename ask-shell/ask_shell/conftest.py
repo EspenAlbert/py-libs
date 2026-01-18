@@ -2,7 +2,7 @@ import os
 from unittest.mock import Mock
 
 import pytest
-from model_lib.static_settings import StaticSettings
+from model_lib import StaticSettings
 from rich.console import Console
 from zero_3rdparty.file_utils import ensure_parents_write_text
 

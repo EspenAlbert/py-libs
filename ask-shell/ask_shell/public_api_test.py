@@ -7,7 +7,7 @@ from json import loads
 from os import getenv
 
 import pytest
-from model_lib.pydantic_utils import field_names
+from model_lib import fields
 from pydantic import ValidationError
 
 from ask_shell._internal.events import (
@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.parametrize("func", [run, run_and_wait], ids=["run", "run_and_wait"])
 def test_check_all_config_args_in_signatures(func):
-    names = set(field_names(ShellConfig)) - {"shell_input"}
+    names = set(fields.field_names(ShellConfig)) - {"shell_input"}
     annotations = {
         name: annotation for name, annotation in ShellConfig.__annotations__.items()
     }

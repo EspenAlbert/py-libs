@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import IO, Any, Callable
 
-from model_lib.pydantic_utils import copy_and_validate
+from model_lib import fields
 from rich.ansi import AnsiDecoder
 from rich.console import Console
 from rich.errors import MarkupError
@@ -187,7 +187,7 @@ def _as_config(config: ShellConfig | str, **kwargs) -> ShellConfig:
     if isinstance(config, str):
         return ShellConfig(shell_input=config, **kwargs_not_none)
     assert isinstance(config, ShellConfig), f"not a ShellConfig or str: {config!r}"
-    return copy_and_validate(config, **kwargs_not_none)
+    return fields.copy_and_validate(config, **kwargs_not_none)
 
 
 @dataclass

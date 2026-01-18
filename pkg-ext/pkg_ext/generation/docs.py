@@ -336,13 +336,17 @@ def render_env_var_table(symbol: ClassDump) -> str:
     return f"{header}\n" + "\n".join(rows)
 
 
-def should_show_field_table(fields: list[ClassFieldInfo]) -> bool:
+def should_show_field_table(fields: list[ClassFieldInfo] | None) -> bool:
     """Return True if table provides value beyond signature (has deprecated/description)."""
+    if not fields:
+        return False
     return any((f.deprecated or f.description) for f in fields if not f.is_computed)
 
 
-def render_field_table(fields: list[ClassFieldInfo]) -> str:
+def render_field_table(fields: list[ClassFieldInfo] | None) -> str:
     """Render markdown table with conditional columns based on field metadata."""
+    if not fields:
+        return ""
     visible = [f for f in fields if not f.is_computed]
     if not visible:
         return ""

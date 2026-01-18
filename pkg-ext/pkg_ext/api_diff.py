@@ -64,6 +64,7 @@ class DiffResult(Event):
     action_type: Literal["breaking_change", "additional_change"]
     change_kind: ChangeKind
     details: str
+    field_name: str | None = None
 
     def to_changelog_action(self) -> BreakingChangeAction | AdditionalChangeAction:
         if self.action_type == "breaking_change":
@@ -72,6 +73,7 @@ class DiffResult(Event):
                 group=self.group,
                 details=self.details,
                 change_kind=self.change_kind,
+                field_name=self.field_name,
                 auto_generated=True,
             )
         return AdditionalChangeAction(
@@ -79,6 +81,7 @@ class DiffResult(Event):
             group=self.group,
             details=self.details,
             change_kind=self.change_kind,
+            field_name=self.field_name,
             auto_generated=True,
         )
 
@@ -118,13 +121,16 @@ def _compare_defaults(
     group: str,
     item_name: str,
     item_type: str,  # "param" or "field"
+    is_field: bool = False,
 ) -> DiffResult | None:
+    field_name = item_name if is_field else None
     if base_default is None and dev_default is not None:
         return _diff(
             symbol_name,
             group,
             ChangeKind.DEFAULT_ADDED,
             f"{item_type} '{item_name}' default added: {dev_default.value_repr}",
+            field_name=field_name,
         )
     if base_default is not None and dev_default is None:
         return _diff(
@@ -132,6 +138,7 @@ def _compare_defaults(
             group,
             ChangeKind.DEFAULT_REMOVED,
             f"{item_type} '{item_name}' default removed (was: {base_default.value_repr})",
+            field_name=field_name,
         )
     if base_default and dev_default:
         if base_default.is_factory and dev_default.is_factory:
@@ -143,6 +150,7 @@ def _compare_defaults(
                 group,
                 ChangeKind.DEFAULT_CHANGED,
                 f"{item_type} '{item_name}' default: {base_default.value_repr} -> {dev_default.value_repr}",
+                field_name=field_name,
             )
     return None
 
@@ -152,6 +160,7 @@ def _diff(
     group: str,
     change_kind: ChangeKind,
     details: str,
+    field_name: str | None = None,
 ) -> DiffResult:
     return DiffResult(
         name=name,
@@ -161,6 +170,7 @@ def _diff(
         else "additional_change",
         change_kind=change_kind,
         details=details,
+        field_name=field_name,
     )
 
 
@@ -242,6 +252,7 @@ def compare_fields(
                 group,
                 ChangeKind.FIELD_REMOVED,
                 f"removed field '{name}'",
+                field_name=name,
             )
         )
 
@@ -254,6 +265,7 @@ def compare_fields(
                     group,
                     ChangeKind.REQUIRED_FIELD_ADDED,
                     f"added required field '{name}'",
+                    field_name=name,
                 )
             )
         else:
@@ -264,6 +276,7 @@ def compare_fields(
                     group,
                     ChangeKind.OPTIONAL_FIELD_ADDED,
                     f"added optional field '{name}' (default: {default_str})",
+                    field_name=name,
                 )
             )
 
@@ -276,10 +289,11 @@ def compare_fields(
                     group,
                     ChangeKind.PARAM_TYPE_CHANGED,
                     f"field '{name}' type: {bf.type_annotation} -> {df.type_annotation}",
+                    field_name=name,
                 )
             )
         if default_diff := _compare_defaults(
-            bf.default, df.default, symbol_name, group, name, "field"
+            bf.default, df.default, symbol_name, group, name, "field", is_field=True
         ):
             results.append(default_diff)
 

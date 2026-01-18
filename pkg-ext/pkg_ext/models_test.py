@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Callable
 
 import pytest
-from model_lib.serialize.parse import parse_model
+from model_lib import parse
 
 from pkg_ext.changelog.actions import (
     GroupModuleAction,
@@ -31,7 +31,7 @@ def _public_group_check(
 ) -> Callable[[], PublicGroups]:
     def check():
         file_regression_testdata(_public_groups.storage_path.read_text(), "yaml")
-        return parse_model(_public_groups.storage_path, t=PublicGroups)
+        return parse.parse_model(_public_groups.storage_path, t=PublicGroups)
 
     return check
 

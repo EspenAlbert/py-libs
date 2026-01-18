@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import total_ordering
 
-from model_lib.model_base import Entity
+from model_lib import Entity
 from pydantic import Field, model_validator
 from zero_3rdparty.enum_utils import StrEnum
 

@@ -34,7 +34,7 @@ UNRELEASED_VERSION = "unreleased"
 class SymbolChange(Event):
     version: str
     description: str
-    ts: UtcDatetime
+    ts: fields.UtcDatetime
 
 
 def find_release_version(

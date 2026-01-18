@@ -9,8 +9,7 @@ from typing import Self
 
 from ask_shell._internal._run import run_and_wait
 from ask_shell._internal.interactive import raise_on_question
-from model_lib.model_base import Entity
-from model_lib.serialize import dump, parse_model
+from model_lib import Entity, dump, parse
 from pydantic import model_validator
 from zero_3rdparty.file_utils import ensure_parents_write_text, iter_paths_and_relative
 
@@ -245,7 +244,7 @@ def create_api_dump(settings: PkgSettings):
 def write_api_dump(settings: PkgSettings, dev_mode: bool = False) -> Path:
     api_dump = create_api_dump(settings)
     output = settings.api_dump_dev_path if dev_mode else settings.api_dump_baseline_path
-    yaml_text = dump(api_dump.model_dump(exclude_none=True), "yaml")
+    yaml_text = dump.dump_as_str(api_dump.model_dump(exclude_none=True), "yaml")
     ensure_parents_write_text(output, yaml_text)
     logger.info(f"API dump written to {output}")
     return output
@@ -264,8 +263,8 @@ def run_api_diff(
         logger.warning(f"Dev dump not found at {dev_path}, skipping diff")
         return []
 
-    baseline = parse_model(baseline_path, t=PublicApiDump)
-    dev = parse_model(dev_path, t=PublicApiDump)
+    baseline = parse.parse_model(baseline_path, t=PublicApiDump)
+    dev = parse.parse_model(dev_path, t=PublicApiDump)
     diff_results = api_diff.compare_api_dumps(baseline, dev)
 
     if not diff_results:

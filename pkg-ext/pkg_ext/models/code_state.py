@@ -3,7 +3,7 @@ from __future__ import annotations
 from pydoc import locate
 from typing import Any, Iterable
 
-from model_lib.model_base import Entity
+from model_lib import Entity
 from pydantic import model_validator
 from zero_3rdparty.object_name import as_name
 

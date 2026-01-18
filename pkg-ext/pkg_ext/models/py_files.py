@@ -5,7 +5,7 @@ from functools import total_ordering
 from pathlib import Path
 from typing import Iterable
 
-from model_lib.model_base import Entity
+from model_lib import Entity
 from pydantic import Field, ValidationError, model_validator
 
 from .py_symbols import RefSymbol, SymbolType

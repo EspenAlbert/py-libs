@@ -153,7 +153,7 @@ def head_merge_pr(repo_path: Path) -> int:
 
 
 def last_merge_pr(
-    commits: Iterable[GitCommit], after_ts: UtcDatetime | None = None
+    commits: Iterable[GitCommit], after_ts: fields.UtcDatetime | None = None
 ) -> int | None:
     after_ts = after_ts or datetime.fromtimestamp(0, tz=timezone.utc)
     for commit in sorted(commits, reverse=True):

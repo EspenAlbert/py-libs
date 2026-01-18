@@ -4,7 +4,7 @@ import re
 from collections.abc import Sequence
 from typing import Literal
 
-from model_lib.model_base import Event
+from model_lib import Event
 from zero_3rdparty.enum_utils import StrEnum
 
 from pkg_ext.changelog.actions import AdditionalChangeAction, BreakingChangeAction

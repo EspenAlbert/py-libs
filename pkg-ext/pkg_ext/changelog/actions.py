@@ -96,7 +96,7 @@ class ChangelogActionBase(Entity):
                 ordered[key] = data.pop(key)
         for key in sorted(data.keys()):
             ordered[key] = data[key]
-        return dump(ordered, format="yaml")
+        return dump.dump_as_str(ordered, format="yaml")
 
     @property
     def stable_sort_key(self) -> tuple[str, ...]:

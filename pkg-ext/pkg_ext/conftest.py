@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Callable, Protocol
 
 import pytest
-from model_lib.static_settings import StaticSettings
+from model_lib import StaticSettings
 from pytest_regressions.file_regression import FileRegressionFixture
 from zero_3rdparty import file_utils
 from zero_3rdparty.file_utils import ensure_parents_write_text

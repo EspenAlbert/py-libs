@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import ClassVar, Self, TypeVar
 
-from model_lib.serialize.parse import parse_model
+from model_lib import parse
 from pydantic import DirectoryPath, Field, model_validator
 from pydantic_settings import BaseSettings
 from zero_3rdparty import file_utils
@@ -149,7 +149,7 @@ class PkgSettings(BaseSettings):
         if self.dev_mode and no_suffix_path.exists():
             file_utils.copy(no_suffix_path, public_groups_path)
         if public_groups_path.exists():
-            public_groups = parse_model(public_groups_path, t=PublicGroups)
+            public_groups = parse.parse_model(public_groups_path, t=PublicGroups)
             public_groups.storage_path = public_groups_path
         else:
             public_groups = PublicGroups(storage_path=public_groups_path)

@@ -13,7 +13,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
 
-from model_lib.model_base import Entity
+from model_lib import Entity
 from pydantic import Field, model_validator
 
 from pkg_ext.changelog.actions import BumpType

@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 
 import typer
-from model_lib.serialize import dump, parse_model
+from model_lib import dump, parse
 from zero_3rdparty.file_utils import ensure_parents_write_text
 
 from pkg_ext import api_diff
@@ -38,7 +38,7 @@ def dump_api(
         write_api_dump(settings, dev_mode=dev)
     else:
         api_dump = create_api_dump(settings)
-        yaml_text = dump(api_dump.model_dump(exclude_none=True), "yaml")
+        yaml_text = dump.dump_as_str(api_dump.model_dump(exclude_none=True), "yaml")
         ensure_parents_write_text(output, yaml_text)
         logger.info(f"API dump written to {output}")
 
@@ -91,7 +91,7 @@ def diff_api(
     baseline_path = settings.api_dump_baseline_path
 
     write_api_dump(settings, dev_mode=True)
-    dev_dump = parse_model(dev_path, t=PublicApiDump)
+    dev_dump = parse.parse_model(dev_path, t=PublicApiDump)
 
     # Load baseline
     baseline: PublicApiDump | None = None
@@ -100,9 +100,9 @@ def diff_api(
         if content is None:
             logger.info(f"No baseline found at {baseline_ref}:{baseline_path.name}")
         else:
-            baseline = parse_model(content, t=PublicApiDump)
+            baseline = parse.parse_model(content, t=PublicApiDump)
     elif baseline_path.exists():
-        baseline = parse_model(baseline_path, t=PublicApiDump)
+        baseline = parse.parse_model(baseline_path, t=PublicApiDump)
     else:
         logger.info("No baseline found (first release)")
 

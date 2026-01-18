@@ -5,8 +5,8 @@ from contextlib import suppress
 from dataclasses import dataclass
 from typing import Callable
 
+from model_lib import parse
 from model_lib.metadata.context_dict import identity
-from model_lib.serialize.parse import parse_dict
 
 from pkg_ext.changelog import (
     BumpType,
@@ -158,7 +158,7 @@ def read_current_version(ctx: pkg_ctx):
     pyproject_toml = ctx.settings.pyproject_toml
     if pyproject_toml.exists():
         with suppress(Exception):
-            pyproject = parse_dict(pyproject_toml)
+            pyproject = parse.parse_dict(pyproject_toml)
             version_raw = pyproject["project"]["version"]
             version = PkgVersion.parse(version_raw)
     init_path = ctx.settings.init_path

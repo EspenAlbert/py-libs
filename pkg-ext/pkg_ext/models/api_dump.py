@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, Literal
 
-from model_lib.model_base import Entity
+from model_lib import Entity
 from pydantic import Field
 from zero_3rdparty.enum_utils import StrEnum
 

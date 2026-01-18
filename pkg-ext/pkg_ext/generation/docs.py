@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from model_lib.model_base import Entity
+from model_lib import Entity
 from pydantic import BaseModel
 from zero_3rdparty.humps import depascalize
 from zero_3rdparty.sections import slug, wrap_section

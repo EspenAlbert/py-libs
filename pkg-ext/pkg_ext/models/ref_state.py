@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ask_shell._internal.interactive import ChoiceTyped
-from model_lib.model_base import Entity
+from model_lib import Entity
 from pydantic import Field
 from zero_3rdparty.enum_utils import StrEnum
 

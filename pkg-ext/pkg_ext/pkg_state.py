@@ -3,7 +3,7 @@ from __future__ import annotations
 from contextlib import suppress
 from pathlib import Path
 
-from model_lib.model_base import Entity
+from model_lib import Entity
 from pydantic import DirectoryPath, Field
 
 from pkg_ext.changelog.actions import (

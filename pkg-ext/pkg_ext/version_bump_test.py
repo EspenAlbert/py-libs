@@ -176,3 +176,24 @@ def test_bump_version_max_bump_respects_lower_calculated(pkg_ctx_instance):
     with pkg_ctx_instance:
         result = bump_version(pkg_ctx_instance, PkgVersion.parse("1.0.0"))
         assert str(result) == "1.0.1"
+
+
+def test_bump_version_with_settings_max_bump(pkg_ctx_instance):
+    pkg_ctx_instance.settings.max_bump_type = BumpType.MINOR
+    actions = [BreakingChangeAction(name="func", group="grp", details="breaking")]
+    pkg_ctx_instance._actions = actions
+    with pkg_ctx_instance:
+        result = bump_version(pkg_ctx_instance, PkgVersion.parse("0.1.0"))
+        assert str(result) == "0.2.0"
+
+
+def test_bump_version_action_overrides_settings(pkg_ctx_instance):
+    pkg_ctx_instance.settings.max_bump_type = BumpType.MINOR
+    actions = [
+        BreakingChangeAction(name="func", group="grp", details="breaking"),
+        MaxBumpTypeAction(name="cap", max_bump=BumpType.PATCH, reason="patch only"),
+    ]
+    pkg_ctx_instance._actions = actions
+    with pkg_ctx_instance:
+        result = bump_version(pkg_ctx_instance, PkgVersion.parse("0.1.0"))
+        assert str(result) == "0.1.1"

@@ -11,10 +11,12 @@ import logging
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
 
 from model_lib.model_base import Entity
 from pydantic import Field, model_validator
+
+from pkg_ext.changelog.actions import BumpType
 
 if TYPE_CHECKING:
     from pkg_ext.models.api_dump import GroupDump
@@ -82,6 +84,9 @@ def _detect_cycle(groups: dict[str, GroupConfig]) -> list[str] | None:
     return None
 
 
+MaxBumpLiteral = Literal["patch", "minor", "major"]
+
+
 class ProjectConfig(Entity):
     DEFAULT_CHANGELOG_CLEANUP_COUNT: ClassVar[int] = 30
     DEFAULT_CHANGELOG_KEEP_COUNT: ClassVar[int] = 10
@@ -100,7 +105,13 @@ class ProjectConfig(Entity):
     mkdocs_skip_sections: tuple[str, ...] = ()
     format_command: tuple[str, ...] = DEFAULT_FORMAT_COMMAND
     examples_enabled: bool = False
+    max_bump_type: MaxBumpLiteral | None = None
     groups: dict[str, GroupConfig] = Field(default_factory=dict)
+
+    def get_max_bump(self) -> BumpType | None:
+        if self.max_bump_type is None:
+            return None
+        return BumpType(self.max_bump_type)
 
     def is_examples_enabled(self, group_name: str) -> bool:
         group_cfg = self.groups.get(group_name)

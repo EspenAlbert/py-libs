@@ -129,7 +129,9 @@ def bump_version(
     When keep_prerelease is enabled and the current version has a prerelease suffix,
     bump the prerelease number instead of the major/minor/patch version.
 
-    If a MaxBumpTypeAction is present, the calculated bump is capped at that maximum.
+    Bump capping precedence (action overrides config):
+    1. MaxBumpTypeAction in PR changelog (if present) - allows per-PR override
+    2. settings.max_bump_type from pyproject.toml (project-wide default)
     """
     actions = ctx.pr_changelog_actions()
     bumps = [action.bump_type for action in actions]
@@ -139,6 +141,8 @@ def bump_version(
     )
     if max_bump_action:
         bump = cap_bump_type(bump, max_bump_action.max_bump)
+    elif ctx.settings.max_bump_type:
+        bump = cap_bump_type(bump, ctx.settings.max_bump_type)
     if prerelease_bump := old_version.prerelease_bump_type:
         if ctx.settings.keep_prerelease:
             bump = prerelease_bump

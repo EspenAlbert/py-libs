@@ -6,6 +6,7 @@ from pydantic import DirectoryPath, Field, model_validator
 from pydantic_settings import BaseSettings
 from zero_3rdparty import file_utils
 
+from pkg_ext.changelog.actions import BumpType
 from pkg_ext.config import ProjectConfig, load_project_config, load_user_config
 
 T = TypeVar("T")
@@ -55,6 +56,7 @@ class PkgSettings(BaseSettings):
     keep_prerelease: bool = False
     ignored_symbols: frozenset[str] = frozenset()
     format_command: tuple[str, ...] = ProjectConfig.DEFAULT_FORMAT_COMMAND
+    max_bump_type: BumpType | None = None
 
     def _with_dev_suffix(self, path: Path) -> Path:
         if self.dev_mode:
@@ -198,4 +200,5 @@ def pkg_settings(
         if ignored_symbols is not None
         else frozenset(project_config.ignored_symbols),
         format_command=project_config.format_command,
+        max_bump_type=project_config.get_max_bump(),
     )

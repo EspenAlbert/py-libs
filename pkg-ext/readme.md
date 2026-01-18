@@ -226,6 +226,7 @@ commit_diff_suffixes = [".py", ".pyi"]
 changelog_cleanup_count = 30  # Archive when count exceeds this
 changelog_keep_count = 10     # Keep this many after cleanup
 format_command = ["ruff", "format"]  # ruff check --fix always runs first
+max_bump_type = "minor"  # Cap version bumps (patch, minor, major)
 # after_file_write_hooks = ["extra-cmd {pkg_path}"]  # Custom post-write hooks
 ```
 
@@ -480,18 +481,26 @@ When no baseline `{pkg}.api.yaml` exists, diff is skipped (nothing to compare ag
 
 ## Version Bump Override
 
-For pre-1.0.0 packages where breaking changes are expected, use `MaxBumpTypeAction` to cap the version bump:
+For pre-1.0.0 packages where breaking changes are expected, cap the version bump using project config:
+
+```toml
+# pyproject.toml
+[tool.pkg-ext]
+max_bump_type = "minor"  # All PRs capped to minor
+```
+
+For per-PR overrides, use `MaxBumpTypeAction` in the changelog (overrides config):
 
 ```yaml
 # .changelog/{pr}.yaml
 name: version_cap
 type: max_bump_type
-max_bump: minor
-reason: Pre-1.0.0 release, breaking changes expected per semver
+max_bump: patch
+reason: Documentation-only release
 ts: '2026-01-17T14:35:00+00:00'
 ```
 
-This caps the calculated bump (e.g., breaking change becomes minor instead of major).
+Precedence: `MaxBumpTypeAction` overrides `max_bump_type` config (allows per-PR escape from project default).
 
 ## Limitations
 

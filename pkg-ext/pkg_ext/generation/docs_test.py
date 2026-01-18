@@ -137,6 +137,8 @@ def test_render_group_index_has_valid_sections():
     assert "symbol_details_header" in section_ids
     assert "load_def" in section_ids
     assert "save_def" in section_ids
+    assert "[`load`](#load_def)" in content
+    assert "[`save`](#save_def)" in content
 
 
 def test_render_group_index_includes_docstring():
@@ -710,3 +712,29 @@ def test_render_inline_symbol_shows_since_badge():
     ]
     content = render_inline_symbol(ctx, actions)
     assert "**Since:** 1.0.0" in content
+
+
+def test_render_inline_symbol_with_source_link(tmp_path: Path):
+    func = FunctionDump(
+        name="parse",
+        module_path="config",
+        signature=CallableSignature(),
+        line_number=42,
+    )
+    ctx = SymbolContext(symbol=func)
+    docs_dir = tmp_path / "docs"
+    pkg_src = tmp_path
+    content = render_inline_symbol(
+        ctx,
+        symbol_doc_path=docs_dir / "config/index.md",
+        pkg_src_dir=pkg_src,
+        pkg_import_name="my_pkg",
+    )
+    assert "- [source](../../my_pkg/config.py#L42)" in content
+
+
+def test_render_inline_symbol_no_source_link_when_params_missing():
+    func = _func_dump("parse")
+    ctx = SymbolContext(symbol=func)
+    content = render_inline_symbol(ctx)
+    assert "[source]" not in content

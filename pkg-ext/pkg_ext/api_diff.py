@@ -120,7 +120,7 @@ def _compare_defaults(
     symbol_name: str,
     group: str,
     item_name: str,
-    item_type: str,  # "param" or "field"
+    item_type: Literal["param", "field"],
     is_field: bool = False,
 ) -> DiffResult | None:
     field_name = item_name if is_field else None

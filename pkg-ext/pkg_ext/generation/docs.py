@@ -454,6 +454,10 @@ def render_since_badge(version: str | None) -> str:
 def render_inline_symbol(
     ctx: SymbolContext,
     changelog_actions: Sequence[ChangelogAction] | None = None,
+    *,
+    symbol_doc_path: Path | None = None,
+    pkg_src_dir: Path | None = None,
+    pkg_import_name: str | None = None,
 ) -> str:
     """Render inline symbol with signature, docstring, and optional field table."""
     symbol = ctx.symbol
@@ -465,6 +469,15 @@ def render_inline_symbol(
     since_badge = render_since_badge(since_version)
 
     lines = [f"### {type_label}: `{symbol.name}`"]
+    if symbol_doc_path and pkg_src_dir and pkg_import_name:
+        source_link = calculate_source_link(
+            symbol_doc_path,
+            symbol.module_path,
+            pkg_src_dir,
+            pkg_import_name,
+            symbol.line_number,
+        )
+        lines.append(f"- [source]({source_link})")
     if since_badge:
         lines.append(since_badge)
     lines.extend(["", "```python", sig, "```"])
@@ -637,7 +650,7 @@ def render_symbol_entry(ctx: SymbolContext) -> str:
     name = ctx.symbol.name
     if ctx.is_complex:
         return f"- [{name}](./{slug(name)}.md)"
-    return f"- `{name}`"
+    return f"- [`{name}`](#{slug(name)}_def)"
 
 
 def render_group_index(
@@ -645,6 +658,10 @@ def render_group_index(
     contexts: list[SymbolContext],
     group_config: GroupConfig,
     changelog_actions: Sequence[ChangelogAction] | None = None,
+    *,
+    docs_dir: Path | None = None,
+    pkg_src_dir: Path | None = None,
+    pkg_import_name: str | None = None,
 ) -> str:
     header = f"# {group.name}\n"
     if group_config.docstring:
@@ -653,11 +670,20 @@ def render_group_index(
     symbol_entries = [render_symbol_entry(c) for c in sorted_contexts]
     symbol_list = "\n".join(symbol_entries)
 
+    dir_name = group_dir_name(group)
+    index_path = docs_dir / dir_name / "index.md" if docs_dir else None
+
     inline_sections = []
     for ctx in sorted_contexts:
         if not ctx.is_complex:
             section_id = f"{slug(ctx.symbol.name)}_def"
-            inline_content = render_inline_symbol(ctx, changelog_actions)
+            inline_content = render_inline_symbol(
+                ctx,
+                changelog_actions,
+                symbol_doc_path=index_path,
+                pkg_src_dir=pkg_src_dir,
+                pkg_import_name=pkg_import_name,
+            )
             inline_sections.append(
                 wrap_section(inline_content, section_id, PKG_EXT_TOOL_NAME, MD_CONFIG)
             )
@@ -707,7 +733,13 @@ def generate_docs(
         ]
         index_path = f"{dir_name}/index.md"
         path_contents[index_path] = render_group_index(
-            group, contexts, group_config, changelog_actions
+            group,
+            contexts,
+            group_config,
+            changelog_actions,
+            docs_dir=docs_dir,
+            pkg_src_dir=pkg_src_dir,
+            pkg_import_name=pkg_import_name,
         )
 
         loaded_examples: dict[str, list[Any]] = {}

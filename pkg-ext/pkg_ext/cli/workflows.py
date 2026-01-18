@@ -168,15 +168,13 @@ def sync_files(api_input: GenerateApiInput, ctx: pkg_ctx):
             run_and_wait(substituted, cwd=settings.repo_root)
 
 
-def post_merge_commit_workflow(
-    repo_path: Path,
+def create_release_action(
     changelog_dir_path: Path,
     pr_number: int,
-    tag_prefix: str,
     old_version: str,
     new_version: str,
-    push: bool,
-):
+) -> Path:
+    """Create ReleaseAction and write to changelog file. Returns changelog path."""
     assert pr_number > 0, f"invalid PR number: {pr_number} must be > 0"
     changelog_pr_path = changelog_filepath(changelog_dir_path, pr_number)
     old_actions = parse_changelog_file_path(changelog_pr_path)
@@ -187,10 +185,16 @@ def post_merge_commit_workflow(
     ):
         raise ValueError(f"pr has already been released: {release_action!r}")
     release_action = ReleaseAction(name=new_version, old_version=old_version)
-    changelog_pr_path = dump_changelog_actions(
-        changelog_pr_path,
-        old_actions + [release_action],
-    )
+    return dump_changelog_actions(changelog_pr_path, old_actions + [release_action])
+
+
+def post_merge_commit_workflow(
+    repo_path: Path,
+    tag_prefix: str,
+    new_version: str,
+    push: bool,
+):
+    """Commit all staged changes and create release tag."""
     git_tag = f"{tag_prefix}{new_version}"
     git_commit(
         repo_path,

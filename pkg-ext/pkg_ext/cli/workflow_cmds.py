@@ -26,6 +26,7 @@ from pkg_ext.cli.workflows import (
     clean_old_entries,
     create_api_dump,
     create_ctx,
+    create_release_action,
     create_stability_ctx,
     generate_api_workflow,
     post_merge_commit_workflow,
@@ -237,12 +238,19 @@ def post_merge(
     pkg_ctx = create_ctx(api_input)
     sync_files(api_input, pkg_ctx)
     write_api_dump(settings, dev_mode=False)
-    post_merge_commit_workflow(
-        repo_path=settings.repo_root,
+    # Create ReleaseAction first so docs generation has correct since_version
+    create_release_action(
         changelog_dir_path=pkg_ctx.settings.changelog_dir,
         pr_number=pr,
-        tag_prefix=settings.tag_prefix,
         old_version=pkg_ctx.run_state.old_version,
+        new_version=pkg_ctx.run_state.new_version,
+    )
+    count = generate_docs_for_pkg(settings)
+    logger.info(f"Regenerated {count} doc files with release version")
+    # Now commit with docs that have correct since_version
+    post_merge_commit_workflow(
+        repo_path=settings.repo_root,
+        tag_prefix=settings.tag_prefix,
         new_version=pkg_ctx.run_state.new_version,
         push=push,
     )

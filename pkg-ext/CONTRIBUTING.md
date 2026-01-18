@@ -47,8 +47,9 @@ pkg-ext post-merge --push --pr 123
 | Command | When | Mode | Writes |
 |---------|------|------|--------|
 | `pre-change` | After adding/removing symbols | Interactive | `{group}_examples.py`, `{group}_test.py` |
-| `pre-commit` | Before commit / CI validation | Bot | `.groups-dev.yaml`, `CHANGELOG-dev.md`, docs |
+| `pre-commit` | Before commit / CI validation | Bot | `-dev` files, docs, API diff |
 | `post-merge` | After merge to main | Bot | Real files, VERSION bump, git tag |
+| `diff-api` | Manual API comparison | Bot | Nothing (output only) |
 
 ### Command Details
 
@@ -203,6 +204,7 @@ pkg-ext uses section markers to preserve user content during regeneration.
 | `CHANGELOG-dev.md` | Human-readable changelog (dev copy) |
 | `.changelog/{pr}.yaml` | Changelog actions for this PR |
 | `{pkg}/_warnings.py` | Stability warning decorators |
+| `{pkg}.api-dev.yaml` | API dump for comparison (gitignored) |
 | `{group}_examples.py` | Example scaffolds |
 | `{group}_test.py` | Test scaffolds |
 
@@ -213,6 +215,7 @@ pkg-ext uses section markers to preserve user content during regeneration.
 | `.groups.yaml` | Copied from dev |
 | `CHANGELOG.md` | Copied from dev |
 | `{pkg}/__init__.py` | VERSION updated |
+| `{pkg}.api.yaml` | API baseline dump |
 | `pyproject.toml` | Version field updated |
 
 ## Common Issues

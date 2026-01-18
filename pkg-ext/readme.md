@@ -43,8 +43,14 @@ Stored in `.changelog/{pr_number}.yaml` files using Pydantic discriminated union
 | `experimental` | Mark as experimental | Patch | `target`, `group`/`parent` |
 | `ga` | Graduate to GA | Patch | `target`, `group`/`parent` |
 | `deprecated` | Mark as deprecated | Patch | `target`, `group`/`parent`, `replacement` |
+| `max_bump_type` | Cap version bump | None | `max_bump`, `reason` |
 
 All actions inherit common fields: `name`, `ts`, `author`, `pr`.
+
+The `breaking_change` and `additional_change` actions support optional fields for API diff:
+- `change_kind: str | None` - machine-readable change type (e.g., `param_removed`, `default_changed`)
+- `auto_generated: bool` - `true` when created by API diff, `false` for interactive actions
+- `field_name: str | None` - field name for field-level changes
 
 ### Stability Targets
 
@@ -179,6 +185,17 @@ Regenerate `.groups.yaml` with merged config data (for debugging group assignmen
 ```bash
 pkg-ext dump-groups
 ```
+
+#### `diff-api`
+
+Compare baseline API dump against current code to detect breaking and non-breaking changes.
+
+```bash
+pkg-ext diff-api                    # Compare {pkg}.api.yaml vs current code
+pkg-ext diff-api --baseline v1.0.0  # Compare against specific git tag/ref
+```
+
+Outputs a summary grouped by breaking and non-breaking changes. The comparison runs automatically during `pre-commit`; this command is for manual inspection.
 
 #### `release-notes`
 
@@ -427,6 +444,55 @@ When exposing a function, its type hint arguments are auto-exposed if they refer
 - Uses [gh CLI](https://cli.github.com/) to detect PR info
 - Extracts PR number from merge commit message (`Merge pull request #123`)
 
+## API Diff and Breaking Change Detection
+
+During `pre-commit`, pkg-ext compares `{pkg}.api.yaml` (baseline from last release) against `{pkg}.api-dev.yaml` (current code) to detect API changes.
+
+### Detected Change Types
+
+| Change | Breaking? | `change_kind` |
+|--------|-----------|---------------|
+| Parameter removed | Yes | `param_removed` |
+| Required parameter added | Yes | `required_param_added` |
+| Parameter type changed | Yes | `param_type_changed` |
+| Return type changed | Yes | `return_type_changed` |
+| Default removed | Yes | `default_removed` |
+| Required field added | Yes | `required_field_added` |
+| Field removed | Yes | `field_removed` |
+| Base class removed | Yes | `base_class_removed` |
+| Optional parameter added | No | `optional_param_added` |
+| Default added | No | `default_added` |
+| Default changed | No | `default_changed` |
+| Optional field added | No | `optional_field_added` |
+
+### Auto-Generated Actions
+
+API diff creates `BreakingChangeAction` or `AdditionalChangeAction` entries with `auto_generated: true`. These are:
+- Replaced on each `pre-commit` run
+- Keyed by `(name, group, type, change_kind)` for deduplication
+- Timestamps preserved for unchanged changes
+
+Interactive actions (from `pre-change`) are never replaced.
+
+### First Release
+
+When no baseline `{pkg}.api.yaml` exists, diff is skipped (nothing to compare against).
+
+## Version Bump Override
+
+For pre-1.0.0 packages where breaking changes are expected, use `MaxBumpTypeAction` to cap the version bump:
+
+```yaml
+# .changelog/{pr}.yaml
+name: version_cap
+type: max_bump_type
+max_bump: minor
+reason: Pre-1.0.0 release, breaking changes expected per semver
+ts: '2026-01-17T14:35:00+00:00'
+```
+
+This caps the calculated bump (e.g., breaking change becomes minor instead of major).
+
 ## Limitations
 
 ### Symbol Detection
@@ -462,6 +528,11 @@ When exposing a function, its type hint arguments are auto-exposed if they refer
 ### Stability
 - **Non-callable symbols** - Constants and type aliases in experimental/deprecated groups don't emit warnings. `@experimental` and `@deprecated` only work on functions and classes.
 - **Arg-level only for GA groups** - Cannot track arg-level stability changes until group is GA.
+
+### API Diff
+- **No rename detection** - Renames are treated as remove + add (two separate actions)
+- **Return types always breaking** - No semantic analysis (e.g., returning subclass is flagged as breaking)
+- **Factory defaults** - Defaults using `"..."` (factory pattern) may cause false positives
 
 ## File Structure
 

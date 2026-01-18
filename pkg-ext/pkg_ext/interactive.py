@@ -107,7 +107,12 @@ def select_group(groups: PublicGroups, ref: RefSymbol, pkg_path: Path) -> Public
             choices,
             options=new_public_group_constructor(groups, ref),
         )
-        if not group.is_root and has_group_conflict(pkg_path, group.name):
+        is_new_group = not group.owned_refs
+        if (
+            is_new_group
+            and not group.is_root
+            and has_group_conflict(pkg_path, group.name)
+        ):
             logger.warning(
                 f"Group '{group.name}' conflicts with source file {pkg_path / f'{group.name}.py'}"
             )

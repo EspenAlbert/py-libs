@@ -2,18 +2,13 @@ from pathlib import Path
 from typing import ClassVar, Self, TypeVar
 
 from model_lib.serialize.parse import parse_model
-from pydantic import DirectoryPath, Field, computed_field, model_validator
+from pydantic import DirectoryPath, Field, model_validator
 from pydantic_settings import BaseSettings
 from zero_3rdparty import file_utils
 
 from pkg_ext.config import ProjectConfig, load_project_config, load_user_config
 
 T = TypeVar("T")
-
-
-def detect_is_flat(pkg_path: Path) -> bool:
-    """Auto-detect flat package (no _internal/ directory)."""
-    return not (pkg_path / "_internal").is_dir()
 
 
 def default_commit_fix_prefixes() -> tuple[str, ...]:
@@ -60,11 +55,6 @@ class PkgSettings(BaseSettings):
     keep_prerelease: bool = False
     ignored_symbols: frozenset[str] = frozenset()
     format_command: tuple[str, ...] = ProjectConfig.DEFAULT_FORMAT_COMMAND
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def is_flat(self) -> bool:
-        return detect_is_flat(self.pkg_directory)
 
     def _with_dev_suffix(self, path: Path) -> Path:
         if self.dev_mode:

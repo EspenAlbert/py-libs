@@ -55,3 +55,8 @@ option_dev_mode = typer.Option(
 option_skip_fix_commits = typer.Option(
     False, "--skip-fix-commits", help="Skip prompts for fix commits in git history"
 )
+option_full = typer.Option(
+    False,
+    "--full",
+    help="Run pre-commit workflow after pre-change (sync + docs + diff)",
+)

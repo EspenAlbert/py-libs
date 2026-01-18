@@ -11,6 +11,7 @@ from zero_3rdparty.sections import get_comment_config, parse_sections, replace_s
 from pkg_ext import api_dumper, py_format
 from pkg_ext.changelog import parse_changelog_actions
 from pkg_ext.cli.options import (
+    option_full,
     option_git_changes_since,
     option_group,
     option_pr,
@@ -254,6 +255,8 @@ def pre_change(
     group: str | None = option_group,
     git_changes_since: GitSince = option_git_changes_since,
     skip_fix_commits: bool = option_skip_fix_commits,
+    full: bool = option_full,
+    skip_docs: bool = option_skip_docs,
 ):
     """Handle new symbols then generate examples and tests."""
     settings: PkgSettings = ctx.obj
@@ -265,7 +268,8 @@ def pre_change(
         push=False,
         skip_fix_commits=skip_fix_commits,
     )
-    if not update_changelog_entries(api_input):
+    pkg_ctx = update_changelog_entries(api_input)
+    if not pkg_ctx:
         return
     api_dump = create_api_dump(settings)
     groups = [api_dump.get_group(group)] if group else api_dump.groups
@@ -275,6 +279,19 @@ def pre_change(
     logger.info(
         f"Generated {total} files ({examples_count} examples, {tests_count} tests)"
     )
+
+    if not full:
+        return
+    # Run pre-commit workflow (without bot mode or dirty check)
+    settings.dev_mode = True
+    sync_files(api_input, pkg_ctx)
+    if skip_docs:
+        logger.info("Skipped docs regeneration")
+    else:
+        count = generate_docs_for_pkg(settings)
+        logger.info(f"Regenerated {count} doc files")
+    write_api_dump(settings, dev_mode=True)
+    run_api_diff(settings)
 
 
 def pre_commit(

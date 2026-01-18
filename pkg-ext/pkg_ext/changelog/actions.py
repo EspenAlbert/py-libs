@@ -190,6 +190,7 @@ class BreakingChangeAction(ChangelogActionBase):
     group: str
     details: str
     change_kind: str | None = None
+    field_name: str | None = None
     auto_generated: bool = False
 
     @property
@@ -198,7 +199,13 @@ class BreakingChangeAction(ChangelogActionBase):
 
     @property
     def stable_sort_key(self) -> tuple[str, ...]:
-        return (self.type, self.group, self.name, self.change_kind or "")
+        return (
+            self.type,
+            self.group,
+            self.name,
+            self.change_kind or "",
+            self.field_name or "",
+        )
 
 
 class AdditionalChangeAction(ChangelogActionBase):
@@ -206,6 +213,7 @@ class AdditionalChangeAction(ChangelogActionBase):
     group: str
     details: str
     change_kind: str | None = None
+    field_name: str | None = None
     auto_generated: bool = False
 
     @property
@@ -214,7 +222,13 @@ class AdditionalChangeAction(ChangelogActionBase):
 
     @property
     def stable_sort_key(self) -> tuple[str, ...]:
-        return (self.type, self.group, self.name, self.change_kind or "")
+        return (
+            self.type,
+            self.group,
+            self.name,
+            self.change_kind or "",
+            self.field_name or "",
+        )
 
 
 class GroupModuleAction(ChangelogActionBase):

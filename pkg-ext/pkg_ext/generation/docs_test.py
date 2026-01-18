@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from zero_3rdparty.sections import parse_sections
 
 from pkg_ext.changelog.actions import (
+    AdditionalChangeAction,
     DeprecatedAction,
     FixAction,
     MakePublicAction,
@@ -29,9 +30,12 @@ from pkg_ext.generation.docs import (
     build_symbol_changes,
     build_symbol_context,
     calculate_source_link,
+    find_release_version,
     format_docstring,
     format_signature,
     generate_docs,
+    get_field_since_version,
+    get_symbol_since_version,
     group_dir_name,
     has_env_vars,
     render_changes_section,
@@ -599,3 +603,110 @@ def test_render_group_index_includes_signatures():
     content = render_group_index(group, contexts, GroupConfig())
     assert "class SimpleClass:" in content
     assert "timeout: int = 30" in content
+
+
+def test_find_release_version_found():
+    actions = [
+        ReleaseAction(
+            name="1.0.0", old_version="0.0.0", ts=datetime(2025, 1, 10, tzinfo=UTC)
+        ),
+    ]
+    version = find_release_version(datetime(2025, 1, 5, tzinfo=UTC), actions)
+    assert version == "1.0.0"
+
+
+def test_find_release_version_not_found():
+    actions = [
+        ReleaseAction(
+            name="1.0.0", old_version="0.0.0", ts=datetime(2025, 1, 1, tzinfo=UTC)
+        ),
+    ]
+    version = find_release_version(datetime(2025, 2, 1, tzinfo=UTC), actions)
+    assert version is None
+
+
+def test_get_symbol_since_version_with_release():
+    actions = [
+        MakePublicAction(
+            name="my_func", group="config", ts=datetime(2025, 1, 1, tzinfo=UTC)
+        ),
+        ReleaseAction(
+            name="1.0.0", old_version="0.0.0", ts=datetime(2025, 1, 10, tzinfo=UTC)
+        ),
+    ]
+    assert get_symbol_since_version("my_func", actions) == "1.0.0"
+
+
+def test_get_symbol_since_version_unreleased():
+    actions = [
+        MakePublicAction(
+            name="my_func", group="config", ts=datetime(2025, 1, 1, tzinfo=UTC)
+        ),
+    ]
+    assert get_symbol_since_version("my_func", actions) == UNRELEASED_VERSION
+
+
+def test_get_symbol_since_version_not_found():
+    actions = [
+        ReleaseAction(
+            name="1.0.0", old_version="0.0.0", ts=datetime(2025, 1, 10, tzinfo=UTC)
+        ),
+    ]
+    assert get_symbol_since_version("unknown", actions) is None
+
+
+def test_get_field_since_version_from_action():
+    actions = [
+        AdditionalChangeAction(
+            name="MyClass",
+            group="config",
+            details="added field",
+            field_name="new_field",
+            ts=datetime(2025, 1, 1, tzinfo=UTC),
+        ),
+        ReleaseAction(
+            name="1.1.0", old_version="1.0.0", ts=datetime(2025, 1, 10, tzinfo=UTC)
+        ),
+    ]
+    assert get_field_since_version("MyClass", "new_field", actions) == "1.1.0"
+
+
+def test_get_field_since_version_falls_back_to_symbol():
+    actions = [
+        MakePublicAction(
+            name="MyClass", group="config", ts=datetime(2025, 1, 1, tzinfo=UTC)
+        ),
+        ReleaseAction(
+            name="1.0.0", old_version="0.0.0", ts=datetime(2025, 1, 10, tzinfo=UTC)
+        ),
+    ]
+    assert get_field_since_version("MyClass", "existing_field", actions) == "1.0.0"
+
+
+def test_should_show_field_table_with_since_version():
+    cls = _class_with_fields("Config")
+    field_versions = {"timeout": "1.0.0"}
+    assert should_show_field_table(cls.fields, field_versions)
+
+
+def test_render_field_table_with_since_column():
+    cls = _class_with_fields("Config")
+    field_versions = {"timeout": "1.0.0"}
+    table = render_field_table(cls.fields, field_versions)
+    assert "| Field | Type | Default | Since |" in table
+    assert "| 1.0.0 |" in table
+
+
+def test_render_inline_symbol_shows_since_badge():
+    func = _func_dump("my_func")
+    ctx = SymbolContext(symbol=func)
+    actions = [
+        MakePublicAction(
+            name="my_func", group="config", ts=datetime(2025, 1, 1, tzinfo=UTC)
+        ),
+        ReleaseAction(
+            name="1.0.0", old_version="0.0.0", ts=datetime(2025, 1, 10, tzinfo=UTC)
+        ),
+    ]
+    content = render_inline_symbol(ctx, actions)
+    assert "**Since:** 1.0.0" in content

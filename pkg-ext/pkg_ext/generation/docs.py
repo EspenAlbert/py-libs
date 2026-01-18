@@ -86,6 +86,46 @@ MEANINGFUL_CHANGE_ACTIONS: tuple[type, ...] = (
 UNRELEASED_VERSION = "unreleased"
 
 
+def find_release_version(
+    ts: datetime, changelog_actions: Sequence[ChangelogAction]
+) -> str | None:
+    """Find the first release version with ts > the given timestamp."""
+    for action in sorted(changelog_actions):
+        if isinstance(action, ReleaseAction) and action.ts > ts:
+            return action.name
+    return None
+
+
+def get_symbol_since_version(
+    symbol_name: str, changelog_actions: Sequence[ChangelogAction]
+) -> str | None:
+    """Derive since_version from MakePublicAction timestamp."""
+    for action in sorted(changelog_actions):
+        if isinstance(action, MakePublicAction) and action.name == symbol_name:
+            if version := find_release_version(action.ts, changelog_actions):
+                return version
+            return UNRELEASED_VERSION
+    return None
+
+
+def get_field_since_version(
+    symbol_name: str,
+    field_name: str,
+    changelog_actions: Sequence[ChangelogAction],
+) -> str | None:
+    """Derive field since_version from AdditionalChangeAction with matching field_name."""
+    for action in sorted(changelog_actions):
+        if (
+            isinstance(action, AdditionalChangeAction)
+            and action.name == symbol_name
+            and action.field_name == field_name
+        ):
+            if version := find_release_version(action.ts, changelog_actions):
+                return version
+            return UNRELEASED_VERSION
+    return get_symbol_since_version(symbol_name, changelog_actions)
+
+
 class SymbolChange(Event):
     version: str
     description: str
@@ -336,14 +376,25 @@ def render_env_var_table(symbol: ClassDump) -> str:
     return f"{header}\n" + "\n".join(rows)
 
 
-def should_show_field_table(fields: list[ClassFieldInfo] | None) -> bool:
-    """Return True if table provides value beyond signature (has deprecated/description)."""
+def should_show_field_table(
+    fields: list[ClassFieldInfo] | None,
+    field_versions: dict[str, str] | None = None,
+) -> bool:
+    """Return True if table provides value beyond signature."""
     if not fields:
         return False
-    return any((f.deprecated or f.description) for f in fields if not f.is_computed)
+    visible = [f for f in fields if not f.is_computed]
+    if any(f.deprecated or f.description for f in visible):
+        return True
+    if field_versions and any(field_versions.get(f.name) for f in visible):
+        return True
+    return False
 
 
-def render_field_table(fields: list[ClassFieldInfo] | None) -> str:
+def render_field_table(
+    fields: list[ClassFieldInfo] | None,
+    field_versions: dict[str, str] | None = None,
+) -> str:
     """Render markdown table with conditional columns based on field metadata."""
     if not fields:
         return ""
@@ -353,8 +404,11 @@ def render_field_table(fields: list[ClassFieldInfo] | None) -> str:
 
     has_deprecated = any(f.deprecated for f in visible)
     has_description = any(f.description for f in visible)
+    has_since = field_versions and any(field_versions.get(f.name) for f in visible)
 
     cols = ["Field", "Type", "Default"]
+    if has_since:
+        cols.append("Since")
     if has_deprecated:
         cols.append("Deprecated")
     if has_description:
@@ -367,6 +421,8 @@ def render_field_table(fields: list[ClassFieldInfo] | None) -> str:
     for f in visible:
         default = f"`{f.default.value_repr}`" if f.default else "-"
         row = [f.name, f"`{f.type_annotation}`" if f.type_annotation else "-", default]
+        if has_since and field_versions:
+            row.append(field_versions.get(f.name) or "-")
         if has_deprecated:
             row.append(f.deprecated or "-")
         if has_description:
@@ -376,32 +432,55 @@ def render_field_table(fields: list[ClassFieldInfo] | None) -> str:
     return "\n".join([header, separator, *rows])
 
 
-def render_inline_symbol(ctx: SymbolContext) -> str:
+def _build_field_versions(
+    symbol_name: str,
+    fields: list[ClassFieldInfo] | None,
+    changelog_actions: Sequence[ChangelogAction],
+) -> dict[str, str]:
+    if not fields:
+        return {}
+    return {
+        f.name: v
+        for f in fields
+        if not f.is_computed
+        and (v := get_field_since_version(symbol_name, f.name, changelog_actions))
+    }
+
+
+def render_since_badge(version: str | None) -> str:
+    return f"> **Since:** {version}" if version else ""
+
+
+def render_inline_symbol(
+    ctx: SymbolContext,
+    changelog_actions: Sequence[ChangelogAction] | None = None,
+) -> str:
     """Render inline symbol with signature, docstring, and optional field table."""
     symbol = ctx.symbol
     type_label = symbol.type.value
     sig = format_signature(symbol)
+    changelog_actions = changelog_actions or []
 
-    lines = [
-        f"### {type_label}: `{symbol.name}`",
-        "",
-        "```python",
-        sig,
-        "```",
-    ]
+    since_version = get_symbol_since_version(symbol.name, changelog_actions)
+    since_badge = render_since_badge(since_version)
+
+    lines = [f"### {type_label}: `{symbol.name}`"]
+    if since_badge:
+        lines.append(since_badge)
+    lines.extend(["", "```python", sig, "```"])
 
     docstring = format_docstring(symbol.docstring)
     if docstring:
         lines.extend(["", docstring])
 
-    if (
-        isinstance(symbol, ClassDump)
-        and symbol.fields
-        and should_show_field_table(symbol.fields)
-    ):
-        table = render_field_table(symbol.fields)
-        if table:
-            lines.extend(["", table])
+    if isinstance(symbol, ClassDump) and symbol.fields:
+        field_versions = _build_field_versions(
+            symbol.name, symbol.fields, changelog_actions
+        )
+        if should_show_field_table(symbol.fields, field_versions):
+            table = render_field_table(symbol.fields, field_versions)
+            if table:
+                lines.extend(["", table])
 
     return "\n".join(lines)
 
@@ -432,6 +511,32 @@ def calculate_source_link(
     return str(rel_path)
 
 
+def _render_symbol_main_section(
+    symbol: SymbolDump,
+    group: GroupDump,
+    source_link: str,
+    changelog_actions: Sequence[ChangelogAction],
+) -> str:
+    section_id = f"{slug(symbol.name)}_def"
+    type_label = symbol.type.value
+    stability = render_stability_badge(symbol, group)
+    since_badge = render_since_badge(
+        get_symbol_since_version(symbol.name, changelog_actions)
+    )
+    sig = format_signature(symbol)
+    docstring = format_docstring(symbol.docstring)
+
+    lines = [f"## {type_label}: {symbol.name}", f"- [source]({source_link})"]
+    if stability:
+        lines.append(stability)
+    if since_badge:
+        lines.append(since_badge)
+    lines.extend(["", "```python", sig, "```"])
+    if docstring:
+        lines.extend(["", docstring])
+    return wrap_section("\n".join(lines), section_id, PKG_EXT_TOOL_NAME, MD_CONFIG)
+
+
 def render_symbol_page(
     ctx: SymbolContext,
     group: GroupDump,
@@ -440,11 +545,11 @@ def render_symbol_page(
     pkg_import_name: str,
     examples: list[Any] | None = None,
     changes: list[SymbolChange] | None = None,
+    changelog_actions: Sequence[ChangelogAction] | None = None,
 ) -> str:
     """Render full content for a complex symbol's dedicated page."""
     symbol = ctx.symbol
-    section_id = f"{slug(symbol.name)}_def"
-    type_label = symbol.type.value
+    changelog_actions = changelog_actions or []
 
     source_link = calculate_source_link(
         symbol_doc_path,
@@ -453,27 +558,22 @@ def render_symbol_page(
         pkg_import_name,
         symbol.line_number,
     )
-    stability = render_stability_badge(symbol, group)
-    sig = format_signature(symbol)
-    docstring = format_docstring(symbol.docstring)
-
-    lines = [f"## {type_label}: {symbol.name}", f"- [source]({source_link})"]
-    if stability:
-        lines.append(stability)
-    lines.extend(["", "```python", sig, "```"])
-    if docstring:
-        lines.extend(["", docstring])
-
-    main_content = wrap_section(
-        "\n".join(lines), section_id, PKG_EXT_TOOL_NAME, MD_CONFIG
+    main_content = _render_symbol_main_section(
+        symbol, group, source_link, changelog_actions
     )
-
     parts = [f"# {symbol.name}", "", main_content]
 
     if isinstance(symbol, ClassDump) and has_env_vars(symbol):
-        env_table = render_env_var_table(symbol)
-        if env_table:
+        if env_table := render_env_var_table(symbol):
             parts.extend(["", env_table])
+
+    if isinstance(symbol, ClassDump) and symbol.fields:
+        field_versions = _build_field_versions(
+            symbol.name, symbol.fields, changelog_actions
+        )
+        if should_show_field_table(symbol.fields, field_versions):
+            if table := render_field_table(symbol.fields, field_versions):
+                parts.extend(["", "### Fields", "", table])
 
     for ex in examples or []:
         parts.extend(["", render_example_section(ex, symbol, pkg_import_name)])
@@ -541,7 +641,10 @@ def render_symbol_entry(ctx: SymbolContext) -> str:
 
 
 def render_group_index(
-    group: GroupDump, contexts: list[SymbolContext], group_config: GroupConfig
+    group: GroupDump,
+    contexts: list[SymbolContext],
+    group_config: GroupConfig,
+    changelog_actions: Sequence[ChangelogAction] | None = None,
 ) -> str:
     header = f"# {group.name}\n"
     if group_config.docstring:
@@ -554,7 +657,7 @@ def render_group_index(
     for ctx in sorted_contexts:
         if not ctx.is_complex:
             section_id = f"{slug(ctx.symbol.name)}_def"
-            inline_content = render_inline_symbol(ctx)
+            inline_content = render_inline_symbol(ctx, changelog_actions)
             inline_sections.append(
                 wrap_section(inline_content, section_id, PKG_EXT_TOOL_NAME, MD_CONFIG)
             )
@@ -603,7 +706,9 @@ def generate_docs(
             for s in group.symbols
         ]
         index_path = f"{dir_name}/index.md"
-        path_contents[index_path] = render_group_index(group, contexts, group_config)
+        path_contents[index_path] = render_group_index(
+            group, contexts, group_config, changelog_actions
+        )
 
         loaded_examples: dict[str, list[Any]] = {}
         if load_examples:
@@ -626,6 +731,7 @@ def generate_docs(
                         pkg_import_name,
                         examples=symbol_examples,
                         changes=symbol_changes,
+                        changelog_actions=changelog_actions,
                     )
                 else:
                     path_contents[symbol_path] = f"# {ctx.symbol.name}\n"

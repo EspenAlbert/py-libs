@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+from dataclasses import is_dataclass
 from datetime import UTC, datetime
 from pydoc import locate
 from typing import Any, Callable
@@ -38,6 +39,27 @@ def _get_line_number(obj: Any) -> int | None:
         return None
 
 
+def _is_auto_generated_dataclass_doc(cls: type) -> bool:
+    """Check if __doc__ is the auto-generated dataclass signature."""
+    if not is_dataclass(cls):
+        return False
+    doc = cls.__doc__
+    if not doc:
+        return False
+    try:
+        text_sig = str(inspect.signature(cls)).replace(" -> None", "")
+        return doc == cls.__name__ + text_sig
+    except (TypeError, ValueError):
+        return False
+
+
+def _get_class_docstring(cls: type) -> str:
+    """Get docstring, filtering out auto-generated dataclass signatures."""
+    if _is_auto_generated_dataclass_doc(cls):
+        return ""
+    return cls.__doc__ or ""
+
+
 def dump_function(symbol: Callable, ref: RefSymbol) -> FunctionDump:
     return FunctionDump(
         name=ref.name,
@@ -55,7 +77,7 @@ def dump_class(cls: type, ref: RefSymbol) -> ClassDump:
     return ClassDump(
         name=ref.name,
         module_path=ref.module_path,
-        docstring=cls.__doc__ or "",
+        docstring=_get_class_docstring(cls),
         direct_bases=parse_direct_bases(cls),
         init_signature=init_sig,
         fields=fields,

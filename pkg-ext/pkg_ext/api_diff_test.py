@@ -251,3 +251,24 @@ def test_format_diff_results_grouped():
     assert "Additional Changes (1)" in output
     assert "[core] func: removed param 'x'" in output
     assert "1 breaking, 1 additional" in output
+
+
+def test_compare_fields_populates_field_name():
+    baseline = [_field("x")]
+    dev = [_field("x"), _field("y", default=_default("None"))]
+    results = compare_fields(baseline, dev, "MyClass", "group")
+    assert results[0].field_name == "y"
+
+
+def test_diff_result_to_action_includes_field_name():
+    diff = DiffResult(
+        name="MyClass",
+        group="core",
+        action_type="additional_change",
+        change_kind=ChangeKind.OPTIONAL_FIELD_ADDED,
+        details="added field 'new_field'",
+        field_name="new_field",
+    )
+    action = diff.to_changelog_action()
+    assert isinstance(action, AdditionalChangeAction)
+    assert action.field_name == "new_field"

@@ -377,7 +377,7 @@ def render_field_table(fields: list[ClassFieldInfo] | None) -> str:
 
 
 def render_inline_symbol(ctx: SymbolContext) -> str:
-    """Render inline symbol with signature and optional field table."""
+    """Render inline symbol with signature, docstring, and optional field table."""
     symbol = ctx.symbol
     type_label = symbol.type.value
     sig = format_signature(symbol)
@@ -389,6 +389,10 @@ def render_inline_symbol(ctx: SymbolContext) -> str:
         sig,
         "```",
     ]
+
+    docstring = format_docstring(symbol.docstring)
+    if docstring:
+        lines.extend(["", docstring])
 
     if (
         isinstance(symbol, ClassDump)

@@ -577,6 +577,21 @@ def test_render_inline_symbol_class_with_table():
     assert "| Field | Type | Default | Deprecated |" in content
 
 
+def test_render_inline_symbol_with_docstring():
+    func = FunctionDump(
+        name="parse",
+        module_path="mod",
+        signature=CallableSignature(),
+        docstring="    Parse input data.\n\n    Returns parsed result.",
+    )
+    ctx = SymbolContext(symbol=func)
+    content = render_inline_symbol(ctx)
+    assert "### function: `parse`" in content
+    assert "```python" in content
+    assert "Parse input data." in content
+    assert "Returns parsed result." in content
+
+
 def test_render_group_index_includes_signatures():
     cls = _class_with_fields("SimpleClass")
     group = GroupDump(name="utils", symbols=[cls])

@@ -3,8 +3,7 @@
 from collections.abc import Sequence
 from datetime import datetime
 
-from model_lib import UtcDatetime
-from model_lib.model_base import Event
+from model_lib import Event, fields
 
 from pkg_ext.changelog.actions import (
     AdditionalChangeAction,

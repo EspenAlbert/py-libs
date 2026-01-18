@@ -12,8 +12,7 @@ from typing import Any, ClassVar, Iterable, Self
 from ask_shell._internal._run import run_and_wait
 from ask_shell.shell import ShellError
 from git import Commit, Git, GitCommandError, InvalidGitRepositoryError, Repo
-from model_lib import UtcDatetime
-from model_lib.model_base import Entity
+from model_lib import Entity, fields
 from pydantic import BaseModel, Field, model_validator
 
 from pkg_ext.errors import RemoteURLNotFound
@@ -59,7 +58,7 @@ class GitCommit(BaseModel):
     file_changes: set[str]
     author: str
     message: str
-    ts: UtcDatetime
+    ts: fields.UtcDatetime
     sha: str
 
     @model_validator(mode="after")

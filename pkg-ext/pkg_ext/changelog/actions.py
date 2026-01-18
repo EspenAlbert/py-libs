@@ -7,9 +7,7 @@ from pathlib import Path
 from typing import Annotated, ClassVar, Iterable, Literal, Self, Union
 
 from ask_shell import shell
-from model_lib import UtcDatetime
-from model_lib.model_base import Entity
-from model_lib.serialize import dump
+from model_lib import Entity, dump, fields
 from model_lib.serialize.yaml_serialize import parse_yaml_str
 from pydantic import Field, TypeAdapter, model_validator
 from zero_3rdparty.datetime_utils import utc_now
@@ -75,7 +73,7 @@ class ChangelogActionBase(Entity):
     name: str = Field(
         default="", description="Symbol name or Group name or Release Version"
     )
-    ts: UtcDatetime = Field(default_factory=utc_now)
+    ts: fields.UtcDatetime = Field(default_factory=utc_now)
     author: str = Field(default_factory=current_user)
     pr: int | None = Field(default=0)
 

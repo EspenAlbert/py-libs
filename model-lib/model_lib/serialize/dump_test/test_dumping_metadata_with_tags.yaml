@@ -1,9 +1,0 @@
-model:
-  name: model
-metadata:
-  model_name: _MyModel
-  tags:
-  - - other_key
-    - other_name: metadata
-  - - normal_key
-    - normal_value

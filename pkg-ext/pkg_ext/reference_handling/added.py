@@ -170,5 +170,11 @@ def handle_added_refs(ctx: pkg_ctx) -> None:
             task.update(advance=len(all_refs_decided))
     if added_refs:
         remaining_str = "\n".join(str(ref) for ref in added_refs.values())
-        untracked_symbol_types = [symbol_type for symbol_type in SymbolType if symbol_type not in tracked_symbol_types]
-        logger.debug(f"still has {len(added_refs)}, untracked symbol types: {untracked_symbol_types} remaining:\n{remaining_str}")
+        untracked_symbol_types = [
+            symbol_type
+            for symbol_type in SymbolType
+            if symbol_type not in tracked_symbol_types
+        ]
+        logger.debug(
+            f"still has {len(added_refs)}, untracked symbol types: {untracked_symbol_types} remaining:\n{remaining_str}"
+        )

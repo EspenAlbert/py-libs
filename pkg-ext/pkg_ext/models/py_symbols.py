@@ -49,8 +49,6 @@ class RefSymbol(Entity):
                 f"Symbol name {self.name} cannot start with '_', '_' is reserved for private symbols"
             )
         match self.type:
-            case SymbolType.TYPE_ALIAS if not self.name.endswith("T"):
-                raise ValueError(f"Type alias {self.name} should end with 'T'")
             case SymbolType.GLOBAL_VAR if not self.name.isupper() or len(self.name) < 2:
                 raise ValueError(
                     f"Global variable {self.name} should be in uppercase and longer than 1 character"

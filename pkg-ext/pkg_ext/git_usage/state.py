@@ -12,7 +12,7 @@ from typing import Any, ClassVar, Iterable, Self
 from ask_shell._internal._run import run_and_wait
 from ask_shell.shell import ShellError
 from git import Commit, Git, GitCommandError, InvalidGitRepositoryError, Repo
-from model_lib import utc_datetime
+from model_lib import UtcDatetime
 from model_lib.model_base import Entity
 from pydantic import BaseModel, Field, model_validator
 
@@ -59,7 +59,7 @@ class GitCommit(BaseModel):
     file_changes: set[str]
     author: str
     message: str
-    ts: utc_datetime
+    ts: UtcDatetime
     sha: str
 
     @model_validator(mode="after")
@@ -154,7 +154,7 @@ def head_merge_pr(repo_path: Path) -> int:
 
 
 def last_merge_pr(
-    commits: Iterable[GitCommit], after_ts: utc_datetime | None = None
+    commits: Iterable[GitCommit], after_ts: UtcDatetime | None = None
 ) -> int | None:
     after_ts = after_ts or datetime.fromtimestamp(0, tz=timezone.utc)
     for commit in sorted(commits, reverse=True):

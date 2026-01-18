@@ -44,10 +44,10 @@ def test_parse_models_module():
     found_symbols = [
         (symbol.name, symbol.type) for symbol in sorted(symbols.iterate_ref_symbols())
     ]
+    # Note: OutputT is a TypeVar, not a TypeAlias, so it's not captured
     expected_symbols = [
         ("ERROR_MESSAGE_INTERACTIVE_SHELL", "global_var"),
         ("EmptyOutputError", "exception"),
-        ("OutputT", "type_alias"),
         ("RunIncompleteError", "exception"),
         ("ShellConfig", "class"),
         ("ShellError", "exception"),
@@ -82,7 +82,22 @@ def test_parse_symbols_run_env():
     assert "ENV_PREFIX" not in symbols
 
 
-def test_parse_type_alias_interactive():
+def test_typevars_not_captured():
+    # TypeVars (FuncT = TypeVar(...)) are not type aliases, they're not captured
     file = _parse_src_module(interactive)
     symbols = parse_code_symbols([file], "ask_shell")
-    assert symbols["ask_shell._internal.interactive.FuncT"]
+    assert "ask_shell._internal.interactive.FuncT" not in symbols
+
+
+def test_type_alias_annotation_captured():
+    # Symbols with TypeAlias annotation (e.g., `x: TypeAlias = ...`) are captured
+    from model_lib import pydantic_utils
+
+    module_path = Path(pydantic_utils.__file__)
+    pkg_path = module_path.parent.parent
+    rel_path = module_path.relative_to(pkg_path)
+    result = parse_symbols(module_path, str(rel_path), "model_lib")
+    assert isinstance(result, PkgSrcFile)
+    assert "UtcDatetime" in result.type_aliases
+    assert "UtcDatetimeMs" in result.type_aliases
+    assert "StrBytesIntFloat" in result.type_aliases

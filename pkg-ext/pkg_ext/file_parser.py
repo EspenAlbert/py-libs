@@ -36,12 +36,17 @@ class SymbolParser(ast.NodeTransformer):
         """Skip short symbols that are typically internal (TypeVars, single chars)."""
         return len(name) <= 2 and name.isupper()
 
+    def _is_type_alias_annotation(self, annotation: ast.expr) -> bool:
+        """Check if annotation is TypeAlias (e.g., `x: TypeAlias = ...`)."""
+        if isinstance(annotation, ast.Name) and annotation.id == "TypeAlias":
+            return True
+        if isinstance(annotation, ast.Attribute) and annotation.attr == "TypeAlias":
+            return True
+        return False
+
     def visit_Name(self, node: ast.Name) -> ast.AST:
-        """TODO: revisit this logic
-        For type aliases: Check for TypeAlias annotations or assignments to typing constructs
-        For global variables: Track the context (module-level vs local scope)
-        Use sets instead of lists to avoid duplicates
-        """
+        # Global vars without annotations are captured here (e.g., `CONSTANT = 1`)
+        # Type aliases are captured in visit_AnnAssign (e.g., `x: TypeAlias = ...`)
         node_name = node.id
         if self.name_is_imported(node_name):
             return node
@@ -49,8 +54,6 @@ class SymbolParser(ast.NodeTransformer):
             return node
         if node_name.isupper():
             self.global_vars.append(node.id)
-        elif node.id.endswith("T"):
-            self.type_aliases.append(node.id)
         return node
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST:
@@ -77,12 +80,12 @@ class SymbolParser(ast.NodeTransformer):
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AnnAssign:
         if isinstance(node.target, ast.Name):
             name = node.target.id
-            if self._is_internal_symbol(name):
+            if name.startswith("_") or self._is_internal_symbol(name):
                 return node
-            if name.isupper():
-                self.global_vars.append(name)
-            elif name.endswith("T"):
+            if self._is_type_alias_annotation(node.annotation):
                 self.type_aliases.append(name)
+            elif name.isupper():
+                self.global_vars.append(name)
         return node
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom:

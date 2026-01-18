@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 from datetime import datetime
 
-from model_lib import utc_datetime
+from model_lib import UtcDatetime
 from model_lib.model_base import Event
 
 from pkg_ext.changelog.actions import (
@@ -35,7 +35,7 @@ UNRELEASED_VERSION = "unreleased"
 class SymbolChange(Event):
     version: str
     description: str
-    ts: utc_datetime
+    ts: UtcDatetime
 
 
 def find_release_version(

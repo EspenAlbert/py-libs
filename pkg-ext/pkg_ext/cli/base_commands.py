@@ -115,12 +115,14 @@ from pkg_ext.cli.workflow_cmds import (  # noqa: E402
     post_merge,
     pre_change,
     pre_commit,
+    promote,
 )
 
 app.command()(post_merge)
 app.command()(pre_change)
 app.command()(pre_commit)
 app.command()(chore)
+app.command()(promote)
 app.command()(exp)
 app.command()(ga)
 app.command()(dep)

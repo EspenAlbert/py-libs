@@ -413,3 +413,55 @@ def chore(
 def _get_current_pr_number(settings: PkgSettings) -> int:
     pr_info = find_pr_info_or_none(settings.repo_root)
     return pr_info.pr_number if pr_info else 0
+
+
+def promote(
+    ctx: typer.Context,
+    name: str | None = typer.Option(
+        None, "--name", "-n", help="Symbol name to promote"
+    ),
+    group: str | None = typer.Option(None, "--group", "-g", help="Target group"),
+    module_filter: str | None = typer.Option(
+        None, "--module", "-m", help="Filter by module path prefix"
+    ),
+    pattern: str | None = typer.Option(
+        None, "--pattern", "-p", help="Filter by name pattern (e.g., 'dump_*')"
+    ),
+    undecided: bool = typer.Option(
+        False,
+        "--undecided",
+        "-u",
+        help="Include symbols without changelog entry (not yet decided)",
+    ),
+    pr_number: int = typer.Option(
+        0, "--pr", help="PR number (auto-detected if not provided)"
+    ),
+):
+    """Promote symbols to public API (private or undecided)."""
+    from pkg_ext.reference_handling.promote import handle_promote
+
+    settings: PkgSettings = ctx.obj
+    pr = pr_number or _get_current_pr_number(settings)
+    if not pr:
+        logger.error("Could not detect PR number. Use --pr to specify it.")
+        raise typer.Exit(1)
+
+    api_input = GenerateApiInput(
+        settings=settings,
+        git_changes_since=GitSince.NO_GIT_CHANGES,
+        bump_version=False,
+        create_tag=False,
+        push=False,
+        explicit_pr=pr,
+    )
+    pkg_ctx = create_ctx(api_input)
+
+    with pkg_ctx:
+        actions = handle_promote(
+            pkg_ctx, name, group, module_filter, pattern, undecided
+        )
+
+    if actions:
+        logger.info(f"Promoted {len(actions)} symbol(s) to public API")
+    else:
+        logger.info("No symbols promoted")

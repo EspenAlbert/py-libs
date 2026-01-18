@@ -42,7 +42,7 @@ def test_filter_functions(sample_private_action, sample_ref_symbol):
 
     assert promote.filter_by_pattern(entries, "dump_*") == entries
     assert promote.filter_by_pattern(entries, "*_str") == entries
-    assert promote.filter_by_pattern(entries, "parse_*") == []
+    assert not promote.filter_by_pattern(entries, "parse_*")
 
 
 def test_match_symbol_in_code(sample_private_action, sample_ref_symbol):

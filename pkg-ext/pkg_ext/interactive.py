@@ -13,6 +13,7 @@ from ask_shell._internal.interactive import (
 )
 from zero_3rdparty.enum_utils import StrEnum
 
+from pkg_ext.changelog import KeepPrivateAction
 from pkg_ext.models import (
     PublicGroup,
     PublicGroups,
@@ -162,6 +163,29 @@ def confirm_delete(refs: list[RefState]) -> bool:
     return confirm(f"Confirm deleting remaining refs: {delete_names}")
 
 
+PromotableEntry = tuple[KeepPrivateAction | None, RefSymbol]
+
+
+def _as_choice_promotable(entry: PromotableEntry) -> ChoiceTyped[PromotableEntry]:
+    private, ref = entry
+    docstring = ref.docstring[:80] + "..." if len(ref.docstring) > 80 else ref.docstring
+    location = private.full_path if private else ref.local_id
+    label = "[private]" if private else "[new]"
+    return ChoiceTyped(
+        name=f"{ref.name} {label} ({location})",
+        value=entry,
+        description=docstring or "No docstring",
+        checked=False,
+    )
+
+
+def select_private_symbols(entries: list[PromotableEntry]) -> list[PromotableEntry]:
+    choices = [_as_choice_promotable(e) for e in entries]
+    return select_list_multiple_choices(
+        "Select symbols to promote to public API:", choices
+    )
+
+
 __all__ = [
     "CommitFixAction",
     "confirm_create_alias",
@@ -173,5 +197,6 @@ __all__ = [
     "select_group_name_or_skip",
     "select_multiple_ref_state",
     "select_multiple_refs",
+    "select_private_symbols",
     "select_ref",
 ]

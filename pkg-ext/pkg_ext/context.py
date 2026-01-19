@@ -4,10 +4,18 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from pkg_ext.changelog import (
+    AdditionalChangeAction,
+    BreakingChangeAction,
     ChangelogAction,
     ChangelogActionBase,
+    DeleteAction,
+    DeprecatedAction,
+    ExperimentalAction,
     FixAction,
+    GAAction,
     MakePublicAction,
+    RenameAction,
+    StabilityTarget,
     changelog_filepath,
     default_changelog_path,
     dump_changelog_actions,
@@ -76,8 +84,26 @@ class pkg_ctx:
 
     def action_group(self, action: ChangelogAction) -> PublicGroup:
         match action:
-            case MakePublicAction(group=group):
+            case (
+                MakePublicAction(group=group)
+                | DeleteAction(group=group)
+                | RenameAction(group=group)
+                | BreakingChangeAction(group=group)
+                | AdditionalChangeAction(group=group)
+            ):
                 return self.tool_state.groups.get_or_create_group(group)
+            case (
+                ExperimentalAction(target=StabilityTarget.symbol, group=group)
+                | GAAction(target=StabilityTarget.symbol, group=group)
+                | DeprecatedAction(target=StabilityTarget.symbol, group=group)
+            ):
+                return self.tool_state.groups.get_or_create_group(group)  # type: ignore[arg-type]
+            case (
+                ExperimentalAction(target=StabilityTarget.group, name=name)
+                | GAAction(target=StabilityTarget.group, name=name)
+                | DeprecatedAction(target=StabilityTarget.group, name=name)
+            ):
+                return self.tool_state.groups.get_or_create_group(name)
             case FixAction(name=group_name):
                 return self.tool_state.groups.get_or_create_group(group_name)
         raise NoPublicGroupMatch()

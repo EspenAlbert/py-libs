@@ -7,11 +7,19 @@ from zero_3rdparty.datetime_utils import date_filename
 from zero_3rdparty.file_utils import ensure_parents_write_text
 
 from pkg_ext.changelog.actions import (
+    AdditionalChangeAction,
+    BreakingChangeAction,
     BumpType,
     ChangelogAction,
+    ChoreAction,
     DeleteAction,
+    DeprecatedAction,
+    ExperimentalAction,
     FixAction,
+    GAAction,
     MakePublicAction,
+    RenameAction,
+    StabilityTarget,
 )
 from pkg_ext.context import pkg_ctx
 from pkg_ext.errors import NoPublicGroupMatch
@@ -81,20 +89,51 @@ def _commit_url(remote_url: str, sha: str) -> str:
     return f"({sha})"
 
 
+StabilityAction = ExperimentalAction | GAAction | DeprecatedAction
+
+
+def _stability_target_desc(action: StabilityAction) -> str:
+    match action.target:
+        case StabilityTarget.group:
+            return f"group `{action.name}`"
+        case StabilityTarget.symbol:
+            return f"`{action.group}.{action.name}`"
+        case StabilityTarget.arg:
+            return f"arg `{action.name}` in `{action.parent}`"
+
+
+def _stability_line(prefix: str, action: StabilityAction) -> str:
+    base = f"{prefix}: {_stability_target_desc(action)}"
+    if isinstance(action, DeprecatedAction) and action.replacement:
+        return f"{base}, use `{action.replacement}` instead"
+    return base
+
+
 def as_changelog_line(action: ChangelogAction, remote_url: str, ctx: pkg_ctx) -> str:
     match action:
-        case FixAction(
-            ignored=False,
-            message=message,
-            changelog_message=changelog_message,
-            short_sha=sha,
-        ):
-            return f"{changelog_message or message} {_commit_url(remote_url, sha)}"
+        case FixAction(ignored=True):
+            return ""
+        case FixAction(message=msg, changelog_message=cl_msg, short_sha=sha):
+            return f"{cl_msg or msg} {_commit_url(remote_url, sha)}"
         case MakePublicAction(name=name):
-            ref_symbol = ctx.code_state.ref_symbol(name)
-            return f"New {ref_symbol.type} {name}"
-        case DeleteAction(name=name):
-            return f"Removed {name}"
+            return f"New {ctx.code_state.ref_symbol(name).type} `{name}`"
+        case DeleteAction(name=name, group=group):
+            return f"Removed `{group}.{name}`"
+        case RenameAction(name=name, old_name=old_name, group=group):
+            return f"Renamed `{group}.{old_name}` to `{name}`"
+        case BreakingChangeAction(name=name, group=group, details=details):
+            return f"BREAKING `{group}.{name}`: {details}"
+        case AdditionalChangeAction(name=name, group=group, details=details):
+            return f"`{group}.{name}`: {details}"
+        case ExperimentalAction() | GAAction() | DeprecatedAction():
+            prefix = {
+                "ExperimentalAction": "Experimental",
+                "GAAction": "GA",
+                "DeprecatedAction": "Deprecated",
+            }[type(action).__name__]
+            return _stability_line(prefix, action)
+        case ChoreAction(description=desc):
+            return f"Chore: {desc}"
     return ""
 
 

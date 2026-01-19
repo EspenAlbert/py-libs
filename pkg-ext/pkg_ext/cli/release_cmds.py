@@ -50,18 +50,28 @@ def release_notes(
     ensure_parents_write_text(output_file, content)
 
 
-def _collect_refs_to_remove(changelog_actions: list, groups: PublicGroups) -> set[str]:
-    """Collect refs that should be removed based on KeepPrivateAction and DeleteAction."""
+def _collect_removed_refs(
+    changelog_actions: list, groups: PublicGroups
+) -> tuple[set[str], set[str]]:
+    """Collect refs and names that should be removed.
+
+    Returns:
+        Tuple of (refs_to_remove, deleted_names) where:
+        - refs_to_remove: full ref paths to remove from groups
+        - deleted_names: symbol names that were deleted (to skip re-adding)
+    """
     refs_to_remove: set[str] = set()
+    deleted_names: set[str] = set()
     for action in changelog_actions:
         match action:
             case KeepPrivateAction(full_path=full_path) if full_path:
                 refs_to_remove.add(full_path)
             case DeleteAction(name=name, group=group_name):
+                deleted_names.add(name)
                 if group := groups.name_to_group.get(group_name):
                     matching = [r for r in group.owned_refs if r.endswith(f".{name}")]
                     refs_to_remove.update(matching)
-    return refs_to_remove
+    return refs_to_remove, deleted_names
 
 
 def dump_groups(ctx: typer.Context):
@@ -76,16 +86,18 @@ def dump_groups(ctx: typer.Context):
     named_refs = code_state.named_refs
 
     # Remove private/deleted refs from all groups
-    refs_to_remove = _collect_refs_to_remove(changelog_actions, groups)
+    refs_to_remove, deleted_names = _collect_removed_refs(changelog_actions, groups)
     for group in groups.groups:
         removed = group.owned_refs & refs_to_remove
         if removed:
             group.owned_refs -= removed
             logger.info(f"Removed private/deleted refs from {group.name}: {removed}")
 
-    # Add missing public refs from MakePublicAction
+    # Add missing public refs from MakePublicAction (skip deleted ones)
     for action in changelog_actions:
         if not isinstance(action, MakePublicAction):
+            continue
+        if action.name in deleted_names:
             continue
         group = groups.get_or_create_group(action.group)
         if ref_state := named_refs.get(action.name):

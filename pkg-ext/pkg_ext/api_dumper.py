@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import inspect
+import re
 from dataclasses import is_dataclass
 from datetime import UTC, datetime
 from pydoc import locate
-from typing import Any, Callable
+from typing import Any, Callable, get_args, get_origin
+
+from typing_extensions import Annotated
+from zero_3rdparty.object_name import as_name
 
 from pkg_ext.models.api_dump import (
     ClassDump,
@@ -95,12 +99,53 @@ def dump_exception(cls: type, ref: RefSymbol) -> ExceptionDump:
     )
 
 
+_FUNC_REPR_PATTERN = re.compile(r"<function (\w+) at 0x[0-9a-f]+>")
+
+# Generic docstrings from builtin typing constructs that should be filtered out
+_GENERIC_DOCSTRING_PREFIXES = (
+    "Type variable.",
+    "Runtime representation of an annotated type.",
+    "Abstract base class for generic types.",
+)
+
+
+def _get_type_alias_docstring(alias: Any) -> str:
+    """Get docstring for a type alias, filtering out generic typing docstrings."""
+    doc = getattr(alias, "__doc__", "") or ""
+    if any(doc.startswith(prefix) for prefix in _GENERIC_DOCSTRING_PREFIXES):
+        return ""
+    return doc
+
+
+def _format_value_stable(value: Any) -> str:
+    """Format a value with stable output (no memory addresses)."""
+    if callable(value) and not isinstance(value, type):
+        return as_name(value)
+    raw = repr(value)
+    return _FUNC_REPR_PATTERN.sub(r"\1", raw)
+
+
+def _format_type_alias_target(alias: Any) -> str:
+    """Format a type alias with stable function references."""
+    if alias is None:
+        return "unknown"
+    if get_origin(alias) is Annotated:
+        args = get_args(alias)
+        base_type = args[0] if args else alias
+        metadata = args[1:] if len(args) > 1 else ()
+        base_repr = _format_type_alias_target(base_type)
+        meta_reprs = [_format_value_stable(m) for m in metadata]
+        return f"typing.Annotated[{base_repr}, {', '.join(meta_reprs)}]"
+    raw = str(alias)
+    return _FUNC_REPR_PATTERN.sub(r"\1", raw)
+
+
 def dump_type_alias(alias: Any, ref: RefSymbol) -> TypeAliasDump:
-    alias_target = str(alias) if alias else "unknown"
+    alias_target = _format_type_alias_target(alias)
     return TypeAliasDump(
         name=ref.name,
         module_path=ref.module_path,
-        docstring=getattr(alias, "__doc__", "") or "",
+        docstring=_get_type_alias_docstring(alias),
         alias_target=alias_target,
         line_number=_get_line_number(alias),
     )

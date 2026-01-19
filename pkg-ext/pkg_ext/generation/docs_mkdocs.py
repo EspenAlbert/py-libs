@@ -15,7 +15,7 @@ from pkg_ext.config import PKG_EXT_TOOL_NAME, ROOT_GROUP_NAME
 from pkg_ext.generation.docs_constants import MD_CONFIG, ROOT_DIR, YAML_CONFIG
 
 if TYPE_CHECKING:
-    from pkg_ext.models.api_dump import PublicApiDump
+    from pkg_ext.models.api_dump import GroupDump, PublicApiDump
 
     from .docs import GeneratedDocsOutput
 
@@ -47,23 +47,77 @@ def group_dir_name_for_nav(group_name: str) -> str:
     return ROOT_DIR if group_name == ROOT_GROUP_NAME else group_name
 
 
+def extract_complex_symbols(
+    output: GeneratedDocsOutput, groups: list[GroupDump]
+) -> dict[str, list[tuple[str, str]]]:
+    """Extract complex symbol (name, filename) pairs per group from generated docs output."""
+    result: dict[str, list[tuple[str, str]]] = {}
+    for group in groups:
+        dir_name = group_dir_name_for_nav(group.name)
+        prefix = f"{dir_name}/"
+        complex_pages: list[tuple[str, str]] = []
+        for path in output.path_contents:
+            if not path.startswith(prefix) or path == f"{prefix}index.md":
+                continue
+            filename = path.removeprefix(prefix)
+            symbol = next(
+                (
+                    s.name
+                    for s in group.symbols
+                    if f"{s.name.lower()}.md" == filename.lower()
+                ),
+                filename.removesuffix(".md"),
+            )
+            complex_pages.append((symbol, filename))
+        if complex_pages:
+            result[group.name] = sorted(complex_pages)
+    return result
+
+
+NavItem = dict[str, str | list[dict[str, str]]]
+
+
 def generate_mkdocs_nav(
-    api_dump: PublicApiDump, pkg_import_name: str
-) -> list[dict[str, str]]:
-    nav: list[dict[str, str]] = [{"Home": "index.md"}]
+    api_dump: PublicApiDump,
+    pkg_import_name: str,
+    complex_symbols: dict[str, list[tuple[str, str]]] | None = None,
+) -> list[NavItem]:
+    """Generate mkdocs nav structure.
+
+    Args:
+        api_dump: The public API dump
+        pkg_import_name: Package import name for the root group label
+        complex_symbols: Dict mapping group names to lists of (symbol_name, filename) tuples
+    """
+    complex_symbols = complex_symbols or {}
+    nav: list[NavItem] = [{"Home": "index.md"}]
     groups = sorted(api_dump.groups, key=lambda g: (g.name != ROOT_GROUP_NAME, g.name))
     for group in groups:
         dir_name = group_dir_name_for_nav(group.name)
         label = pkg_import_name if group.name == ROOT_GROUP_NAME else group.name
-        nav.append({label: f"{dir_name}/index.md"})
+        group_complex = complex_symbols.get(group.name, [])
+        if group_complex:
+            children: list[dict[str, str]] = [{"Overview": f"{dir_name}/index.md"}]
+            children.extend(
+                {name: f"{dir_name}/{filename}"} for name, filename in group_complex
+            )
+            nav.append({label: children})
+        else:
+            nav.append({label: f"{dir_name}/index.md"})
     return nav
 
 
-def _render_nav_yaml(nav: list[dict[str, str]]) -> str:
+def _render_nav_yaml(nav: list[NavItem]) -> str:
     lines = ["nav:"]
     for item in nav:
-        for label, path in item.items():
-            lines.append(f"  - {label}: {path}")
+        for label, value in item.items():
+            if isinstance(value, str):
+                lines.append(f"  - {label}: {value}")
+            else:
+                lines.append(f"  - {label}:")
+                for child in value:
+                    for child_label, child_path in child.items():
+                        lines.append(f"    - {child_label}: {child_path}")
     return "\n".join(lines)
 
 

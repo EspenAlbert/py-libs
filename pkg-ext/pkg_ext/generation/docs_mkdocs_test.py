@@ -6,11 +6,12 @@ from pkg_ext.generation.docs import GeneratedDocsOutput
 from pkg_ext.generation.docs_mkdocs import (
     MkdocsSection,
     copy_readme_as_index,
+    extract_complex_symbols,
     generate_mkdocs_nav,
     write_docs_files,
     write_mkdocs_yml,
 )
-from pkg_ext.models.api_dump import GroupDump, PublicApiDump
+from pkg_ext.models.api_dump import ClassDump, GroupDump, PublicApiDump
 
 
 def test_copy_readme_as_index(tmp_path: Path):
@@ -45,6 +46,46 @@ def test_generate_mkdocs_nav():
     assert nav[0] == {"Home": "index.md"}
     assert {"my_pkg": "_root/index.md"} in nav
     assert {"config": "config/index.md"} in nav
+
+
+def test_generate_mkdocs_nav_with_complex_symbols():
+    api_dump = PublicApiDump(
+        pkg_import_name="my_pkg",
+        version="1.0.0",
+        dumped_at=datetime.now(UTC),
+        groups=[
+            GroupDump(
+                name=ROOT_GROUP_NAME,
+                symbols=[
+                    ClassDump(name="Settings", module_path="settings", docstring="")
+                ],
+            ),
+        ],
+    )
+    complex_symbols = {ROOT_GROUP_NAME: [("Settings", "settings.md")]}
+    nav = generate_mkdocs_nav(api_dump, "my_pkg", complex_symbols)
+    root_nav = nav[1]["my_pkg"]
+    assert isinstance(root_nav, list)
+    assert {"Overview": "_root/index.md"} in root_nav
+    assert {"Settings": "_root/settings.md"} in root_nav
+
+
+def test_extract_complex_symbols():
+    groups = [
+        GroupDump(
+            name=ROOT_GROUP_NAME,
+            symbols=[ClassDump(name="Settings", module_path="settings", docstring="")],
+        ),
+    ]
+    output = GeneratedDocsOutput(
+        path_contents={
+            "_root/index.md": "# Root",
+            "_root/settings.md": "# Settings",
+        }
+    )
+    result = extract_complex_symbols(output, groups)
+    assert ROOT_GROUP_NAME in result
+    assert ("Settings", "settings.md") in result[ROOT_GROUP_NAME]
 
 
 def test_write_mkdocs_yml_creates_new(tmp_path: Path):

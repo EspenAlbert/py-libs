@@ -150,8 +150,18 @@ def select_multiple_refs(
     return select_list_multiple_choices(prompt_text, choices)
 
 
+def _as_choice_ref_state_only(state: RefState, checked: bool) -> ChoiceTyped[RefState]:
+    return ChoiceTyped(
+        name=state.name,
+        value=state,
+        description=f"State: {state.type.value}",
+        checked=checked,
+    )
+
+
 def select_multiple_ref_state(prompt_text: str, refs: list[RefState]) -> list[RefState]:
-    raise NotImplementedError
+    choices = [_as_choice_ref_state_only(state, checked=False) for state in refs]
+    return select_list_multiple_choices(prompt_text, choices)
 
 
 def select_ref(prompt_text: str, refs: list[RefStateWithSymbol]) -> RefStateWithSymbol:

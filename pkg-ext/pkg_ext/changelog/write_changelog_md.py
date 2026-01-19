@@ -9,6 +9,7 @@ from zero_3rdparty.file_utils import ensure_parents_write_text
 from pkg_ext.changelog.actions import (
     BumpType,
     ChangelogAction,
+    DeleteAction,
     FixAction,
     MakePublicAction,
 )
@@ -92,6 +93,8 @@ def as_changelog_line(action: ChangelogAction, remote_url: str, ctx: pkg_ctx) ->
         case MakePublicAction(name=name):
             ref_symbol = ctx.code_state.ref_symbol(name)
             return f"New {ref_symbol.type} {name}"
+        case DeleteAction(name=name):
+            return f"Removed {name}"
     return ""
 
 

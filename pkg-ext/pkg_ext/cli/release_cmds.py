@@ -81,7 +81,7 @@ def dump_groups(ctx: typer.Context):
     config = load_project_config(settings.repo_root)
     groups.merge_config(config)
 
-    changelog_actions = list(parse_changelog_actions(settings.changelog_dir))
+    changelog_actions = parse_changelog_actions(settings.changelog_dir)
     code_state = parse_pkg_code_state(settings)
     named_refs = code_state.named_refs
 

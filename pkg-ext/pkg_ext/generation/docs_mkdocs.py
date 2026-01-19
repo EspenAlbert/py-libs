@@ -122,7 +122,7 @@ def _render_nav_yaml(nav: list[NavItem]) -> str:
 
 
 def _mkdocs_section_content(
-    section: MkdocsSection, pkg_import_name: str, nav: list[dict[str, str]]
+    section: MkdocsSection, pkg_import_name: str, nav: list[NavItem]
 ) -> str:
     match section:
         case MkdocsSection.site:
@@ -149,7 +149,7 @@ def _mkdocs_section_content(
 def write_mkdocs_yml(
     mkdocs_path: Path,
     pkg_import_name: str,
-    nav: list[dict[str, str]],
+    nav: list[NavItem],
     skip_sections: tuple[str, ...] = (),
 ) -> None:
     skip_set = set(skip_sections)

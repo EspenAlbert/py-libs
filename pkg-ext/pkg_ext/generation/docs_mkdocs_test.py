@@ -5,6 +5,7 @@ from pkg_ext.config import ROOT_GROUP_NAME
 from pkg_ext.generation.docs import GeneratedDocsOutput
 from pkg_ext.generation.docs_mkdocs import (
     MkdocsSection,
+    NavItem,
     copy_readme_as_index,
     extract_complex_symbols,
     generate_mkdocs_nav,
@@ -90,7 +91,7 @@ def test_extract_complex_symbols():
 
 def test_write_mkdocs_yml_creates_new(tmp_path: Path):
     mkdocs_path = tmp_path / "mkdocs.yml"
-    nav = [{"Home": "index.md"}, {"config": "config/index.md"}]
+    nav: list[NavItem] = [{"Home": "index.md"}, {"config": "config/index.md"}]
     write_mkdocs_yml(mkdocs_path, "my_pkg", nav)
     content = mkdocs_path.read_text()
     assert "site_name: my_pkg" in content
@@ -101,7 +102,7 @@ def test_write_mkdocs_yml_creates_new(tmp_path: Path):
 
 def test_write_mkdocs_yml_honors_skip_sections(tmp_path: Path):
     mkdocs_path = tmp_path / "mkdocs.yml"
-    nav = [{"Home": "index.md"}]
+    nav: list[NavItem] = [{"Home": "index.md"}]
     write_mkdocs_yml(mkdocs_path, "my_pkg", nav, skip_sections=("theme", "extensions"))
     content = mkdocs_path.read_text()
     assert "site_name:" in content

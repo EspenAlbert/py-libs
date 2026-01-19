@@ -41,13 +41,14 @@ def test_parse_models_module():
     symbols = _parse_src_module(models)
     assert "ask_shell.settings.AskShellSettings" in symbols.local_imports
     assert "ERROR_MESSAGE_INTERACTIVE_SHELL" in symbols.global_vars
+    assert "OutputT" in symbols.type_aliases
     found_symbols = [
         (symbol.name, symbol.type) for symbol in sorted(symbols.iterate_ref_symbols())
     ]
-    # Note: OutputT is a TypeVar, not a TypeAlias, so it's not captured
     expected_symbols = [
         ("ERROR_MESSAGE_INTERACTIVE_SHELL", "global_var"),
         ("EmptyOutputError", "exception"),
+        ("OutputT", "type_alias"),
         ("RunIncompleteError", "exception"),
         ("ShellConfig", "class"),
         ("ShellError", "exception"),
@@ -82,11 +83,13 @@ def test_parse_symbols_run_env():
     assert "ENV_PREFIX" not in symbols
 
 
-def test_typevars_not_captured():
-    # TypeVars (FuncT = TypeVar(...)) are not type aliases, they're not captured
+def test_typevars_captured_as_type_aliases():
+    # TypeVars (FuncT = TypeVar(...)) are captured as type aliases
     file = _parse_src_module(interactive)
+    assert "FuncT" in file.type_aliases
     symbols = parse_code_symbols([file], "ask_shell")
-    assert "ask_shell._internal.interactive.FuncT" not in symbols
+    assert "ask_shell._internal.interactive.FuncT" in symbols
+    assert symbols["ask_shell._internal.interactive.FuncT"].type == "type_alias"
 
 
 def test_type_alias_annotation_captured():

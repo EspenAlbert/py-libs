@@ -55,18 +55,6 @@ class SymbolParser(ast.NodeTransformer):
             return True
         return False
 
-    def visit_Name(self, node: ast.Name) -> ast.AST:
-        # Global vars without annotations are captured here (e.g., `CONSTANT = 1`)
-        # Type aliases are captured in visit_AnnAssign (e.g., `x: TypeAlias = ...`)
-        node_name = node.id
-        if self.name_is_imported(node_name):
-            return node
-        if len(node_name) == 1 or self._is_internal_symbol(node_name):
-            return node
-        if node_name.isupper():
-            self.global_vars.append(node.id)
-        return node
-
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST:
         """TODO: Consider parsing function with generic_visit in case I want to look for raise statements and inspect signature."""
         if node.name.startswith("_"):
@@ -89,7 +77,7 @@ class SymbolParser(ast.NodeTransformer):
         return node
 
     def visit_Assign(self, node: ast.Assign) -> ast.Assign:
-        """Handle TypeVar assignments like `T = TypeVar('T')`."""
+        """Handle TypeVar assignments and uppercase global constants."""
         if len(node.targets) != 1:
             return node
         target = node.targets[0]
@@ -100,6 +88,8 @@ class SymbolParser(ast.NodeTransformer):
             return node
         if self._is_typevar_call(node.value):
             self.type_aliases.append(name)
+        elif name.isupper():
+            self.global_vars.append(name)
         return node
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AnnAssign:

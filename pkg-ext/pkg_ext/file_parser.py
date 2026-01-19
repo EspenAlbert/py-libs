@@ -44,6 +44,17 @@ class SymbolParser(ast.NodeTransformer):
             return True
         return False
 
+    def _is_typevar_call(self, value: ast.expr) -> bool:
+        """Check if value is a TypeVar(...) call."""
+        if not isinstance(value, ast.Call):
+            return False
+        func = value.func
+        if isinstance(func, ast.Name) and func.id == "TypeVar":
+            return True
+        if isinstance(func, ast.Attribute) and func.attr == "TypeVar":
+            return True
+        return False
+
     def visit_Name(self, node: ast.Name) -> ast.AST:
         # Global vars without annotations are captured here (e.g., `CONSTANT = 1`)
         # Type aliases are captured in visit_AnnAssign (e.g., `x: TypeAlias = ...`)
@@ -75,6 +86,20 @@ class SymbolParser(ast.NodeTransformer):
             self.exceptions.append(node.name)
         else:
             self.classes.append(node.name)
+        return node
+
+    def visit_Assign(self, node: ast.Assign) -> ast.Assign:
+        """Handle TypeVar assignments like `T = TypeVar('T')`."""
+        if len(node.targets) != 1:
+            return node
+        target = node.targets[0]
+        if not isinstance(target, ast.Name):
+            return node
+        name = target.id
+        if name.startswith("_") or self._is_internal_symbol(name):
+            return node
+        if self._is_typevar_call(node.value):
+            self.type_aliases.append(name)
         return node
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AnnAssign:

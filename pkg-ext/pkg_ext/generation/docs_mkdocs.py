@@ -88,7 +88,8 @@ def _mkdocs_section_content(
                   - pymdownx.highlight:
                       anchor_linenums: true
                   - pymdownx.superfences
-                  - admonition""").rstrip()
+                  - admonition
+                  - attr_list""").rstrip()
 
 
 def write_mkdocs_yml(

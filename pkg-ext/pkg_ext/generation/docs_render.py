@@ -261,7 +261,8 @@ def render_inline_symbol(
     since_version = get_symbol_since_version(symbol.name, changelog_actions)
     since_badge = render_since_badge(since_version)
 
-    lines = [f"### {type_label}: `{symbol.name}`"]
+    anchor_id = f"{slug(symbol.name)}_def"
+    lines = [f'<a id="{anchor_id}"></a>\n\n### {type_label}: `{symbol.name}`']
     if symbol_doc_path and pkg_src_dir and pkg_import_name:
         source_link = calculate_source_link(
             symbol_doc_path,

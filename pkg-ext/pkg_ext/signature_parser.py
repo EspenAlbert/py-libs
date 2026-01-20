@@ -270,7 +270,12 @@ def _parse_pydantic_fields(cls: type) -> list[ClassFieldInfo]:
 
 
 def _parse_dataclass_fields(cls: type) -> list[ClassFieldInfo]:
-    hints = get_type_hints(cls)
+    try:
+        hints = get_type_hints(cls)
+    except NameError:
+        # Forward reference couldn't be resolved (e.g., TYPE_CHECKING import)
+        # Fall back to raw string annotations
+        hints = getattr(cls, "__annotations__", {})
     fields: list[ClassFieldInfo] = []
     for f in dataclasses.fields(cls):
         if f.name.startswith("_"):

@@ -14,21 +14,21 @@ dependencies = [
 package = false
 
 [tool.uv.sources]
-ask-shell = { workspace = true }
+ask-shell = { path = "../ask-shell", editable = true }
 model-lib = { path = "../model-lib", editable = true }
 pkg-ext = { workspace = true }
 pytest-model-lib = { workspace = true }
 zero-3rdparty = { path = "../zero-3rdparty", editable = true }
 
 [tool.uv.workspace]
-members = ["ask-shell", "pkg-ext", "pytest-model-lib"]
-exclude=['model-lib', 'model_lib', 'docker_example', 'compose_chart_export', 'docker_compose_parser']
+members = ["pkg-ext", "pytest-model-lib"]
+exclude=['ask_shell', "ask-shell", 'model-lib', 'model_lib', 'docker_example', 'compose_chart_export', 'docker_compose_parser']
 
 [tool.pytest.ini_options]
 addopts = "-s -vv --log-cli-level=INFO --ignore=.venv/* --ignore=.venv-ci/* --ignore=archive/* --capture=no -n auto"
 # addopts = "-s -vv --log-cli-level=INFO --ignore=.venv/* --ignore=.venv-ci/* --ignore=archive/* --capture=no --durations=0 -n auto -p pytest_model_lib --force-regen"
 # addopts = "-s -vv --log-cli-level=INFO --ignore=.venv/* --ignore=.venv-ci/* --ignore=archive/* --capture=no"
-testpaths = ["ask-shell/ask_shell", "pkg-ext/pkg_ext"]
+testpaths = ["pkg-ext/pkg_ext"]
 filterwarnings =[
     "ignore::pytest.PytestRemovedIn9Warning"
 ]
@@ -36,7 +36,7 @@ filterwarnings =[
 omit = ["*_test.py", "conftest.py", "*/testdata/*", "/private/var/*"]
 
 [tool.pyright]
-include = ["ask-shell", "pkg-ext"]
+include = ["pkg-ext"]
 venvPath = ".venv"
 exclude = [
     "pkg-ext/pkg_ext/testdata/",

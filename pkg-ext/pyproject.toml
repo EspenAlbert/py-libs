@@ -26,6 +26,10 @@ exclude = [
   "test_*.json",
 ]
 
+[tool.uv.sources]
+ask-shell = { path = "../../ask-shell", editable = true }
+model-lib = { path = "../../model-lib", editable = true }
+
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",

@@ -1,2 +1,0 @@
-def chosen():
-    return "chosen"

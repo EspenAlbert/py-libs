@@ -6,7 +6,7 @@ template = """\
 [project]
 name = "{NAME}"
 version = "1.0.0+rc1"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 
 [build-system]
 requires = ["hatchling"]

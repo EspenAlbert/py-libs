@@ -42,11 +42,13 @@ def find_pkg_key(pkg_name: str) -> str:
 version_pattern_str = (
     r"^(VERSION|version)\s+:?=\s+\"(?P<version>\d+\.\d+\.\d+\+?[\w\d]*)\"$"
 )
-_version_regex = re.compile(version_pattern_str, re.M)
+_version_regex = re.compile(version_pattern_str, re.MULTILINE)
 
 
 def pkg_version_regex(pkg_name: str) -> re.Pattern:
-    return re.compile(f"^{find_pkg_key(pkg_name)}{version_pattern_str[1:]}", re.M)
+    return re.compile(
+        f"^{find_pkg_key(pkg_name)}{version_pattern_str[1:]}", re.MULTILINE
+    )
 
 
 def find_pkg_version(pkg_name: str) -> str:
@@ -163,7 +165,7 @@ def main(pkg_name_input: str, command: str):
         new_version = parsed_version.bump_rc()
     else:
         raise ValueError(f"Unknown command: {command}")
-    print(f"bumping from {pkg_version} to {str(new_version)}")
+    print(f"bumping from {pkg_version} to {new_version!s}")
     sub_version(pkg_name, pkg_version, str(new_version))
 
 

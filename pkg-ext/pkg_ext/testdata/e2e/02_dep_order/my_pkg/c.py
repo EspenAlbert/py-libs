@@ -1,2 +1,0 @@
-def c():
-    return "C"

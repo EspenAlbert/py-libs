@@ -1,2 +1,0 @@
-def inferred():
-    return "inferred"

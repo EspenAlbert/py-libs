@@ -37,7 +37,6 @@ omit = ["*_test.py", "conftest.py", "*/testdata/*", "/private/var/*"]
 
 [tool.pyright]
 include = ["pkg-ext"]
-venvPath = ".venv"
 exclude = [
     "pkg-ext/pkg_ext/testdata/",
 ]
